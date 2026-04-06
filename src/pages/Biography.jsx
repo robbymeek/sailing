@@ -5,6 +5,8 @@ import Marquee from '../components/Marquee'
 const MARQUEE_1 = ['ROBBY MEEK', 'LA 2028', 'ILCA 7', 'HARVARD', 'US SAILING TEAM']
 const MARQUEE_2 = ['OLYMPIC CAMPAIGN', 'ANNAPOLIS', 'APPLIED MATHEMATICS', 'GO FOR GOLD', 'STUDENT-ATHLETE']
 
+const BASE = import.meta.env.BASE_URL
+
 const PRESS = [
   { t: 'ILCAs dominate US Open Long Beach', u: 'https://www.sailingscuttlebutt.com/2023/07/16/ilcas-dominate-us-open-long-beach/' },
   { t: 'School Nationals for Singlehanded titles', u: 'https://www.sailingscuttlebutt.com/2023/07/16/ilcas-dominate-us-open-long-beach/' },
@@ -37,7 +39,7 @@ export default function Biography({ onNavigate }) {
           height: 420, overflow: 'hidden',
         }}>
           <img
-            src="/IMG_5957.JPG"
+            src={`${BASE}IMG_5957.JPG`}
             alt="Robby Meek sailing"
             style={{
               width: '100%', height: '100%',

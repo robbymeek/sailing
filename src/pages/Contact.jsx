@@ -2,7 +2,12 @@ import Nav from '../components/Nav'
 
 export default function Contact({ onNavigate }) {
   return (
-    <div style={{ background: 'rgb(224,224,224)', minHeight: '100vh' }}>
+    <div style={{
+      background: 'rgb(224,224,224)',
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
       <Nav current="Contact" onNavigate={onNavigate} variant="light" />
 
       {/* Purple/blue header bar */}
@@ -37,10 +42,11 @@ export default function Contact({ onNavigate }) {
         </button>
       </div>
 
-      {/* Purple/blue footer bar */}
+      {/* Purple/blue footer bar - fills remaining space */}
       <div style={{
         background: 'linear-gradient(135deg, rgb(100,100,180), rgb(120,120,200))',
-        height: 200,
+        flex: 1,
+        minHeight: 200,
       }} />
     </div>
   )

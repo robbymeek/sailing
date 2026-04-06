@@ -2,6 +2,8 @@ import Nav from '../components/Nav'
 import Footer from '../components/Footer'
 import Marquee from '../components/Marquee'
 
+const BASE = import.meta.env.BASE_URL
+
 const SUPPORTERS = [
   ['The Strom Family', 'The Ziskind Family', '- - - - - - -'],
   ['The Callahan Family', 'Parabh Gill', '- - - - - - -'],
@@ -26,20 +28,20 @@ export default function Team({ onNavigate }) {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               minHeight: 140, borderRight: '2px solid rgba(50,50,150,0.6)',
             }}>
-              <img src="/AAENT-Logo.png" alt="AA ENT & Facial Plastic Surgery" style={{ maxWidth: '80%', maxHeight: 100, objectFit: 'contain' }} />
+              <img src={`${BASE}AAENT-Logo.png`} alt="AA ENT & Facial Plastic Surgery" style={{ maxWidth: '80%', maxHeight: 100, objectFit: 'contain' }} />
             </div>
             <div style={{
               padding: '20px', textAlign: 'center', background: 'rgb(20,40,60)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               minHeight: 140, borderRight: '2px solid rgba(50,50,150,0.6)',
             }}>
-              <img src="/us-sailing-team-logo.png" alt="US Sailing Team" style={{ maxWidth: '80%', maxHeight: 100, objectFit: 'contain' }} />
+              <img src={`${BASE}us-sailing-team-logo.png`} alt="US Sailing Team" style={{ maxWidth: '80%', maxHeight: 100, objectFit: 'contain' }} />
             </div>
             <div style={{
               padding: '20px', textAlign: 'center', background: 'rgb(255,255,255)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 140,
             }}>
-              <img src="/sfny-logo.png" alt="Sailing Foundation of New York" style={{ maxWidth: '80%', maxHeight: 100, objectFit: 'contain' }} />
+              <img src={`${BASE}sfny-logo.png`} alt="Sailing Foundation of New York" style={{ maxWidth: '80%', maxHeight: 100, objectFit: 'contain' }} />
             </div>
           </div>
 
@@ -50,7 +52,7 @@ export default function Team({ onNavigate }) {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               minHeight: 140, borderRight: '2px solid rgba(50,50,150,0.6)',
             }}>
-              <img src="/charter-financial-logo.jpeg" alt="Charter Financial Group" style={{ maxWidth: '80%', maxHeight: 100, objectFit: 'contain' }} />
+              <img src={`${BASE}charter-financial-logo.jpeg`} alt="Charter Financial Group" style={{ maxWidth: '80%', maxHeight: 100, objectFit: 'contain' }} />
             </div>
             <div style={{ background: 'rgb(18,0,120)', padding: '20px 30px' }}>
               {SUPPORTERS.map((row, ri) => (
