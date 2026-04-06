@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import useCountdown from '../hooks/useCountdown'
+import Nav from '../components/Nav'
 
 const BASE = import.meta.env.BASE_URL
 
@@ -20,18 +21,35 @@ export default function Home({ onNavigate }) {
     return () => clearInterval(iv)
   }, [])
 
+  const [showNav, setShowNav] = useState(false)
+
   return (
-    <div style={{
-      background: 'rgb(19,23,31)',
-      height: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      overflow: 'hidden',
-      boxShadow: 'inset 0 0 120px 20px rgba(120,60,20,0.15), inset 0 0 60px 10px rgba(80,30,10,0.1)',
-      borderRadius: 12,
-      border: '1px solid rgba(100,50,20,0.15)',
-    }}>
+    <div
+      onMouseMove={(e) => setShowNav(e.clientY < 80)}
+      onMouseLeave={() => setShowNav(false)}
+      style={{
+        background: 'rgb(19,23,31)',
+        height: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        position: 'relative',
+        boxShadow: 'inset 0 0 120px 20px rgba(120,60,20,0.15), inset 0 0 60px 10px rgba(80,30,10,0.1)',
+        borderRadius: 12,
+        border: '1px solid rgba(100,50,20,0.15)',
+      }}
+    >
+      {/* Nav - appears on hover near top */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
+        opacity: showNav ? 1 : 0,
+        transform: showNav ? 'translateY(0)' : 'translateY(-10px)',
+        transition: 'opacity 0.3s ease, transform 0.3s ease',
+        pointerEvents: showNav ? 'auto' : 'none',
+      }}>
+        <Nav current="Home" onNavigate={onNavigate} />
+      </div>
       <div style={{
         display: 'flex',
         alignItems: 'center',

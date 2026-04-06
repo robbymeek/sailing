@@ -25,7 +25,7 @@ export default function Biography({ onNavigate }) {
       {/* Hero gradient + marquees */}
       <div style={{
         background: 'linear-gradient(180deg, rgb(18,0,120) 0%, rgb(0,100,255) 50%, rgb(0,200,255) 100%)',
-        paddingTop: 20, overflow: 'hidden',
+        overflow: 'hidden',
       }}>
         <Nav current="Biography" onNavigate={onNavigate} variant="blue" />
 
