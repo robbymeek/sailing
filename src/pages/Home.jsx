@@ -38,7 +38,7 @@ export default function Home({ onNavigate }) {
         justifyContent: 'center',
         gap: 'clamp(40px, 8vw, 120px)',
         width: '100%',
-        padding: '0 clamp(40px, 8vw, 140px)',
+        padding: '0 clamp(20px, 4vw, 60px)',
       }}>
         {/* Left - Event Calendar */}
         <div style={{ textAlign: 'center', flexShrink: 0 }}>
