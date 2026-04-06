@@ -2,8 +2,8 @@ import Nav from '../components/Nav'
 import Footer from '../components/Footer'
 import Marquee from '../components/Marquee'
 
-const MARQUEE_1 = ['ROBBY MEEK', 'US SAILING TEAM', 'OLYMPICS', 'LOS ANGELES', 'APPLIED MATHEMATICS', 'HARVARD', 'SAILING', 'STUDENT-ATHLETE', 'BOSTON', 'GO FOR GOLD']
-const MARQUEE_2 = ['ROBBY MEEK', 'US SAILING TEAM', 'OLYMPICS', 'LOS ANGELES', 'APPLIED MATHEMATICS', 'HARVARD', 'CAMPAIGN', 'SAILING', 'LA2028', 'GO FOR GOLD']
+const MARQUEE_1 = ['ROBBY MEEK', 'LA 2028', 'ILCA 7', 'HARVARD', 'US SAILING TEAM']
+const MARQUEE_2 = ['OLYMPIC CAMPAIGN', 'ANNAPOLIS', 'APPLIED MATHEMATICS', 'GO FOR GOLD', 'STUDENT-ATHLETE']
 
 const PRESS = [
   { t: 'ILCAs dominate US Open Long Beach', u: 'https://www.sailingscuttlebutt.com/2023/07/16/ilcas-dominate-us-open-long-beach/' },
@@ -27,30 +27,32 @@ export default function Biography({ onNavigate }) {
       }}>
         <Nav current="Biography" onNavigate={onNavigate} variant="blue" />
 
-        <div style={{ padding: '20px 0' }}>
-          <Marquee items={MARQUEE_1} speed={25} color="rgba(255,255,255,0.12)" fontSize={52} />
-        </div>
-        <div style={{ padding: '10px 0' }}>
-          <Marquee items={MARQUEE_2} speed={30} color="rgba(255,255,255,0.10)" fontSize={52} />
+        <div style={{ padding: '16px 0', opacity: 0.6 }}>
+          <Marquee items={MARQUEE_1} speed={40} color="rgba(255,255,255,0.08)" fontSize={42} />
         </div>
 
-        {/* Hero with "BORN TO GO FOR GOLD" */}
+        {/* Hero image */}
         <div style={{
-          maxWidth: 1100, margin: '20px auto', position: 'relative',
-          background: 'linear-gradient(135deg, rgb(0,80,200), rgb(0,60,160), rgb(0,100,220))',
-          height: 380, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          maxWidth: 1100, margin: '12px auto', position: 'relative',
+          height: 420, overflow: 'hidden',
         }}>
+          <img
+            src="/IMG_5957.JPG"
+            alt="Robby Meek sailing"
+            style={{
+              width: '100%', height: '100%',
+              objectFit: 'cover', objectPosition: 'center 30%',
+              display: 'block',
+            }}
+          />
           <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%',
-            background: 'linear-gradient(0deg, rgba(255,255,255,0.15), transparent)',
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(0deg, rgb(18,0,120) 0%, transparent 30%, transparent 70%, rgba(0,80,200,0.3) 100%)',
           }} />
-          <p style={{
-            color: 'rgba(255,255,255,0.2)', fontSize: 'min(8vw, 80px)',
-            fontWeight: 900, letterSpacing: '-2px', lineHeight: 0.95,
-            textAlign: 'center', textTransform: 'uppercase', position: 'relative',
-          }}>
-            BORN TO<br />GO FOR GOLD
-          </p>
+        </div>
+
+        <div style={{ padding: '12px 0', opacity: 0.6 }}>
+          <Marquee items={MARQUEE_2} speed={35} color="rgba(255,255,255,0.08)" fontSize={42} />
         </div>
       </div>
 
