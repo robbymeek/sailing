@@ -54,16 +54,18 @@ export default function Home({ onNavigate }) {
         </p>
       </div>
 
-      {/* Center - Sailboat */}
-      <svg width="180" height="200" viewBox="0 0 180 200" fill="none">
-        <line x1="90" y1="30" x2="90" y2="155" stroke="rgb(80,90,110)" strokeWidth="2" />
-        <path d="M90 30 C90 30,130 85,130 140 L90 140Z" fill="rgb(70,80,100)" opacity="0.5" />
-        <path d="M90 30 C90 30,128 85,128 135 L90 135Z" fill="rgb(80,90,110)" opacity="0.35" />
-        <path d="M92 45 C92 45,118 90,120 125 L92 125Z" fill="rgb(90,100,120)" opacity="0.2" />
-        <path d="M90 50 C90 50,70 95,68 135 L90 135Z" fill="rgb(65,75,95)" opacity="0.3" />
-        <ellipse cx="90" cy="158" rx="28" ry="5" fill="rgb(70,80,100)" opacity="0.5" />
-        <rect x="62" y="152" width="56" height="7" rx="2" fill="rgb(65,75,95)" opacity="0.5" />
-      </svg>
+      {/* Center - Sailboat GIF */}
+      <img
+        src="/[0001-0250].gif"
+        alt="Sailboat"
+        onClick={() => onNavigate('Team')}
+        style={{
+          width: 200,
+          height: 200,
+          cursor: 'pointer',
+          animation: 'spin 8s linear infinite',
+        }}
+      />
 
       {/* Right - Biography */}
       <div style={{

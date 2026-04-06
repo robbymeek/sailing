@@ -22,41 +22,35 @@ export default function Team({ onNavigate }) {
             borderBottom: '2px solid rgba(50,50,150,0.6)',
           }}>
             <div style={{
-              padding: '40px 20px', textAlign: 'center', background: 'rgb(0,0,0)',
+              padding: '20px', textAlign: 'center', background: 'rgb(0,0,0)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               minHeight: 140, borderRight: '2px solid rgba(50,50,150,0.6)',
             }}>
-              <span style={{ color: '#fff', fontSize: 16, fontWeight: 700, lineHeight: 1.3 }}>
-                AA ENT<br />&amp; Facial Plastic Surgery
-              </span>
+              <img src="/AAENT-Logo.png" alt="AA ENT & Facial Plastic Surgery" style={{ maxWidth: '80%', maxHeight: 100, objectFit: 'contain' }} />
             </div>
             <div style={{
-              padding: '40px 20px', textAlign: 'center', background: 'rgb(20,40,60)',
+              padding: '20px', textAlign: 'center', background: 'rgb(20,40,60)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               minHeight: 140, borderRight: '2px solid rgba(50,50,150,0.6)',
             }}>
-              <span style={{ color: '#fff', fontSize: 16, fontWeight: 700 }}>US Sailing Team</span>
+              <img src="/us-sailing-team-logo.png" alt="US Sailing Team" style={{ maxWidth: '80%', maxHeight: 100, objectFit: 'contain' }} />
             </div>
             <div style={{
-              padding: '40px 20px', textAlign: 'center', background: 'rgb(255,255,255)',
+              padding: '20px', textAlign: 'center', background: 'rgb(255,255,255)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 140,
             }}>
-              <span style={{ color: 'rgb(0,0,120)', fontSize: 15, fontWeight: 700, lineHeight: 1.3 }}>
-                Sailing Foundation<br />of New York
-              </span>
+              <img src="/sfny-logo.png" alt="Sailing Foundation of New York" style={{ maxWidth: '80%', maxHeight: 100, objectFit: 'contain' }} />
             </div>
           </div>
 
           {/* Bottom row */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr' }}>
             <div style={{
-              padding: '40px 20px', textAlign: 'center', background: 'rgb(255,255,255)',
+              padding: '20px', textAlign: 'center', background: 'rgb(255,255,255)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               minHeight: 140, borderRight: '2px solid rgba(50,50,150,0.6)',
             }}>
-              <span style={{ color: 'rgb(0,0,60)', fontSize: 18, fontWeight: 700, lineHeight: 1.3 }}>
-                CHARTER<br />Financial Group
-              </span>
+              <img src="/charter-financial-logo.jpeg" alt="Charter Financial Group" style={{ maxWidth: '80%', maxHeight: 100, objectFit: 'contain' }} />
             </div>
             <div style={{ background: 'rgb(18,0,120)', padding: '20px 30px' }}>
               {SUPPORTERS.map((row, ri) => (
