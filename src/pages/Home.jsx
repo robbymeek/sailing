@@ -21,6 +21,8 @@ export default function Home({ onNavigate }) {
     return () => clearInterval(iv)
   }, [])
 
+  useEffect(() => { document.body.style.background = 'rgb(19,23,31)' }, [])
+
   const [showNav, setShowNav] = useState(false)
 
   return (
@@ -36,8 +38,6 @@ export default function Home({ onNavigate }) {
         overflow: 'hidden',
         position: 'relative',
         boxShadow: 'inset 0 0 120px 20px rgba(120,60,20,0.15), inset 0 0 60px 10px rgba(80,30,10,0.1)',
-        borderRadius: 12,
-        border: '1px solid rgba(100,50,20,0.15)',
       }}
     >
       {/* Nav - appears on hover near top */}

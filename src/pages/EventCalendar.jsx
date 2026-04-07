@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import Nav from '../components/Nav'
 import Footer from '../components/Footer'
 import useCountdown from '../hooks/useCountdown'
@@ -17,6 +18,8 @@ const EVENTS = [
 ]
 
 export default function EventCalendar({ onNavigate }) {
+  useEffect(() => { document.body.style.background = 'rgb(0,0,0)' }, [])
+
   const target = new Date('2028-07-14T00:00:00')
   const { days, hrs, mins, secs } = useCountdown(target)
 

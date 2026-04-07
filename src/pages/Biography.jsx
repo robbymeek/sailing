@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import Nav from '../components/Nav'
 import Footer from '../components/Footer'
 import Marquee from '../components/Marquee'
@@ -20,6 +21,8 @@ const PRESS = [
 ]
 
 export default function Biography({ onNavigate }) {
+  useEffect(() => { document.body.style.background = 'rgb(18,0,120)' }, [])
+
   return (
     <div style={{ background: 'rgb(18,0,120)', minHeight: '100vh' }}>
       {/* Hero gradient + marquees */}

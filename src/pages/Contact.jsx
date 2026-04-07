@@ -1,6 +1,9 @@
+import { useEffect } from 'react'
 import Nav from '../components/Nav'
 
 export default function Contact({ onNavigate }) {
+  useEffect(() => { document.body.style.background = 'rgb(120,120,200)' }, [])
+
   return (
     <div style={{
       background: 'rgb(224,224,224)',
