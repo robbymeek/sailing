@@ -177,7 +177,7 @@ export default function MainView({ onNavigate }) {
       style={{
         width: BOAT_SIZE, height: BOAT_SIZE,
         position: 'relative', cursor: 'pointer', flexShrink: 0,
-        marginLeft: BOAT_SIZE * 0.1,
+        marginLeft: BOAT_SIZE * 0.1 - 20,
       }}
     >
       {/* Dark boat: scaled up slightly to match light boat size */}
