@@ -82,7 +82,8 @@ export default function MainView({ onNavigate }) {
     return () => window.removeEventListener('resize', h)
   }, [])
 
-  const [showNav, setShowNav] = useState(false)
+  // Start nav visible if mouse is already near the top (coming from inner page)
+  const [showNav, setShowNav] = useState(typeof window !== 'undefined' && window._lastMouseY < 80)
 
   // Colors
   const inHome = mode === 'home'

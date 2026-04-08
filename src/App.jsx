@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import Nav from './components/Nav'
 import MainView from './pages/MainView'
@@ -35,6 +35,7 @@ const CURRENT_MAP = {
 export default function App() {
   const navigate = useNavigate()
   const location = useLocation()
+  const mouseY = useRef(0)
 
   const go = (page) => {
     const routes = {
@@ -48,6 +49,13 @@ export default function App() {
     navigate(routes[page] || '/')
   }
 
+  // Track mouse position globally
+  useEffect(() => {
+    const handler = (e) => { mouseY.current = e.clientY; window._lastMouseY = e.clientY }
+    window.addEventListener('mousemove', handler, { passive: true })
+    return () => window.removeEventListener('mousemove', handler)
+  }, [])
+
   // Exit/enter animation state
   const [displayLocation, setDisplayLocation] = useState(location)
   const [transitionStage, setTransitionStage] = useState('entered')
@@ -55,12 +63,11 @@ export default function App() {
   useEffect(() => {
     if (location.pathname !== displayLocation.pathname) {
       setTransitionStage('exiting')
-      // Fallback timer in case onTransitionEnd doesn't fire
       const t = setTimeout(() => {
         setDisplayLocation(location)
         setTransitionStage('entered')
         window.scrollTo(0, 0)
-      }, 400)
+      }, 350)
       return () => clearTimeout(t)
     }
   }, [location])
@@ -74,42 +81,42 @@ export default function App() {
     }
   }
 
-  // Background color management - use TARGET location so bg changes immediately
+  // Background color management
   useEffect(() => {
     document.body.style.background = BG_MAP[location.pathname] || 'rgb(19,23,31)'
     document.body.style.transition = 'background 0.4s ease'
   }, [location.pathname])
 
-  // Nav visibility based on DISPLAY location (what's currently showing)
-  // so it doesn't flash before the exit animation completes
-  const displayPath = displayLocation.pathname
-  const isDisplayHome = displayPath === '/' || displayPath === '/landing'
   const isTargetHome = location.pathname === '/' || location.pathname === '/landing'
 
+  // Determine nav visibility: on inner pages always show,
+  // on home pages completely hidden (MainView manages its own)
+  const navVisible = !isTargetHome && transitionStage !== 'exiting'
 
   return (
     <div>
-      {/* Persistent Nav - only on inner pages, not home/landing */}
-      {!isTargetHome && (
-        <div style={{
-          position: 'relative', zIndex: 50,
-          background: BG_MAP[location.pathname] || 'transparent',
-          transition: 'background 0.4s ease',
-          opacity: transitionStage === 'exiting' && isDisplayHome ? 0 : 1,
-        }}>
-          <Nav
-            current={CURRENT_MAP[location.pathname] || 'Home'}
-            onNavigate={go}
-            variant={VARIANT_MAP[location.pathname] || 'dark'}
-          />
-        </div>
-      )}
+      {/* Persistent Nav - always mounted, fades in/out */}
+      <div style={{
+        position: 'relative', zIndex: 50,
+        background: BG_MAP[location.pathname] || 'transparent',
+        transition: 'background 0.4s ease, opacity 0.2s ease, max-height 0.2s ease',
+        opacity: navVisible ? 1 : 0,
+        maxHeight: navVisible ? 100 : 0,
+        overflow: 'hidden',
+        pointerEvents: navVisible ? 'auto' : 'none',
+      }}>
+        <Nav
+          current={CURRENT_MAP[location.pathname] || 'Home'}
+          onNavigate={go}
+          variant={VARIANT_MAP[location.pathname] || 'dark'}
+        />
+      </div>
 
       {/* Content area with exit animation */}
       <div
         style={{
           opacity: transitionStage === 'exiting' ? 0 : 1,
-          transition: 'opacity 0.35s ease',
+          transition: 'opacity 0.3s ease',
         }}
         onTransitionEnd={handleExitComplete}
       >
