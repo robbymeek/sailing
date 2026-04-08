@@ -4,12 +4,12 @@ import usePageEntrance from '../hooks/usePageEntrance'
 const BASE = import.meta.env.BASE_URL
 
 const SUPPORTERS = [
-  'Charter Financial Group',
-  'The Strom Family',
-  'The Ziskind Family',
-  'The Callahan Family',
-  'Parabh Gill',
-  'Annapolis YC',
+  { name: 'Charter Financial Group', url: 'https://www.charterfinancialgroup.com/' },
+  { name: 'The Strom Family' },
+  { name: 'The Ziskind Family' },
+  { name: 'The Callahan Family' },
+  { name: 'Parabh Gill' },
+  { name: 'Annapolis YC' },
 ]
 
 const EMPTY_SLOTS = 4
@@ -98,17 +98,24 @@ export default function Team({ onNavigate }) {
           <div style={{
             display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10,
           }}>
-            {SUPPORTERS.map((name) => (
-              <div key={name} style={{
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                padding: '10px 20px',
-                color: 'rgba(255,255,255,0.85)',
-                fontSize: 13, fontWeight: 500,
-              }}>
-                {name}
-              </div>
-            ))}
+            {SUPPORTERS.map((s) => {
+              const inner = (
+                <div key={s.name} style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  padding: '10px 20px',
+                  color: 'rgba(255,255,255,0.85)',
+                  fontSize: 13, fontWeight: 500,
+                }}>
+                  {s.name}
+                </div>
+              )
+              return s.url ? (
+                <a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                  {inner}
+                </a>
+              ) : inner
+            })}
             {Array.from({ length: EMPTY_SLOTS }).map((_, i) => (
               <div key={`empty-${i}`} style={{
                 background: 'transparent',

@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import useCountdown from '../hooks/useCountdown'
 
 const BASE = import.meta.env.BASE_URL
-const BOAT_SIZE = 180
+const BOAT_SIZE = 200
 
 export default function MainView({ onNavigate }) {
   const location = useLocation()
