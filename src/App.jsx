@@ -63,6 +63,15 @@ export default function App() {
 
   useEffect(() => {
     if (location.pathname !== displayLocation.pathname) {
+      // Skip exit animation for home↔landing toggle (MainView handles its own)
+      const homePages = ['/', '/landing']
+      const isHomeSwap = homePages.includes(location.pathname) && homePages.includes(displayLocation.pathname)
+
+      if (isHomeSwap) {
+        setDisplayLocation(location)
+        return
+      }
+
       setTransitionStage('exiting')
       const t = setTimeout(() => {
         setDisplayLocation(location)

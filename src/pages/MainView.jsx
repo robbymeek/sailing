@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import useCountdown from '../hooks/useCountdown'
 
 const BASE = import.meta.env.BASE_URL
@@ -7,6 +7,7 @@ const BOAT_SIZE = 180
 
 export default function MainView({ onNavigate }) {
   const location = useLocation()
+  const routerNavigate = useNavigate()
   const isLanding = location.pathname.includes('landing')
 
   // System dark mode
@@ -44,15 +45,16 @@ export default function MainView({ onNavigate }) {
     setTimeout(() => {
       const newMode = mode === 'home' ? 'landing' : 'home'
       setMode(newMode)
+      // Use React Router navigate so App.jsx location stays in sync
       const newPath = newMode === 'home' ? '/' : '/landing'
-      window.history.replaceState(null, '', `${BASE.replace(/\/$/, '')}${newPath}`)
+      routerNavigate(newPath, { replace: true })
     }, 500)
 
     setTimeout(() => {
       setTextVisible(true)
       setTransitioning(false)
     }, 1200)
-  }, [mode, transitioning])
+  }, [mode, transitioning, routerNavigate])
 
   // Scroll detection on dark home page: scroll down → landing, scroll up → contact
   useEffect(() => {
