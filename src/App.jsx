@@ -106,7 +106,7 @@ export default function App() {
         <Nav
           current={CURRENT_MAP[location.pathname] || 'Home'}
           onNavigate={go}
-          variant={isHomePage ? 'dark' : (VARIANT_MAP[location.pathname] || 'dark')}
+          variant={isHomePage ? (location.pathname === '/landing' ? 'light' : 'dark') : (VARIANT_MAP[location.pathname] || 'dark')}
         />
       </div>
 
