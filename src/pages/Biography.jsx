@@ -131,7 +131,7 @@ export default function Biography({ onNavigate }) {
         <TextWithPhotos words={WORDS} photos={PHOTOS} height={`calc(100vh - 60px)`} />
       </div>
 
-      {/* ===== BLUE BANNER: Photo + ILCA - scrolls faster (parallax) ===== */}
+      {/* ===== BLUE BANNER: Photo scrolls fastest, ILCA follows ===== */}
       <div style={{
         background: 'rgb(0,70,255)',
         position: 'relative',
@@ -139,30 +139,28 @@ export default function Biography({ onNavigate }) {
         transform: `translateY(-${parallaxOffset}px)`,
         willChange: 'transform',
       }}>
-        {/* Sailing photo */}
+        {/* Sailing photo - moves even faster within the banner */}
         <div style={{
           maxWidth: 600,
           margin: '0 auto',
           padding: '50px 40px',
+          transform: `translateY(-${scrollY * 0.15}px)`,
+          willChange: 'transform',
         }}>
-          <div style={{
-            border: '6px solid rgb(0,70,255)',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-          }}>
-            <img
-              src={`${BASE}IMG_5957 2.JPG`}
-              alt="Robby Meek sailing"
-              style={{
-                width: '100%',
-                display: 'block',
-                objectFit: 'cover',
-                maxHeight: 420,
-              }}
-            />
-          </div>
+          <img
+            src={`${BASE}IMG_5957 2.JPG`}
+            alt="Robby Meek sailing"
+            style={{
+              width: '100%',
+              display: 'block',
+              objectFit: 'cover',
+              maxHeight: 420,
+              borderRadius: 4,
+            }}
+          />
         </div>
 
-        {/* ILCA Logo */}
+        {/* ILCA Logo - stays with banner speed */}
         <div style={{
           textAlign: 'center',
           padding: '40px 40px 60px',
