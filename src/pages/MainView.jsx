@@ -229,14 +229,16 @@ export default function MainView({ onNavigate }) {
         transition: 'background 0.7s ease',
       }}>
         <div style={{
-          flex: 1, display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center', gap: 28,
+          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          position: 'relative',
         }}>
           {boatEl}
           <button
             onClick={() => onNavigate('Team')}
             style={{
               ...textFade,
+              position: 'absolute',
+              top: `calc(50% + ${BOAT_SIZE / 2 + 28}px)`,
               background: 'none',
               border: `1px solid ${divider}`,
               color: textDim,
