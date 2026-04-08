@@ -43,8 +43,8 @@ export default function Biography({ onNavigate }) {
   }, [])
 
   // Photo banner moves slightly faster than ILCA
-  const photoOffset = scrollY * 0.12
-  const ilcaOffset = scrollY * 0.04
+  const photoOffset = scrollY * 0.35
+  const ilcaOffset = scrollY * 0.18
 
   return (
     <div style={{ background: 'rgb(18,0,120)', minHeight: '100vh' }}>

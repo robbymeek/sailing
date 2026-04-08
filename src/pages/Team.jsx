@@ -131,7 +131,7 @@ export default function Team({ onNavigate }) {
           <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 14, lineHeight: 1.8, marginBottom: 4 }}>
             Thank you. Sincerely,
           </p>
-          <p style={{ color: '#fff', fontSize: 16, fontWeight: 600 }}>Robby</p>
+          <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 14, lineHeight: 1.8 }}>Robby</p>
         </div>
 
         <Footer variant="blue" onNavigate={onNavigate} />
