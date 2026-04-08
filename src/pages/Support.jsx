@@ -39,10 +39,24 @@ export default function Support({ onNavigate }) {
       {/* Content */}
       <div style={{ position: 'relative', zIndex: 1 }}>
 
+        {/* Back to Team — top */}
+        <div style={{ ...fade(0), padding: '24px 40px' }}>
+          <button
+            onClick={() => onNavigate('Team')}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'rgba(255,255,255,0.5)', fontSize: 13,
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            <span style={{ fontSize: 16 }}>&larr;</span> Back to Team
+          </button>
+        </div>
+
         {/* Hero */}
-        <div style={{ padding: '80px 40px 0', maxWidth: 700, margin: '0 auto' }}>
+        <div style={{ padding: '40px 40px 0', maxWidth: 700, margin: '0 auto' }}>
           <p style={{
-            ...fade(0),
+            ...fade(0.05),
             color: 'rgba(255,255,255,0.25)', fontSize: 11, textTransform: 'uppercase',
             letterSpacing: '3px', margin: '0 0 30px',
           }}>
@@ -153,32 +167,34 @@ export default function Support({ onNavigate }) {
           <div style={{
             display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center',
           }}>
-            <a
-              href="https://venmo.com/robbymeek"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                color: '#fff', fontSize: 14, fontWeight: 500,
-                border: '1px solid rgba(255,255,255,0.25)',
-                padding: '14px 0', width: '100%', maxWidth: 280,
-                textDecoration: 'none', textAlign: 'center',
-                display: 'block',
-              }}
-            >
-              Donate via Venmo
-            </a>
-
+            {/* Email — primary action */}
             <a
               href="mailto:robbymeek+LA2028@gmail.com?subject=Supporting%20Your%20Olympic%20Campaign"
               style={{
-                color: 'rgba(255,255,255,0.6)', fontSize: 14,
-                border: '1px solid rgba(255,255,255,0.12)',
+                color: 'rgb(18,0,120)', fontSize: 14, fontWeight: 600,
+                background: '#fff',
                 padding: '14px 0', width: '100%', maxWidth: 280,
                 textDecoration: 'none', textAlign: 'center',
                 display: 'block',
               }}
             >
               Email to Donate
+            </a>
+
+            {/* Venmo — secondary */}
+            <a
+              href="https://venmo.com/robbymeek"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: 'rgba(255,255,255,0.6)', fontSize: 14,
+                border: '1px solid rgba(255,255,255,0.15)',
+                padding: '14px 0', width: '100%', maxWidth: 280,
+                textDecoration: 'none', textAlign: 'center',
+                display: 'block',
+              }}
+            >
+              Donate via Venmo
             </a>
           </div>
         </div>
@@ -207,17 +223,17 @@ export default function Support({ onNavigate }) {
           </a>
         </div>
 
-        {/* Back to Team */}
+        {/* Back to Team — bottom */}
         <div style={{ ...fade(0.5), textAlign: 'center', padding: '0 20px 60px' }}>
           <button
             onClick={() => onNavigate('Team')}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              color: 'rgba(255,255,255,0.2)', fontSize: 12,
-              letterSpacing: '0.5px',
+              color: 'rgba(255,255,255,0.5)', fontSize: 13,
+              display: 'inline-flex', alignItems: 'center', gap: 6,
             }}
           >
-            Back to Team
+            <span style={{ fontSize: 16 }}>&larr;</span> Back to Team
           </button>
         </div>
 

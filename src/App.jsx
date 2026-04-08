@@ -39,6 +39,7 @@ const CURRENT_MAP = {
 function getNavMode(pathname) {
   if (pathname === '/') return 'hover'
   if (pathname === '/landing') return 'fixed'
+  if (pathname === '/support') return 'hidden'
   return 'static'
 }
 
@@ -131,7 +132,9 @@ export default function App() {
   const [hoverNav, setHoverNav] = useState(false)
 
   let navVisible
-  if (navMode === 'hover') {
+  if (navMode === 'hidden') {
+    navVisible = false
+  } else if (navMode === 'hover') {
     navVisible = hoverNav
   } else {
     navVisible = true
