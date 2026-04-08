@@ -24,13 +24,7 @@ export default function MainView({ onNavigate }) {
   // Mode: 'home' or 'landing'
   const [mode, setMode] = useState(isLanding ? 'landing' : 'home')
   const [transitioning, setTransitioning] = useState(false)
-  const [textVisible, setTextVisible] = useState(false)
-
-  // Fade text in on mount
-  useEffect(() => {
-    const t = setTimeout(() => setTextVisible(true), 100)
-    return () => clearTimeout(t)
-  }, [])
+  const [textVisible, setTextVisible] = useState(true)
 
   // Sync mode with route on initial load
   useEffect(() => {
