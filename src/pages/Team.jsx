@@ -88,7 +88,7 @@ export default function Team({ onNavigate }) {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               minHeight: 140,
             }}>
-              <img src={`${BASE}charter-financial-logo.jpeg`} alt="Charter Financial Group" style={{ width: '100%', maxWidth: 300, maxHeight: 130, objectFit: 'contain' }} />
+              <img src={`${BASE}charter-financial-logo-new.png`} alt="Charter Financial Group" style={{ width: '100%', maxWidth: 300, maxHeight: 130, objectFit: 'contain' }} />
             </div>
           </div>
         </div>
