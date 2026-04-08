@@ -150,7 +150,7 @@ export default function Biography({ onNavigate }) {
             boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
           }}>
             <img
-              src={`${BASE}P1177244.jpeg`}
+              src={`${BASE}IMG_5957 2.JPG`}
               alt="Robby Meek sailing"
               style={{
                 width: '100%',
