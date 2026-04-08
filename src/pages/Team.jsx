@@ -115,16 +115,19 @@ export default function Team({ onNavigate }) {
         {/* Thank you letter */}
         <div style={{ ...entrance.style(2), maxWidth: 800, margin: '0 auto', padding: '60px 40px 60px' }}>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.8, marginBottom: 16 }}>
-            Thank you for the support I have received from sponsors, my family, friends, and coaches. Your belief in me has made this Olympic campaign possible. Sailing is a uniquely demanding sport. It is not enough to train hard on your own. To truly improve, you have to compete directly against the best, in the same waters, in the same wind, at the same time.
+            I wanted to take a moment to express my deepest gratitude for any and all guidance and support throughout my Olympic sailing journey. Belief in me has meant more than words can say, and it has been one of the driving forces behind every step I have taken on this path.
           </p>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.8, marginBottom: 16 }}>
-            Because conditions on the water are always changing, the only real way to measure progress is by racing against others in identical conditions. That means traveling to wherever the best sailors and the most competitive regattas are. Without the financial and emotional support I have received, I would not have been able to make it to those starting lines, let alone compete at my best.
+            Some of you have been with me since the very beginning, learning to sail on the Chesapeake Bay, to racing for the United States on the world stage. Whether it was encouragement after a tough regatta, advice on a difficult decision, or simply the confidence that someone believed in what I was working toward, those moments have shaped who I am as a sailor and as a person.
           </p>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.8, marginBottom: 16 }}>
-            I am especially thankful for the people in my corner. My friends and family have supported me through long days and tough setbacks. My coaches have shaped my growth as both a sailor and a person. This campaign is a team effort, and I am constantly reminded how lucky I am to have such a strong team behind me.
+            As I look ahead to this chapter of dedicating myself full-time to the LA 2028 Olympic campaign, I will carry forward everything I learn. The discipline, the resilience, the joy of competition, and the understanding that no great achievement is ever accomplished alone.
+          </p>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.8, marginBottom: 16 }}>
+            Thank you for being part of this journey. I am incredibly fortunate to have people in my corner, and I promise to continue working every day.
           </p>
           <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 14, lineHeight: 1.8, marginBottom: 4 }}>
-            Thank you. Sincerely,
+            With my sincerest thanks and appreciation,
           </p>
           <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 14, lineHeight: 1.8 }}>Robby</p>
         </div>
