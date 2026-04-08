@@ -222,7 +222,7 @@ export default function MainView({ onNavigate }) {
           width: '100%', height: '100%',
           opacity: showDarkGif ? 1 : 0,
           transition: 'opacity 0.7s ease',
-          transform: 'scale(1.23) translate(-1%, 8%)',
+          transform: 'scale(1.0) translate(0%, 0%)',
           transformOrigin: 'center center',
         }}
       />
