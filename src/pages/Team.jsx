@@ -48,38 +48,20 @@ export default function Team({ onNavigate }) {
           }}>
             The sponsors, families, and supporters who make this Olympic campaign possible.
           </p>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a
-              href="https://venmo.com/robbymeek"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'inline-block',
-                color: 'rgba(255,255,255,0.7)',
-                fontSize: 13, fontWeight: 400,
-                border: '1px solid rgba(255,255,255,0.2)',
-                padding: '10px 28px',
-                textDecoration: 'none',
-                letterSpacing: '-0.2px',
-              }}
-            >
-              Venmo
-            </a>
-            <a
-              href="mailto:robbymeek+LA2028@gmail.com?subject=Supporting%20Your%20Olympic%20Campaign"
-              style={{
-                display: 'inline-block',
-                color: 'rgba(255,255,255,0.7)',
-                fontSize: 13, fontWeight: 400,
-                border: '1px solid rgba(255,255,255,0.2)',
-                padding: '10px 28px',
-                textDecoration: 'none',
-                letterSpacing: '-0.2px',
-              }}
-            >
-              Email
-            </a>
-          </div>
+          <button
+            onClick={() => onNavigate('Support')}
+            style={{
+              display: 'inline-block',
+              color: 'rgba(255,255,255,0.7)',
+              fontSize: 13, fontWeight: 400,
+              border: '1px solid rgba(255,255,255,0.2)',
+              padding: '10px 28px',
+              background: 'none', cursor: 'pointer',
+              letterSpacing: '-0.2px',
+            }}
+          >
+            Support the Campaign
+          </button>
         </div>
 
         {/* Sponsor grid */}

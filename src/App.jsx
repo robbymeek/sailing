@@ -6,12 +6,14 @@ import Biography from './pages/Biography'
 import EventCalendar from './pages/EventCalendar'
 import Team from './pages/Team'
 import Contact from './pages/Contact'
+import Support from './pages/Support'
 
 const INNER_BG = {
   '/biography': 'rgb(18,0,120)',
   '/event-calendar': 'rgb(0,0,0)',
   '/team': 'rgb(18,0,120)',
   '/contact': 'rgb(10,30,80)',
+  '/support': 'rgb(18,0,120)',
 }
 
 const VARIANT_MAP = {
@@ -21,6 +23,7 @@ const VARIANT_MAP = {
   '/event-calendar': 'dark',
   '/team': 'blue',
   '/contact': 'blue',
+  '/support': 'blue',
 }
 
 const CURRENT_MAP = {
@@ -30,6 +33,7 @@ const CURRENT_MAP = {
   '/event-calendar': 'Event Calendar',
   '/team': 'Team',
   '/contact': 'Contact',
+  '/support': 'Team',
 }
 
 function getNavMode(pathname) {
@@ -76,6 +80,7 @@ export default function App() {
       'Event Calendar': '/event-calendar',
       'Team': '/team',
       'Contact': '/contact',
+      'Support': '/support',
     }
     navigate(routes[page] || '/landing')
   }
@@ -187,6 +192,7 @@ export default function App() {
           <Route path="/event-calendar" element={<EventCalendar onNavigate={go} />} />
           <Route path="/team" element={<Team onNavigate={go} />} />
           <Route path="/contact" element={<Contact onNavigate={go} />} />
+          <Route path="/support" element={<Support onNavigate={go} />} />
         </Routes>
       </div>
     </div>
