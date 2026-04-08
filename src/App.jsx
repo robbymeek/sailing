@@ -1,6 +1,5 @@
 import { Routes, Route, useNavigate } from 'react-router-dom'
-import Landing from './pages/Landing'
-import Home from './pages/Home'
+import MainView from './pages/MainView'
 import Biography from './pages/Biography'
 import EventCalendar from './pages/EventCalendar'
 import Team from './pages/Team'
@@ -24,8 +23,8 @@ export default function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<Home onNavigate={go} />} />
-      <Route path="/landing" element={<Landing onNavigate={go} />} />
+      <Route path="/" element={<MainView onNavigate={go} />} />
+      <Route path="/landing" element={<MainView onNavigate={go} />} />
       <Route path="/biography" element={<Biography onNavigate={go} />} />
       <Route path="/event-calendar" element={<EventCalendar onNavigate={go} />} />
       <Route path="/team" element={<Team onNavigate={go} />} />
