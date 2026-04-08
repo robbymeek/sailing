@@ -1,15 +1,27 @@
-import { useEffect } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Nav from '../components/Nav'
 import Footer from '../components/Footer'
 
 const BASE = import.meta.env.BASE_URL
 
-const BG_WORDS = [
+const WORDS_TOP = [
   'ROBBY MEEK', 'US SAILING TEAM', 'OLYMPICS',
   'LOS ANGELES', 'APPLIED MATHEMATICS', 'HARVARD',
   'SAILING', 'CAMPAIGN', 'LA 2028', 'BOSTON',
   'ROBBY MEEK', 'STUDENT-ATHLETE', 'ILCA 7',
   'US SAILING TEAM', 'ANNAPOLIS',
+]
+
+const WORDS_BOTTOM = [
+  'SAILING', 'CAMPAIGN', 'LA 2028',
+  'STUDENT-ATHLETE', 'ROBBY MEEK',
+  'HARVARD', 'OLYMPICS', 'ANNAPOLIS',
+]
+
+const PHOTOS = [
+  'IMG_5854.JPG', 'IMG_5866.JPG', 'IMG_5956.JPG',
+  'IMG_5957.JPG', 'IMG_5958.JPG', 'IMG_5959.JPG',
+  'IMG_8856.JPG', 'P1166617.jpeg',
 ]
 
 const PRESS = [
@@ -24,91 +36,150 @@ const PRESS = [
   { t: 'No. 1 Sailing Wins 2025 ICSA Open Team Race National Championship', u: 'https://gocrimson.com/news/2025/4/26/no-1-sailing-wins-2025-icsa-open-team-race-national-championship.aspx' },
 ]
 
-export default function Biography({ onNavigate }) {
-  useEffect(() => { document.body.style.background = 'rgb(18,0,200)' }, [])
-
+function TextWithPhotos({ words, photos }) {
   return (
-    <div style={{ background: 'rgb(18,0,200)', minHeight: '100vh' }}>
-      {/* ===== TOP SECTION: Bright blue with text background ===== */}
+    <div style={{ position: 'relative' }}>
+      {/* Photo collage behind the text */}
       <div style={{
-        background: 'rgb(18,0,200)',
-        position: 'relative',
+        position: 'absolute', inset: 0,
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gridTemplateRows: 'repeat(3, 1fr)',
+        gap: 0,
         overflow: 'hidden',
       }}>
+        {photos.map((p, i) => (
+          <img
+            key={i}
+            src={`${BASE}${p}`}
+            alt=""
+            style={{
+              width: '100%', height: '100%',
+              objectFit: 'cover',
+              opacity: 0.6,
+              filter: 'saturate(0.3) brightness(1.1)',
+            }}
+          />
+        ))}
+      </div>
+      {/* Text that clips the photos - dark blue text reveals photos through letterforms */}
+      <div style={{
+        position: 'relative',
+        fontSize: 'clamp(52px, 8vw, 110px)',
+        fontWeight: 900,
+        lineHeight: 0.95,
+        letterSpacing: '-3px',
+        textTransform: 'uppercase',
+        wordBreak: 'break-word',
+        userSelect: 'none',
+        color: 'rgb(80,130,255)',
+        mixBlendMode: 'multiply',
+      }}>
+        {words.map((word, i) => (
+          <span key={i}>{word} </span>
+        ))}
+      </div>
+      {/* Overlay tint to blend */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: 'rgba(80,130,255,0.35)',
+        pointerEvents: 'none',
+        mixBlendMode: 'color',
+      }} />
+    </div>
+  )
+}
+
+export default function Biography({ onNavigate }) {
+  useEffect(() => { document.body.style.background = 'rgb(18,0,120)' }, [])
+
+  const [scrollY, setScrollY] = useState(0)
+  const containerRef = useRef(null)
+
+  useEffect(() => {
+    const onScroll = () => setScrollY(window.scrollY)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  return (
+    <div ref={containerRef} style={{ background: 'rgb(18,0,120)', minHeight: '100vh' }}>
+      {/* ===== DARK NAVY HEADER ===== */}
+      <div style={{ background: 'rgb(18,0,120)' }}>
         <Nav current="Biography" onNavigate={onNavigate} variant="blue" />
-
-        {/* Background text wall */}
-        <div style={{
-          position: 'relative',
-          padding: '20px 40px 0',
-          maxWidth: 1100,
-          margin: '0 auto',
-        }}>
-          {/* The large text words behind everything */}
-          <div style={{
-            color: 'rgba(255,255,255,0.08)',
-            fontSize: 'clamp(48px, 7vw, 90px)',
-            fontWeight: 900,
-            lineHeight: 1.0,
-            letterSpacing: '-2px',
-            textTransform: 'uppercase',
-            wordBreak: 'break-word',
-            userSelect: 'none',
-          }}>
-            {BG_WORDS.map((word, i) => (
-              <span key={i}>{word} </span>
-            ))}
-          </div>
-
-          {/* Sailing photo overlaid on top of text - with colored border */}
-          <div style={{
-            position: 'relative',
-            maxWidth: 500,
-            margin: '-180px auto 0',
-            zIndex: 2,
-          }}>
-            <div style={{
-              border: '6px solid rgb(0,80,255)',
-              background: 'rgb(0,80,255)',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-            }}>
-              <img
-                src={`${BASE}P1177244.jpeg`}
-                alt="Robby Meek sailing"
-                style={{
-                  width: '100%',
-                  display: 'block',
-                  objectFit: 'cover',
-                  maxHeight: 380,
-                }}
-              />
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* ===== HARD TRANSITION to deeper blue ===== */}
-      <div style={{ background: 'rgb(10,0,180)' }}>
-        {/* ILCA Logo - white on blue */}
+      {/* ===== LIGHT BLUE TEXT SECTION with photos inside letters ===== */}
+      <div style={{
+        background: 'rgb(100,150,255)',
+        overflow: 'hidden',
+        position: 'relative',
+      }}>
+        <TextWithPhotos words={WORDS_TOP} photos={PHOTOS} />
+      </div>
+
+      {/* ===== BRIGHT BLUE SECTION: Photo + ILCA with parallax ===== */}
+      <div style={{
+        background: 'rgb(0,70,255)',
+        overflow: 'hidden',
+        position: 'relative',
+      }}>
+        {/* Sailing photo with parallax */}
+        <div style={{
+          maxWidth: 600,
+          margin: '0 auto',
+          padding: '50px 40px',
+          transform: `translateY(${scrollY * -0.15}px)`,
+          transition: 'transform 0.05s linear',
+        }}>
+          <div style={{
+            border: '6px solid rgb(0,70,255)',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+          }}>
+            <img
+              src={`${BASE}P1177244.jpeg`}
+              alt="Robby Meek sailing"
+              style={{
+                width: '100%',
+                display: 'block',
+                objectFit: 'cover',
+                maxHeight: 420,
+              }}
+            />
+          </div>
+        </div>
+
+        {/* ILCA Logo with parallax */}
         <div style={{
           textAlign: 'center',
-          padding: '60px 40px',
+          padding: '40px 40px 60px',
+          transform: `translateY(${scrollY * -0.1}px)`,
+          transition: 'transform 0.05s linear',
         }}>
           <img
             src={`${BASE}ilca-logo.png`}
             alt="ILCA"
             style={{
-              width: 'clamp(200px, 30vw, 380px)',
+              width: 'clamp(250px, 40vw, 500px)',
               filter: 'brightness(0) invert(1)',
-              opacity: 0.9,
             }}
           />
         </div>
+      </div>
 
-        {/* Second nav */}
+      {/* ===== SECOND TEXT SECTION with photos ===== */}
+      <div style={{
+        background: 'rgb(100,150,255)',
+        overflow: 'hidden',
+        position: 'relative',
+      }}>
+        <TextWithPhotos words={WORDS_BOTTOM} photos={[...PHOTOS].reverse()} />
+      </div>
+
+      {/* ===== BIO CONTENT on dark blue ===== */}
+      <div style={{ background: 'rgb(18,0,120)' }}>
         <Nav current="Biography" onNavigate={onNavigate} variant="blue" />
 
-        {/* Bio text */}
         <div style={{
           maxWidth: 850, margin: '0 auto', padding: '20px 40px 60px',
           color: 'rgba(255,255,255,0.85)', fontSize: 15, lineHeight: 1.7,
