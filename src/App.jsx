@@ -117,18 +117,19 @@ export default function App() {
   // Position logic
   const navPosition = navMode === 'static' ? 'relative' : 'absolute'
 
-  // Background logic
+  // Background + variant use TARGET location so they transition
+  // at the same time as the body background (no lagging color bar)
+  const targetMode = getNavMode(location.pathname)
   let navBg
-  if (navMode === 'hover') {
+  if (targetMode === 'hover') {
     navBg = 'transparent'
-  } else if (navMode === 'fixed') {
+  } else if (targetMode === 'fixed') {
     navBg = 'rgb(245,245,245)'
   } else {
-    navBg = BG_MAP[navPath] || 'transparent'
+    navBg = BG_MAP[location.pathname] || 'transparent'
   }
 
-  // Variant logic
-  const navVariant = VARIANT_MAP[navPath] || 'dark'
+  const navVariant = VARIANT_MAP[location.pathname] || 'dark'
 
   return (
     <div
@@ -151,7 +152,7 @@ export default function App() {
         pointerEvents: navVisible ? 'auto' : 'none',
       }}>
         <Nav
-          current={CURRENT_MAP[navPath] || 'Home'}
+          current={CURRENT_MAP[location.pathname] || 'Home'}
           onNavigate={go}
           variant={navVariant}
         />
