@@ -79,31 +79,17 @@ export default function Home({ onNavigate }) {
           </p>
         </div>
 
-        {/* Center - Sailboat + Support */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
-          <img
-            src={`${BASE}[0001-0250].gif`}
-            alt="Sailboat"
-            onClick={() => onNavigate('Landing')}
-            style={{
-              width: 180,
-              height: 180,
-              cursor: 'pointer',
-            }}
-          />
-          <button
-            onClick={() => onNavigate('Team')}
-            style={{
-              background: 'none',
-              border: '1px solid rgba(255,255,255,0.15)',
-              color: 'rgba(255,255,255,0.4)',
-              fontSize: 12, fontWeight: 400, letterSpacing: '-0.2px',
-              padding: '8px 22px', cursor: 'pointer',
-            }}
-          >
-            Support the Journey
-          </button>
-        </div>
+        {/* Center - Sailboat */}
+        <img
+          src={`${BASE}[0001-0250].gif`}
+          alt="Sailboat"
+          onClick={() => onNavigate('Landing')}
+          style={{
+            width: 180,
+            height: 180,
+            cursor: 'pointer',
+          }}
+        />
 
         {/* Biography - bottom */}
         <div style={{ textAlign: 'center', position: 'absolute', bottom: '15%' }}>
@@ -175,31 +161,18 @@ export default function Home({ onNavigate }) {
         </p>
       </div>
 
-      {/* Center - Sailboat + Support */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, flexShrink: 0 }}>
-        <img
-          src={`${BASE}[0001-0250].gif`}
-          alt="Sailboat"
-          onClick={() => onNavigate('Landing')}
-          style={{
-            width: 'clamp(120px, 16vw, 200px)',
-            height: 'clamp(120px, 16vw, 200px)',
-            cursor: 'pointer',
-          }}
-        />
-        <button
-          onClick={() => onNavigate('Team')}
-          style={{
-            background: 'none',
-            border: '1px solid rgba(255,255,255,0.15)',
-            color: 'rgba(255,255,255,0.4)',
-            fontSize: 12, fontWeight: 400, letterSpacing: '-0.2px',
-            padding: '8px 22px', cursor: 'pointer',
-          }}
-        >
-          Support the Journey
-        </button>
-      </div>
+      {/* Center - Sailboat */}
+      <img
+        src={`${BASE}[0001-0250].gif`}
+        alt="Sailboat"
+        onClick={() => onNavigate('Landing')}
+        style={{
+          width: 'clamp(120px, 16vw, 200px)',
+          height: 'clamp(120px, 16vw, 200px)',
+          cursor: 'pointer',
+          flexShrink: 0,
+        }}
+      />
 
       {/* Right - Biography */}
       <div style={{ textAlign: 'center', flexShrink: 0 }}>
