@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import Nav from '../components/Nav'
 import Footer from '../components/Footer'
 
@@ -32,11 +32,13 @@ const PRESS = [
 ]
 
 export default function Biography({ onNavigate }) {
-  const [scrollY, setScrollY] = useState(0)
   const [bgVisible, setBgVisible] = useState(false)
   const [contentVisible, setContentVisible] = useState(false)
   const [bannersVisible, setBannersVisible] = useState(false)
   const [bioVisible, setBioVisible] = useState(false)
+
+  const photoRef = useRef(null)
+  const ilcaRef = useRef(null)
 
   useEffect(() => {
     const t1 = setTimeout(() => setBgVisible(true), 100)
@@ -46,14 +48,22 @@ export default function Biography({ onNavigate }) {
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4) }
   }, [])
 
+  // Smooth scroll-driven parallax using rAF + refs (no React re-renders)
   useEffect(() => {
-    const onScroll = () => setScrollY(window.scrollY)
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    let rafId
+    const update = () => {
+      const y = window.scrollY
+      if (photoRef.current) {
+        photoRef.current.style.transform = `translateY(-${y * 0.35}px)`
+      }
+      if (ilcaRef.current) {
+        ilcaRef.current.style.transform = `translateY(-${y * 0.18}px)`
+      }
+      rafId = requestAnimationFrame(update)
+    }
+    rafId = requestAnimationFrame(update)
+    return () => cancelAnimationFrame(rafId)
   }, [])
-
-  const photoOffset = scrollY * 0.35
-  const ilcaOffset = scrollY * 0.18
 
   return (
     <div style={{ background: 'rgb(18,0,120)', minHeight: '100vh' }}>
@@ -133,12 +143,11 @@ export default function Biography({ onNavigate }) {
         }} />
 
         {/* Photo banner - scrolls slightly faster */}
-        <div style={{
+        <div ref={photoRef} style={{
           background: 'rgb(0,70,255)',
           position: 'relative',
-          transform: `translateY(-${photoOffset}px) scale(${bannersVisible ? 1 : 0.97})`,
           opacity: bannersVisible ? 1 : 0,
-          transition: 'opacity 0.7s ease, transform 0.7s ease',
+          transition: 'opacity 0.7s ease',
           willChange: 'transform',
         }}>
           <div style={{
@@ -163,12 +172,11 @@ export default function Biography({ onNavigate }) {
         <div style={{ height: 60 }} />
 
         {/* ILCA banner - scrolls slightly slower than photo */}
-        <div style={{
+        <div ref={ilcaRef} style={{
           background: 'rgb(0,70,255)',
           position: 'relative',
-          transform: `translateY(-${ilcaOffset}px) scale(${bannersVisible ? 1 : 0.97})`,
           opacity: bannersVisible ? 1 : 0,
-          transition: 'opacity 0.7s ease 0.15s, transform 0.7s ease 0.15s',
+          transition: 'opacity 0.7s ease 0.15s',
           willChange: 'transform',
         }}>
           <div style={{
