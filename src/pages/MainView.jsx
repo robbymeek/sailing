@@ -56,32 +56,49 @@ export default function MainView({ onNavigate }) {
     }, 1200)
   }, [mode, transitioning, routerNavigate])
 
-  // Scroll detection on dark home page: scroll down → landing, scroll up → contact
+  // Scroll-driven text movement on dark home page
+  const [scrollProgress, setScrollProgress] = useState(0) // -1 to 1, 0 = neutral
+
   useEffect(() => {
     if (mode !== 'home' || transitioning) return
 
     let accumulated = 0
-    const threshold = 80
+    const maxScroll = 300 // pixels of scroll to fully move text off screen
+    let triggered = false
 
     const onWheel = (e) => {
-      if (transitioning) return
+      if (triggered || transitioning) return
       accumulated += e.deltaY
+      accumulated = Math.max(-maxScroll, Math.min(maxScroll, accumulated))
 
-      if (accumulated > threshold) {
-        accumulated = 0
+      const progress = accumulated / maxScroll // -1 to 1
+      setScrollProgress(progress)
+
+      // Trigger navigation when text fully exits
+      if (progress >= 1) {
+        triggered = true
         handleToggle()
-      } else if (accumulated < -threshold) {
-        accumulated = 0
-        setTextVisible(false)
-        setTimeout(() => onNavigate('Contact'), 400)
+      } else if (progress <= -1) {
+        triggered = true
+        onNavigate('Contact')
       }
-
-      // Decay toward zero
-      setTimeout(() => { accumulated *= 0.5 }, 200)
     }
 
+    // Snap back if user stops scrolling partway
+    const snapBack = setInterval(() => {
+      if (triggered) return
+      if (Math.abs(accumulated) > 0 && Math.abs(accumulated) < maxScroll * 0.9) {
+        accumulated *= 0.92
+        if (Math.abs(accumulated) < 5) accumulated = 0
+        setScrollProgress(accumulated / maxScroll)
+      }
+    }, 50)
+
     window.addEventListener('wheel', onWheel, { passive: true })
-    return () => window.removeEventListener('wheel', onWheel)
+    return () => {
+      window.removeEventListener('wheel', onWheel)
+      clearInterval(snapBack)
+    }
   }, [mode, transitioning, handleToggle, onNavigate])
 
   // Countdown + clock
@@ -131,6 +148,27 @@ export default function MainView({ onNavigate }) {
     transform: textVisible ? 'translateY(0)' : 'translateY(8px)',
     transition: 'opacity 0.5s ease, transform 0.5s ease',
   }
+
+  // Scroll-driven text movement for dark home mode
+  // scrollProgress: -1 (scrolled up fully) to 1 (scrolled down fully)
+  const absProgress = Math.abs(scrollProgress)
+  const scrollDir = scrollProgress > 0 ? 1 : -1
+  const scrollTextOffset = scrollProgress * 150 // px to move text
+  const scrollTextOpacity = Math.max(0, 1 - absProgress * 1.5)
+
+  // Left text (or top in portrait) — moves with scroll direction
+  const leftScrollStyle = inHome && absProgress > 0.02 ? {
+    opacity: scrollTextOpacity,
+    transform: `translateY(${scrollTextOffset}px)`,
+    transition: 'none',
+  } : textFade
+
+  // Right text (or bottom in portrait) — moves with scroll direction
+  const rightScrollStyle = inHome && absProgress > 0.02 ? {
+    opacity: scrollTextOpacity,
+    transform: `translateY(${scrollTextOffset}px)`,
+    transition: 'none',
+  } : textFade
 
   // The boat: both GIFs stacked, cross-fade between them
   const darkGif = `${BASE}[0001-0250].gif`
@@ -235,7 +273,7 @@ export default function MainView({ onNavigate }) {
           transition: 'background 0.7s ease',
         }}
       >
-        <div style={{ textAlign: 'center', position: 'absolute', top: '15%', ...textFade }}>
+        <div style={{ textAlign: 'center', position: 'absolute', top: '15%', ...leftScrollStyle }}>
           <button
             onClick={() => onNavigate('Event Calendar')}
             style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center' }}
@@ -256,7 +294,7 @@ export default function MainView({ onNavigate }) {
 
         {boatEl}
 
-        <div style={{ textAlign: 'center', position: 'absolute', bottom: '15%', ...textFade }}>
+        <div style={{ textAlign: 'center', position: 'absolute', bottom: '15%', ...rightScrollStyle }}>
           <button
             onClick={() => onNavigate('Biography')}
             style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center' }}
@@ -293,7 +331,7 @@ export default function MainView({ onNavigate }) {
         transition: 'background 0.7s ease',
       }}
     >
-      <div style={{ textAlign: 'center', flexShrink: 0, ...textFade }}>
+      <div style={{ textAlign: 'center', flexShrink: 0, ...leftScrollStyle }}>
         <button
           onClick={() => onNavigate('Event Calendar')}
           style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center' }}
@@ -314,7 +352,7 @@ export default function MainView({ onNavigate }) {
 
       {boatEl}
 
-      <div style={{ textAlign: 'center', flexShrink: 0, ...textFade }}>
+      <div style={{ textAlign: 'center', flexShrink: 0, ...rightScrollStyle }}>
         <button
           onClick={() => onNavigate('Biography')}
           style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center' }}
