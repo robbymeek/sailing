@@ -180,7 +180,7 @@ export default function MainView({ onNavigate }) {
     return (
       <div style={{
         background: bg,
-        height: '100vh',
+        height: '100dvh',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -188,8 +188,6 @@ export default function MainView({ onNavigate }) {
         overflow: 'hidden',
         transition: 'background 0.7s ease',
       }}>
-        {/* Spacer for nav handled by App.jsx */}
-
         <div style={{
           flex: 1, display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center', gap: 28,
@@ -225,7 +223,7 @@ export default function MainView({ onNavigate }) {
       <div
         style={{
           background: bg,
-          height: '100vh',
+          height: '100dvh',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -283,7 +281,7 @@ export default function MainView({ onNavigate }) {
     <div
       style={{
         background: bg,
-        height: '100vh',
+        height: '100dvh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',

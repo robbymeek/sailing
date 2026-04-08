@@ -95,7 +95,7 @@ export default function App() {
     >
       {/* Single persistent Nav - never unmounts */}
       <div style={{
-        position: isDarkHome ? 'absolute' : 'relative',
+        position: (isDarkHome || isLandingPage) ? 'absolute' : 'relative',
         top: 0, left: 0, right: 0,
         zIndex: 50,
         background: isDarkHome ? 'transparent' : (isLandingPage ? 'rgb(245,245,245)' : (BG_MAP[location.pathname] || 'transparent')),
