@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import useCountdown from '../hooks/useCountdown'
-import Nav from '../components/Nav'
 
 const BASE = import.meta.env.BASE_URL
 const BOAT_SIZE = 180
@@ -82,8 +81,6 @@ export default function MainView({ onNavigate }) {
     return () => window.removeEventListener('resize', h)
   }, [])
 
-  // Start nav visible if mouse is already near the top (coming from inner page)
-  const [showNav, setShowNav] = useState(typeof window !== 'undefined' && window._lastMouseY < 80)
 
   // Colors
   const inHome = mode === 'home'
@@ -224,8 +221,6 @@ export default function MainView({ onNavigate }) {
   if (portrait) {
     return (
       <div
-        onMouseMove={(e) => setShowNav(e.clientY < 80)}
-        onMouseLeave={() => setShowNav(false)}
         style={{
           background: bg,
           height: '100vh',
@@ -238,16 +233,6 @@ export default function MainView({ onNavigate }) {
           transition: 'background 0.7s ease',
         }}
       >
-        <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
-          opacity: showNav ? 1 : 0,
-          transform: showNav ? 'translateY(0)' : 'translateY(-10px)',
-          transition: 'opacity 0.3s ease, transform 0.3s ease',
-          pointerEvents: showNav ? 'auto' : 'none',
-        }}>
-          <Nav current="Home" onNavigate={onNavigate} />
-        </div>
-
         <div style={{ textAlign: 'center', position: 'absolute', top: '15%', ...textFade }}>
           <button
             onClick={() => onNavigate('Event Calendar')}
@@ -294,8 +279,6 @@ export default function MainView({ onNavigate }) {
   // Home landscape
   return (
     <div
-      onMouseMove={(e) => setShowNav(e.clientY < 80)}
-      onMouseLeave={() => setShowNav(false)}
       style={{
         background: bg,
         height: '100vh',
@@ -308,16 +291,6 @@ export default function MainView({ onNavigate }) {
         transition: 'background 0.7s ease',
       }}
     >
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
-        opacity: showNav ? 1 : 0,
-        transform: showNav ? 'translateY(0)' : 'translateY(-10px)',
-        transition: 'opacity 0.3s ease, transform 0.3s ease',
-        pointerEvents: showNav ? 'auto' : 'none',
-      }}>
-        <Nav current="Home" onNavigate={onNavigate} />
-      </div>
-
       <div style={{ textAlign: 'center', flexShrink: 0, ...textFade }}>
         <button
           onClick={() => onNavigate('Event Calendar')}

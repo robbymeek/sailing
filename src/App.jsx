@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import Nav from './components/Nav'
 import MainView from './pages/MainView'
@@ -35,7 +35,6 @@ const CURRENT_MAP = {
 export default function App() {
   const navigate = useNavigate()
   const location = useLocation()
-  const mouseY = useRef(0)
 
   const go = (page) => {
     const routes = {
@@ -48,13 +47,6 @@ export default function App() {
     }
     navigate(routes[page] || '/')
   }
-
-  // Track mouse position globally
-  useEffect(() => {
-    const handler = (e) => { mouseY.current = e.clientY; window._lastMouseY = e.clientY }
-    window.addEventListener('mousemove', handler, { passive: true })
-    return () => window.removeEventListener('mousemove', handler)
-  }, [])
 
   // Exit/enter animation state
   const [displayLocation, setDisplayLocation] = useState(location)
@@ -87,28 +79,36 @@ export default function App() {
     document.body.style.transition = 'background 0.4s ease'
   }, [location.pathname])
 
-  const isTargetHome = location.pathname === '/' || location.pathname === '/landing'
+  // Is the TARGET an inner page or home?
+  const isHome = location.pathname === '/' || location.pathname === '/landing'
+  const isLanding = location.pathname === '/landing'
 
-  // Determine nav visibility: on inner pages always show,
-  // on home pages completely hidden (MainView manages its own)
-  const navVisible = !isTargetHome && transitionStage !== 'exiting'
+  // Hover-reveal state for Home page nav
+  const [hoverNav, setHoverNav] = useState(false)
+
+  // On inner pages: always visible. On home: hover-reveal. On landing: hidden (has own nav).
+  const navVisible = isLanding ? false : (isHome ? hoverNav : true)
 
   return (
-    <div>
-      {/* Persistent Nav - always mounted, fades in/out */}
+    <div
+      onMouseMove={(e) => { if (isHome) setHoverNav(e.clientY < 80) }}
+      onMouseLeave={() => { if (isHome) setHoverNav(false) }}
+    >
+      {/* Single persistent Nav - never unmounts */}
       <div style={{
-        position: 'relative', zIndex: 50,
-        background: BG_MAP[location.pathname] || 'transparent',
-        transition: 'background 0.4s ease, opacity 0.2s ease, max-height 0.2s ease',
+        position: isHome ? 'absolute' : 'relative',
+        top: 0, left: 0, right: 0,
+        zIndex: 50,
+        background: isHome ? 'transparent' : (BG_MAP[location.pathname] || 'transparent'),
         opacity: navVisible ? 1 : 0,
-        maxHeight: navVisible ? 100 : 0,
-        overflow: 'hidden',
+        transform: navVisible ? 'translateY(0)' : 'translateY(-10px)',
+        transition: 'opacity 0.3s ease, transform 0.3s ease, background 0.4s ease',
         pointerEvents: navVisible ? 'auto' : 'none',
       }}>
         <Nav
           current={CURRENT_MAP[location.pathname] || 'Home'}
           onNavigate={go}
-          variant={VARIANT_MAP[location.pathname] || 'dark'}
+          variant={isHome ? 'dark' : (VARIANT_MAP[location.pathname] || 'dark')}
         />
       </div>
 
