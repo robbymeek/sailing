@@ -9,7 +9,7 @@ import Contact from './pages/Contact'
 
 const BG_MAP = {
   '/': 'rgb(19,23,31)',
-  '/landing': 'rgb(19,23,31)',
+  '/landing': 'rgb(245,245,245)',
   '/biography': 'rgb(18,0,120)',
   '/event-calendar': 'rgb(0,0,0)',
   '/team': 'rgb(18,0,120)',
@@ -98,7 +98,7 @@ export default function App() {
         position: isDarkHome ? 'absolute' : 'relative',
         top: 0, left: 0, right: 0,
         zIndex: 50,
-        background: isDarkHome ? 'transparent' : (isLandingPage ? 'transparent' : (BG_MAP[location.pathname] || 'transparent')),
+        background: isDarkHome ? 'transparent' : (isLandingPage ? 'rgb(245,245,245)' : (BG_MAP[location.pathname] || 'transparent')),
         opacity: navVisible ? 1 : 0,
         transform: navVisible ? 'translateY(0)' : 'translateY(-10px)',
         transition: 'opacity 0.3s ease, transform 0.3s ease, background 0.4s ease',
