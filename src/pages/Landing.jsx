@@ -20,6 +20,7 @@ export default function Landing({ onNavigate }) {
 
   const textDim = dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)'
   const textNav = dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)'
+  const divider = dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'
   const gif = dark ? `${BASE}[0001-0250].gif` : `${BASE}[0001-0240].gif`
 
   return (
@@ -58,8 +59,11 @@ export default function Landing({ onNavigate }) {
         ))}
       </nav>
 
-      {/* Center - just the sailboat */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {/* Center - sailboat + Join the Team */}
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: 28,
+      }}>
         <img
           src={gif}
           alt="Sailboat"
@@ -70,6 +74,19 @@ export default function Landing({ onNavigate }) {
             cursor: 'pointer',
           }}
         />
+        <button
+          onClick={() => onNavigate('Team')}
+          style={{
+            background: 'none',
+            border: `1px solid ${divider}`,
+            color: textDim,
+            fontSize: 13, fontWeight: 400, letterSpacing: '-0.2px',
+            padding: '10px 28px', cursor: 'pointer',
+            transition: 'color 0.5s ease, border-color 0.5s ease',
+          }}
+        >
+          Join the Team
+        </button>
       </div>
 
       {/* Footer */}

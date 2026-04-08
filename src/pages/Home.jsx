@@ -46,8 +46,7 @@ export default function Home({ onNavigate }) {
           justifyContent: 'center',
           overflow: 'hidden',
           position: 'relative',
-          boxShadow: 'inset 0 0 120px 20px rgba(120,60,20,0.15), inset 0 0 60px 10px rgba(80,30,10,0.1)',
-        }}
+          }}
       >
         {/* Nav - appears on hover */}
         <div style={{
@@ -143,7 +142,6 @@ export default function Home({ onNavigate }) {
         overflow: 'hidden',
         position: 'relative',
         padding: '0 clamp(20px, 5vw, 80px)',
-        boxShadow: 'inset 0 0 120px 20px rgba(120,60,20,0.15), inset 0 0 60px 10px rgba(80,30,10,0.1)',
       }}
     >
       {/* Nav - appears on hover near top */}

@@ -11,8 +11,8 @@ export default function App() {
 
   const go = (page) => {
     const routes = {
-      'Landing': '/',
-      'Home': '/home',
+      'Home': '/',
+      'Landing': '/landing',
       'Biography': '/biography',
       'Event Calendar': '/event-calendar',
       'Team': '/team',
@@ -24,8 +24,8 @@ export default function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<Landing onNavigate={go} />} />
-      <Route path="/home" element={<Home onNavigate={go} />} />
+      <Route path="/" element={<Home onNavigate={go} />} />
+      <Route path="/landing" element={<Landing onNavigate={go} />} />
       <Route path="/biography" element={<Biography onNavigate={go} />} />
       <Route path="/event-calendar" element={<EventCalendar onNavigate={go} />} />
       <Route path="/team" element={<Team onNavigate={go} />} />
