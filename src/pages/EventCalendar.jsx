@@ -5,18 +5,17 @@ import useCountdown from '../hooks/useCountdown'
 
 const EVENTS = [
   {
-    n: 'Upcoming: European Championships (July)',
-    d: 'July 2026',
+    n: 'Upcoming: ILCA 7 European Championships',
+    d: 'August 2026',
     upcoming: true,
-    summary: 'The ILCA European Championships bring together the top sailors from across Europe and beyond. A critical event for Olympic qualification points and fleet racing experience at the highest level.',
-    url: 'https://www.ilca-class.org',
+    summary: 'The ILCA 7 Senior European Championships bring together the top sailors from across Europe and beyond. A critical event for fleet racing experience at the highest international level.',
+    url: 'https://eurilca.org/',
   },
   {
-    n: 'Upcoming: Midwinters Easy (Feb)',
-    d: 'February 2026',
-    upcoming: true,
-    summary: 'Annual winter regatta held in warm waters, providing essential training and competitive racing during the off-season. A staple event for ILCA sailors on the East Coast.',
-    url: 'https://www.clearwatersailing.com',
+    n: 'Past: Trofeo Princesa Sofia — Palma',
+    d: 'March 2026',
+    summary: 'The 55th Trofeo Princesa Sofia in Palma de Mallorca, opening the 2026 Sailing Grand Slam season. One of the largest ILCA 7 fleets of the year with sailors from across all continents racing on the Bay of Palma.',
+    url: 'https://www.trofeoprincesasofia.org/en/default/races/race',
   },
   {
     n: 'Past: Miami Training Block',
@@ -26,13 +25,14 @@ const EVENTS = [
   {
     n: 'Past: Vilamoura Grand-Prix',
     d: 'November 2025',
-    summary: 'International grand-prix regatta in Vilamoura, Portugal. A high-level European fleet racing event with strong Atlantic Ocean conditions.',
-    url: 'https://www.vilamoura-sailing.com',
+    summary: 'International ILCA 7 grand-prix regatta in Vilamoura, Portugal. A high-level European fleet racing event with strong Atlantic Ocean conditions.',
+    url: 'https://www.vilamourasailing.com/events',
   },
   {
-    n: 'Past: College Single-handed National Championship',
+    n: 'Past: College Single-Handed National Championship \u{1F947}',
     d: 'November 2025',
-    summary: 'The premier college single-handed sailing championship. Won the national title representing Harvard in the ILCA fleet.',
+    summary: 'The ICSA College Singlehanded National Championship hosted by Old Dominion University. Won the Open National Championship title representing Harvard.',
+    url: 'https://collegesailing.org/championships/national-championships',
   },
   {
     n: 'Past: Miami Training',
@@ -40,26 +40,27 @@ const EVENTS = [
     summary: 'Continuation of Miami-based training with focus on starts, upwind speed, and tactical decision-making in shifty bay conditions.',
   },
   {
-    n: 'Past: European Championship',
+    n: 'Past: ILCA 7 European Championship (\u{1F947} Top American)',
     d: 'August 2025',
-    summary: 'Competed at the ILCA 7 European Championship. Finished as the top American in a fleet of over 200 sailors from across the continent.',
-    url: 'https://www.ilca-class.org',
+    summary: 'The ILCA 7 Senior European Championships in Marstrand, Sweden. Finished as the top American in a fleet of over 200 sailors from across the continent.',
+    url: 'https://eurilca.org/2025-ilca-senior-european-championships-final-results/',
   },
   {
     n: 'Past: Long Beach Olympic Classes',
     d: 'July 2025',
-    summary: 'Olympic classes regatta on the 2028 Olympic venue waters in Long Beach, California. Critical for learning the local conditions ahead of LA 2028.',
+    summary: 'ILCA 7 Olympic classes regatta on the 2028 Olympic venue waters in Long Beach, California. Critical for learning the local conditions ahead of LA 2028.',
   },
   {
     n: 'Past: Kiel Week',
     d: 'June 2025',
-    summary: 'One of the world\'s largest and most prestigious sailing events, held annually in Kiel, Germany. Features world-class competition across all Olympic classes.',
-    url: 'https://www.kieler-woche.de',
+    summary: 'One of the world\'s largest and most prestigious sailing events, held annually in Kiel, Germany. Raced in the ILCA 7 fleet alongside world-class competition across all Olympic classes.',
+    url: 'https://www.kieler-woche.de/en/sailing.php',
   },
   {
-    n: 'Past: North American Championship',
+    n: 'Past: ILCA 7 North American Championship \u{1F947}',
     d: 'June 2025',
-    summary: 'The ILCA North American Championship. Won the title of top North American sailor against a competitive continental fleet.',
+    summary: 'The ILCA 7 North American Championship hosted by Alamitos Bay Yacht Club. Won the title of top North American in the 45-boat ILCA 7 fleet.',
+    url: 'https://ilcanasailing.org/major-regattas',
   },
   {
     n: 'Past: LA Training',
