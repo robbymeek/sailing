@@ -79,25 +79,26 @@ export default function App() {
     document.body.style.transition = 'background 0.4s ease'
   }, [location.pathname])
 
-  const isHomePage = location.pathname === '/' || location.pathname === '/landing'
+  const isDarkHome = location.pathname === '/'
+  const isLandingPage = location.pathname === '/landing'
 
-  // Hover-reveal state for home pages
+  // Hover-reveal state only for dark home
   const [hoverNav, setHoverNav] = useState(false)
 
-  // On inner pages: always visible. On home/landing: hover-reveal.
-  const navVisible = isHomePage ? hoverNav : true
+  // Dark home: hover-reveal. Landing + inner pages: always visible.
+  const navVisible = isDarkHome ? hoverNav : true
 
   return (
     <div
-      onMouseMove={(e) => { if (isHomePage) setHoverNav(e.clientY < 80) }}
-      onMouseLeave={() => { if (isHomePage) setHoverNav(false) }}
+      onMouseMove={(e) => { if (isDarkHome) setHoverNav(e.clientY < 80) }}
+      onMouseLeave={() => { if (isDarkHome) setHoverNav(false) }}
     >
       {/* Single persistent Nav - never unmounts */}
       <div style={{
-        position: isHomePage ? 'absolute' : 'relative',
+        position: isDarkHome ? 'absolute' : 'relative',
         top: 0, left: 0, right: 0,
         zIndex: 50,
-        background: isHomePage ? 'transparent' : (BG_MAP[location.pathname] || 'transparent'),
+        background: isDarkHome ? 'transparent' : (isLandingPage ? 'transparent' : (BG_MAP[location.pathname] || 'transparent')),
         opacity: navVisible ? 1 : 0,
         transform: navVisible ? 'translateY(0)' : 'translateY(-10px)',
         transition: 'opacity 0.3s ease, transform 0.3s ease, background 0.4s ease',
@@ -106,7 +107,7 @@ export default function App() {
         <Nav
           current={CURRENT_MAP[location.pathname] || 'Home'}
           onNavigate={go}
-          variant={isHomePage ? (location.pathname === '/landing' ? 'light' : 'dark') : (VARIANT_MAP[location.pathname] || 'dark')}
+          variant={isLandingPage ? 'light' : (isDarkHome ? 'dark' : (VARIANT_MAP[location.pathname] || 'dark'))}
         />
       </div>
 

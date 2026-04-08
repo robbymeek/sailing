@@ -41,21 +41,46 @@ export default function MainView({ onNavigate }) {
     setTransitioning(true)
     setTextVisible(false)
 
-    // After text fades out, swap mode (cross-fade GIFs + bg)
     setTimeout(() => {
       const newMode = mode === 'home' ? 'landing' : 'home'
       setMode(newMode)
-      // Update route without remounting
       const newPath = newMode === 'home' ? '/' : '/landing'
       window.history.replaceState(null, '', `${BASE.replace(/\/$/, '')}${newPath}`)
     }, 500)
 
-    // After GIF cross-fade, fade text in
     setTimeout(() => {
       setTextVisible(true)
       setTransitioning(false)
     }, 1200)
   }, [mode, transitioning])
+
+  // Scroll detection on dark home page: scroll down → landing, scroll up → contact
+  useEffect(() => {
+    if (mode !== 'home' || transitioning) return
+
+    let accumulated = 0
+    const threshold = 80
+
+    const onWheel = (e) => {
+      if (transitioning) return
+      accumulated += e.deltaY
+
+      if (accumulated > threshold) {
+        accumulated = 0
+        handleToggle()
+      } else if (accumulated < -threshold) {
+        accumulated = 0
+        setTextVisible(false)
+        setTimeout(() => onNavigate('Contact'), 400)
+      }
+
+      // Decay toward zero
+      setTimeout(() => { accumulated *= 0.5 }, 200)
+    }
+
+    window.addEventListener('wheel', onWheel, { passive: true })
+    return () => window.removeEventListener('wheel', onWheel)
+  }, [mode, transitioning, handleToggle, onNavigate])
 
   // Countdown + clock
   const target = new Date('2028-07-14T00:00:00')
@@ -163,8 +188,7 @@ export default function MainView({ onNavigate }) {
         overflow: 'hidden',
         transition: 'background 0.7s ease',
       }}>
-        {/* Nav handled by App.jsx */}
-        <div style={{ height: 60 }} />
+        {/* Spacer for nav handled by App.jsx */}
 
         <div style={{
           flex: 1, display: 'flex', flexDirection: 'column',
