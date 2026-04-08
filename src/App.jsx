@@ -17,6 +17,8 @@ const BG_MAP = {
 }
 
 const VARIANT_MAP = {
+  '/': 'dark',
+  '/landing': 'light',
   '/biography': 'blue',
   '/event-calendar': 'dark',
   '/team': 'blue',
@@ -30,6 +32,13 @@ const CURRENT_MAP = {
   '/event-calendar': 'Event Calendar',
   '/team': 'Team',
   '/contact': 'Contact',
+}
+
+// Nav behavior per route
+function getNavMode(pathname) {
+  if (pathname === '/') return 'hover'       // dark home: hover-reveal
+  if (pathname === '/landing') return 'fixed' // landing: always visible, absolute
+  return 'static'                             // inner pages: always visible, in flow
 }
 
 export default function App() {
@@ -79,42 +88,70 @@ export default function App() {
     document.body.style.transition = 'background 0.4s ease'
   }, [location.pathname])
 
-  const isDarkHome = location.pathname === '/'
-  const isLandingPage = location.pathname === '/landing'
+  // During exit: use the DISPLAY location for nav behavior (what's still showing)
+  // After enter: use the TARGET location
+  const isExiting = transitionStage === 'exiting'
+  const navPath = isExiting ? displayLocation.pathname : location.pathname
+  const navMode = getNavMode(navPath)
 
-  // Hover-reveal state only for dark home
+  // Hover state for dark home
   const [hoverNav, setHoverNav] = useState(false)
 
-  // Dark home: hover-reveal. Landing + inner pages: always visible.
-  const navVisible = isDarkHome ? hoverNav : true
+  // Visibility logic
+  let navVisible
+  if (navMode === 'hover') {
+    navVisible = hoverNav
+  } else {
+    navVisible = true
+  }
+
+  // Position logic
+  const navPosition = navMode === 'static' ? 'relative' : 'absolute'
+
+  // Background logic
+  let navBg
+  if (navMode === 'hover') {
+    navBg = 'transparent'
+  } else if (navMode === 'fixed') {
+    navBg = 'rgb(245,245,245)'
+  } else {
+    navBg = BG_MAP[navPath] || 'transparent'
+  }
+
+  // Variant logic
+  const navVariant = VARIANT_MAP[navPath] || 'dark'
 
   return (
     <div
-      onMouseMove={(e) => { if (isDarkHome) setHoverNav(e.clientY < 80) }}
-      onMouseLeave={() => { if (isDarkHome) setHoverNav(false) }}
+      onMouseMove={(e) => {
+        if (getNavMode(location.pathname) === 'hover') setHoverNav(e.clientY < 80)
+      }}
+      onMouseLeave={() => {
+        if (getNavMode(location.pathname) === 'hover') setHoverNav(false)
+      }}
     >
       {/* Single persistent Nav - never unmounts */}
       <div style={{
-        position: (isDarkHome || isLandingPage) ? 'absolute' : 'relative',
+        position: navPosition,
         top: 0, left: 0, right: 0,
         zIndex: 50,
-        background: isDarkHome ? 'transparent' : (isLandingPage ? 'rgb(245,245,245)' : (BG_MAP[location.pathname] || 'transparent')),
+        background: navBg,
         opacity: navVisible ? 1 : 0,
         transform: navVisible ? 'translateY(0)' : 'translateY(-10px)',
-        transition: 'opacity 0.3s ease, transform 0.3s ease, background 0.4s ease',
+        transition: 'opacity 0.3s ease, transform 0.3s ease, background 0.3s ease',
         pointerEvents: navVisible ? 'auto' : 'none',
       }}>
         <Nav
-          current={CURRENT_MAP[location.pathname] || 'Home'}
+          current={CURRENT_MAP[navPath] || 'Home'}
           onNavigate={go}
-          variant={isLandingPage ? 'light' : (isDarkHome ? 'dark' : (VARIANT_MAP[location.pathname] || 'dark'))}
+          variant={navVariant}
         />
       </div>
 
       {/* Content area with exit animation */}
       <div
         style={{
-          opacity: transitionStage === 'exiting' ? 0 : 1,
+          opacity: isExiting ? 0 : 1,
           transition: 'opacity 0.3s ease',
         }}
         onTransitionEnd={handleExitComplete}
