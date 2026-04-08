@@ -5,10 +5,17 @@ import useCountdown from '../hooks/useCountdown'
 
 const EVENTS = [
   {
-    n: 'Upcoming: ILCA 7 European Championships',
+    n: 'Upcoming: ILCA 7 Senior World Championship',
     d: 'August 2026',
     upcoming: true,
-    summary: 'The ILCA 7 Senior European Championships bring together the top sailors from across Europe and beyond. A critical event for fleet racing experience at the highest international level.',
+    summary: 'The ILCA 7 Senior World Championship in Ireland. The pinnacle event of the ILCA 7 calendar, bringing together the best sailors in the world to compete for the world title.',
+    url: 'https://ilcasailing.org/',
+  },
+  {
+    n: 'Upcoming: ILCA 7 European Championships',
+    d: 'May 2026',
+    upcoming: true,
+    summary: 'The ILCA 7 Senior European Championships in Split, Croatia. A critical event for fleet racing experience at the highest international level, bringing together top sailors from across Europe and beyond.',
     url: 'https://eurilca.org/',
   },
   {
