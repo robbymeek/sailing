@@ -122,7 +122,7 @@ export default function MainView({ onNavigate }) {
         position: 'relative', cursor: 'pointer', flexShrink: 0,
       }}
     >
-      {/* Dark boat is the reference frame */}
+      {/* Dark boat: scaled up slightly to match light boat size */}
       <img
         src={darkGif}
         alt="Sailboat dark"
@@ -131,9 +131,11 @@ export default function MainView({ onNavigate }) {
           width: '100%', height: '100%',
           opacity: showDarkGif ? 1 : 0,
           transition: 'opacity 0.7s ease',
+          transform: 'scale(1.12) translate(-1%, -3%)',
+          transformOrigin: 'center center',
         }}
       />
-      {/* Light boat: scaled and offset to align hull with dark boat */}
+      {/* Light boat: slight offset to align hull */}
       <img
         src={lightGif}
         alt="Sailboat light"
@@ -143,7 +145,7 @@ export default function MainView({ onNavigate }) {
           width: '100%', height: '100%',
           opacity: showDarkGif ? 0 : 1,
           transition: 'opacity 0.7s ease',
-          transform: 'scale(0.82) translate(6%, 8%)',
+          transform: 'scale(0.92) translate(4%, 5%)',
           transformOrigin: 'center center',
         }}
       />

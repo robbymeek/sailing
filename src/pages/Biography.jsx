@@ -109,12 +109,6 @@ export default function Biography({ onNavigate }) {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // The text section is 100vh. The blue banner starts below it.
-  // We want the blue banner (photo + ILCA) to scroll faster, so it
-  // overlaps and slides over the text section as you scroll.
-  const textHeight = typeof window !== 'undefined' ? window.innerHeight : 800
-  const parallaxOffset = scrollY * 0.4 // moves 40% faster
-
   return (
     <div style={{ background: 'rgb(18,0,120)', minHeight: '100vh' }}>
       {/* ===== DARK NAVY HEADER ===== */}
@@ -131,21 +125,18 @@ export default function Biography({ onNavigate }) {
         <TextWithPhotos words={WORDS} photos={PHOTOS} height={`calc(100vh - 60px)`} />
       </div>
 
-      {/* ===== BLUE BANNER: Photo scrolls fastest, ILCA follows ===== */}
+      {/* ===== PHOTO BANNER - scrolls fastest ===== */}
       <div style={{
         background: 'rgb(0,70,255)',
         position: 'relative',
         zIndex: 3,
-        transform: `translateY(-${parallaxOffset}px)`,
+        transform: `translateY(-${scrollY * 0.5}px)`,
         willChange: 'transform',
       }}>
-        {/* Sailing photo - moves even faster within the banner */}
         <div style={{
           maxWidth: 600,
           margin: '0 auto',
           padding: '50px 40px',
-          transform: `translateY(-${scrollY * 0.15}px)`,
-          willChange: 'transform',
         }}>
           <img
             src={`${BASE}IMG_5957 2.JPG`}
@@ -155,15 +146,25 @@ export default function Biography({ onNavigate }) {
               display: 'block',
               objectFit: 'cover',
               maxHeight: 420,
-              borderRadius: 4,
             }}
           />
         </div>
+      </div>
 
-        {/* ILCA Logo - stays with banner speed */}
+      {/* ===== GAP - text/photos visible between banners ===== */}
+      <div style={{ height: 80, position: 'relative', zIndex: 1 }} />
+
+      {/* ===== ILCA BANNER - scrolls slightly slower than photo ===== */}
+      <div style={{
+        background: 'rgb(0,70,255)',
+        position: 'relative',
+        zIndex: 3,
+        transform: `translateY(-${scrollY * 0.35}px)`,
+        willChange: 'transform',
+      }}>
         <div style={{
           textAlign: 'center',
-          padding: '40px 40px 60px',
+          padding: '50px 40px',
         }}>
           <img
             src={`${BASE}ilca-logo.png`}
@@ -181,7 +182,7 @@ export default function Biography({ onNavigate }) {
         background: 'rgb(100,150,255)',
         position: 'relative',
         zIndex: 2,
-        transform: `translateY(-${parallaxOffset}px)`,
+        transform: `translateY(-${scrollY * 0.35}px)`,
         willChange: 'transform',
       }}>
         <TextWithPhotos words={WORDS_BOTTOM} photos={[...PHOTOS].reverse()} height={400} />
@@ -192,7 +193,7 @@ export default function Biography({ onNavigate }) {
         background: 'rgb(18,0,120)',
         position: 'relative',
         zIndex: 4,
-        transform: `translateY(-${parallaxOffset}px)`,
+        transform: `translateY(-${scrollY * 0.35}px)`,
         willChange: 'transform',
       }}>
         <Nav current="Biography" onNavigate={onNavigate} variant="blue" />

@@ -14,9 +14,7 @@ export default function Contact({ onNavigate }) {
       flexDirection: 'column',
     }}>
       {/* Background photo */}
-      <div style={{
-        position: 'fixed', inset: 0, zIndex: 0,
-      }}>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0 }}>
         <img
           src={`${BASE}P1177244.jpeg`}
           alt=""
@@ -25,7 +23,6 @@ export default function Contact({ onNavigate }) {
             objectFit: 'cover', objectPosition: 'center 40%',
           }}
         />
-        {/* Blue overlay */}
         <div style={{
           position: 'absolute', inset: 0,
           background: 'rgba(10,20,80,0.75)',
@@ -40,36 +37,32 @@ export default function Contact({ onNavigate }) {
         <div style={{
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
+          {/* Tan bar spanning full width */}
           <div style={{
-            textAlign: 'center', padding: '60px 20px',
-            background: 'rgba(0,0,0,0.2)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            borderRadius: 8,
-            border: '1px solid rgba(255,255,255,0.08)',
-            maxWidth: 460,
             width: '100%',
-            margin: '20px',
+            background: 'rgba(210,195,170,0.92)',
+            padding: '48px 20px',
+            textAlign: 'center',
           }}>
             <h1 style={{
-              color: '#fff', fontSize: 24, fontWeight: 600, margin: '0 0 6px',
-              letterSpacing: '-0.5px',
+              color: 'rgb(40,30,20)', fontSize: 22, fontWeight: 600, margin: '0 0 4px',
+              letterSpacing: '-0.3px',
             }}>Robby Meek</h1>
-            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, margin: '0 0 32px' }}>
+            <p style={{ color: 'rgb(120,105,85)', fontSize: 14, margin: '0 0 24px' }}>
               Annapolis, Maryland
             </p>
-            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, margin: '0 0 6px' }}>
+            <p style={{ color: 'rgb(90,75,60)', fontSize: 13, margin: '0 0 4px' }}>
               Sailing: robbymeek+LA2028@gmail.com
             </p>
-            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, margin: '0 0 32px' }}>
+            <p style={{ color: 'rgb(90,75,60)', fontSize: 13, margin: '0 0 24px' }}>
               Personal: robbymeek@gmail.com
             </p>
             <button
               onClick={() => onNavigate('Team')}
               style={{
-                display: 'inline-block', color: 'rgba(255,255,255,0.6)', fontSize: 13,
-                border: '1px solid rgba(255,255,255,0.2)', padding: '10px 28px',
-                background: 'none', cursor: 'pointer', borderRadius: 4,
+                display: 'inline-block', color: 'rgb(60,50,35)', fontSize: 13,
+                border: '1px solid rgb(160,145,120)', padding: '10px 28px',
+                background: 'none', cursor: 'pointer',
               }}
             >
               Support the Journey
