@@ -116,13 +116,18 @@ export default function Biography({ onNavigate }) {
         <Nav current="Biography" onNavigate={onNavigate} variant="blue" />
       </div>
 
-      {/* ===== TEXT SECTION - fills viewport ===== */}
+      {/* ===== TEXT SECTION - fills viewport, stays behind banners ===== */}
       <div style={{
         background: 'rgb(100,150,255)',
         position: 'relative',
         zIndex: 1,
       }}>
-        <TextWithPhotos words={WORDS} photos={PHOTOS} height={`calc(100vh - 60px)`} />
+        {/* Sticky inner so text/photos remain visible behind banners as they scroll */}
+        <div style={{ position: 'sticky', top: 0 }}>
+          <TextWithPhotos words={WORDS} photos={PHOTOS} height={'100vh'} />
+        </div>
+        {/* Extra height so the text section extends behind the banner area */}
+        <div style={{ height: '80vh' }} />
       </div>
 
       {/* ===== PHOTO BANNER - scrolls fastest ===== */}
@@ -151,9 +156,6 @@ export default function Biography({ onNavigate }) {
         </div>
       </div>
 
-      {/* ===== GAP - text/photos visible between banners ===== */}
-      <div style={{ height: 80, position: 'relative', zIndex: 1 }} />
-
       {/* ===== ILCA BANNER - scrolls slightly slower than photo ===== */}
       <div style={{
         background: 'rgb(0,70,255)',
@@ -161,6 +163,7 @@ export default function Biography({ onNavigate }) {
         zIndex: 3,
         transform: `translateY(-${scrollY * 0.35}px)`,
         willChange: 'transform',
+        marginTop: 80,
       }}>
         <div style={{
           textAlign: 'center',
