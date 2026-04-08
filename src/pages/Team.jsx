@@ -4,6 +4,7 @@ import usePageEntrance from '../hooks/usePageEntrance'
 const BASE = import.meta.env.BASE_URL
 
 const SUPPORTERS = [
+  'Charter Financial Group',
   'The Strom Family',
   'The Ziskind Family',
   'The Callahan Family',
@@ -83,13 +84,6 @@ export default function Team({ onNavigate }) {
               </div>
             </div>
 
-            <div style={{
-              padding: '16px', textAlign: 'center', background: 'rgb(255,255,255)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              minHeight: 140,
-            }}>
-              <img src={`${BASE}charter-financial-logo-new.png`} alt="Charter Financial Group" style={{ width: '100%', maxWidth: 300, maxHeight: 130, objectFit: 'contain' }} />
-            </div>
           </div>
         </div>
 
