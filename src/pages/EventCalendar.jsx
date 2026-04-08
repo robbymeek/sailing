@@ -12,7 +12,13 @@ const EVENTS = [
     url: 'https://eurilca.org/',
   },
   {
-    n: 'Past: Trofeo Princesa Sofia — Palma',
+    n: 'Upcoming: San Pedro OCR',
+    d: 'July 20\u201324, 2026',
+    upcoming: true,
+    summary: 'Olympic classes regatta in San Pedro on the LA 2028 Olympic venue waters. An important opportunity to race in the conditions and waters where the 2028 Olympic sailing events will be held.',
+  },
+  {
+    n: 'Past: Trofeo Princesa Sofia \u2014 Palma',
     d: 'March 2026',
     summary: 'The 55th Trofeo Princesa Sofia in Palma de Mallorca, opening the 2026 Sailing Grand Slam season. One of the largest ILCA 7 fleets of the year with sailors from across all continents racing on the Bay of Palma.',
     url: 'https://www.trofeoprincesasofia.org/en/default/races/race',
@@ -40,9 +46,9 @@ const EVENTS = [
     summary: 'Continuation of Miami-based training with focus on starts, upwind speed, and tactical decision-making in shifty bay conditions.',
   },
   {
-    n: 'Past: ILCA 7 European Championship (\u{1F947} Top American)',
+    n: 'Past: ILCA 7 European Championship \u{1F4AA}',
     d: 'August 2025',
-    summary: 'The ILCA 7 Senior European Championships in Marstrand, Sweden. Finished as the top American in a fleet of over 200 sailors from across the continent.',
+    summary: 'The ILCA 7 Senior European Championships in Marstrand, Sweden. I was really happy with my performance here among the best in the world. A great learning experience racing against the top fleet on the international stage.',
     url: 'https://eurilca.org/2025-ilca-senior-european-championships-final-results/',
   },
   {
