@@ -215,13 +215,19 @@ export default function EventCalendar({ onNavigate }) {
           {olympic.days} : {String(olympic.hrs).padStart(2, '0')} : {String(olympic.mins).padStart(2, '0')} : {String(olympic.secs).padStart(2, '0')}
         </p>
 
-        {/* Next event countdown */}
-        <div style={{ ...entrance.style(2), margin: '24px 0 12px' }}>
-          <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '2px', margin: '0 0 8px' }}>
-            Next Event — European Championships, Split
-          </p>
-          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 24, fontWeight: 600, letterSpacing: '-1px', margin: 0 }}>
-            {nextEvent.days} days
+        {/* Next event countdown — chrome shimmer */}
+        <div style={{ ...entrance.style(2), margin: '28px 0 12px' }}>
+          <p
+            className="chrome-text"
+            style={{
+              fontSize: 'clamp(16px, 2.5vw, 22px)',
+              fontWeight: 800,
+              letterSpacing: '-0.5px',
+              margin: 0,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Next Event — European Championships, Split — {nextEvent.days} days
           </p>
         </div>
 

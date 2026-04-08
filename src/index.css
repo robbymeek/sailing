@@ -14,6 +14,34 @@ button {
   font-family: inherit;
 }
 
+/* Chrome shimmer effect for next event countdown */
+@keyframes chromeShimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.chrome-text {
+  background: linear-gradient(
+    90deg,
+    rgba(180,200,255,0.9) 0%,
+    rgba(255,255,255,1) 12%,
+    rgba(100,160,255,0.8) 24%,
+    rgba(200,220,255,0.95) 36%,
+    rgba(60,120,220,0.7) 48%,
+    rgba(255,255,255,1) 60%,
+    rgba(140,180,255,0.85) 72%,
+    rgba(220,235,255,0.95) 84%,
+    rgba(80,140,240,0.8) 96%,
+    rgba(180,200,255,0.9) 100%
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: chromeShimmer 6s ease infinite;
+}
+
 /* Marquee animation */
 @keyframes marquee {
   0% { transform: translateX(0); }
