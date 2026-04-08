@@ -1,21 +1,23 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import Nav from '../components/Nav'
 import Footer from '../components/Footer'
 
 const BASE = import.meta.env.BASE_URL
 
-const WORDS_TOP = [
+const WORDS = [
   'ROBBY MEEK', 'US SAILING TEAM', 'OLYMPICS',
   'LOS ANGELES', 'APPLIED MATHEMATICS', 'HARVARD',
   'SAILING', 'CAMPAIGN', 'LA 2028', 'BOSTON',
-  'ROBBY MEEK', 'STUDENT-ATHLETE', 'ILCA 7',
-  'US SAILING TEAM', 'ANNAPOLIS',
+  'STUDENT-ATHLETE', 'ILCA 7', 'ANNAPOLIS',
+  'ROBBY MEEK', 'US SAILING TEAM', 'OLYMPICS',
+  'LOS ANGELES', 'HARVARD', 'SAILING', 'CAMPAIGN',
 ]
 
 const WORDS_BOTTOM = [
   'SAILING', 'CAMPAIGN', 'LA 2028',
   'STUDENT-ATHLETE', 'ROBBY MEEK',
   'HARVARD', 'OLYMPICS', 'ANNAPOLIS',
+  'ILCA 7', 'US SAILING TEAM', 'LOS ANGELES',
 ]
 
 const PHOTOS = [
@@ -36,17 +38,16 @@ const PRESS = [
   { t: 'No. 1 Sailing Wins 2025 ICSA Open Team Race National Championship', u: 'https://gocrimson.com/news/2025/4/26/no-1-sailing-wins-2025-icsa-open-team-race-national-championship.aspx' },
 ]
 
-function TextWithPhotos({ words, photos }) {
+function TextWithPhotos({ words, photos, height }) {
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ position: 'relative', height, overflow: 'hidden' }}>
       {/* Photo collage behind the text */}
       <div style={{
         position: 'absolute', inset: 0,
         display: 'grid',
         gridTemplateColumns: 'repeat(4, 1fr)',
-        gridTemplateRows: 'repeat(3, 1fr)',
+        gridAutoRows: '1fr',
         gap: 0,
-        overflow: 'hidden',
       }}>
         {photos.map((p, i) => (
           <img
@@ -56,33 +57,40 @@ function TextWithPhotos({ words, photos }) {
             style={{
               width: '100%', height: '100%',
               objectFit: 'cover',
-              opacity: 0.6,
-              filter: 'saturate(0.3) brightness(1.1)',
+              opacity: 0.4,
+              filter: 'saturate(0.2) brightness(1.2)',
             }}
           />
         ))}
       </div>
-      {/* Text that clips the photos - dark blue text reveals photos through letterforms */}
-      <div style={{
-        position: 'relative',
-        fontSize: 'clamp(52px, 8vw, 110px)',
-        fontWeight: 900,
-        lineHeight: 0.95,
-        letterSpacing: '-3px',
-        textTransform: 'uppercase',
-        wordBreak: 'break-word',
-        userSelect: 'none',
-        color: 'rgb(80,130,255)',
-        mixBlendMode: 'multiply',
-      }}>
-        {words.map((word, i) => (
-          <span key={i}>{word} </span>
-        ))}
-      </div>
-      {/* Overlay tint to blend */}
+      {/* Text overlay - barely visible */}
       <div style={{
         position: 'absolute', inset: 0,
-        background: 'rgba(80,130,255,0.35)',
+        display: 'flex', alignItems: 'center',
+        padding: '0 10px',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          fontSize: 'clamp(60px, 10vw, 140px)',
+          fontWeight: 900,
+          lineHeight: 0.92,
+          letterSpacing: '-4px',
+          textTransform: 'uppercase',
+          wordBreak: 'break-word',
+          userSelect: 'none',
+          color: 'rgb(80,130,255)',
+          mixBlendMode: 'multiply',
+          opacity: 0.7,
+        }}>
+          {words.map((word, i) => (
+            <span key={i}>{word} </span>
+          ))}
+        </div>
+      </div>
+      {/* Color overlay to make text even more subtle */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: 'rgba(90,140,255,0.45)',
         pointerEvents: 'none',
         mixBlendMode: 'color',
       }} />
@@ -94,7 +102,6 @@ export default function Biography({ onNavigate }) {
   useEffect(() => { document.body.style.background = 'rgb(18,0,120)' }, [])
 
   const [scrollY, setScrollY] = useState(0)
-  const containerRef = useRef(null)
 
   useEffect(() => {
     const onScroll = () => setScrollY(window.scrollY)
@@ -102,35 +109,41 @@ export default function Biography({ onNavigate }) {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  // The text section is 100vh. The blue banner starts below it.
+  // We want the blue banner (photo + ILCA) to scroll faster, so it
+  // overlaps and slides over the text section as you scroll.
+  const textHeight = typeof window !== 'undefined' ? window.innerHeight : 800
+  const parallaxOffset = scrollY * 0.4 // moves 40% faster
+
   return (
-    <div ref={containerRef} style={{ background: 'rgb(18,0,120)', minHeight: '100vh' }}>
+    <div style={{ background: 'rgb(18,0,120)', minHeight: '100vh' }}>
       {/* ===== DARK NAVY HEADER ===== */}
-      <div style={{ background: 'rgb(18,0,120)' }}>
+      <div style={{ background: 'rgb(18,0,120)', position: 'relative', zIndex: 2 }}>
         <Nav current="Biography" onNavigate={onNavigate} variant="blue" />
       </div>
 
-      {/* ===== LIGHT BLUE TEXT SECTION with photos inside letters ===== */}
+      {/* ===== TEXT SECTION - fills viewport ===== */}
       <div style={{
         background: 'rgb(100,150,255)',
-        overflow: 'hidden',
         position: 'relative',
+        zIndex: 1,
       }}>
-        <TextWithPhotos words={WORDS_TOP} photos={PHOTOS} />
+        <TextWithPhotos words={WORDS} photos={PHOTOS} height={`calc(100vh - 60px)`} />
       </div>
 
-      {/* ===== BRIGHT BLUE SECTION: Photo + ILCA with parallax ===== */}
+      {/* ===== BLUE BANNER: Photo + ILCA - scrolls faster (parallax) ===== */}
       <div style={{
         background: 'rgb(0,70,255)',
-        overflow: 'hidden',
         position: 'relative',
+        zIndex: 3,
+        transform: `translateY(-${parallaxOffset}px)`,
+        willChange: 'transform',
       }}>
-        {/* Sailing photo with parallax */}
+        {/* Sailing photo */}
         <div style={{
           maxWidth: 600,
           margin: '0 auto',
           padding: '50px 40px',
-          transform: `translateY(${scrollY * -0.15}px)`,
-          transition: 'transform 0.05s linear',
         }}>
           <div style={{
             border: '6px solid rgb(0,70,255)',
@@ -149,12 +162,10 @@ export default function Biography({ onNavigate }) {
           </div>
         </div>
 
-        {/* ILCA Logo with parallax */}
+        {/* ILCA Logo */}
         <div style={{
           textAlign: 'center',
           padding: '40px 40px 60px',
-          transform: `translateY(${scrollY * -0.1}px)`,
-          transition: 'transform 0.05s linear',
         }}>
           <img
             src={`${BASE}ilca-logo.png`}
@@ -167,17 +178,25 @@ export default function Biography({ onNavigate }) {
         </div>
       </div>
 
-      {/* ===== SECOND TEXT SECTION with photos ===== */}
+      {/* ===== SECOND TEXT SECTION ===== */}
       <div style={{
         background: 'rgb(100,150,255)',
-        overflow: 'hidden',
         position: 'relative',
+        zIndex: 2,
+        transform: `translateY(-${parallaxOffset}px)`,
+        willChange: 'transform',
       }}>
-        <TextWithPhotos words={WORDS_BOTTOM} photos={[...PHOTOS].reverse()} />
+        <TextWithPhotos words={WORDS_BOTTOM} photos={[...PHOTOS].reverse()} height={400} />
       </div>
 
       {/* ===== BIO CONTENT on dark blue ===== */}
-      <div style={{ background: 'rgb(18,0,120)' }}>
+      <div style={{
+        background: 'rgb(18,0,120)',
+        position: 'relative',
+        zIndex: 4,
+        transform: `translateY(-${parallaxOffset}px)`,
+        willChange: 'transform',
+      }}>
         <Nav current="Biography" onNavigate={onNavigate} variant="blue" />
 
         <div style={{
@@ -232,9 +251,9 @@ export default function Biography({ onNavigate }) {
             </a>
           ))}
         </div>
-      </div>
 
-      <Footer variant="blue" onNavigate={onNavigate} />
+        <Footer variant="blue" onNavigate={onNavigate} />
+      </div>
     </div>
   )
 }
