@@ -1,12 +1,16 @@
 import { useEffect } from 'react'
 import Nav from '../components/Nav'
 import Footer from '../components/Footer'
-import Marquee from '../components/Marquee'
-
-const MARQUEE_1 = ['ROBBY MEEK', 'LA 2028', 'ILCA 7', 'HARVARD', 'US SAILING TEAM']
-const MARQUEE_2 = ['OLYMPIC CAMPAIGN', 'ANNAPOLIS', 'APPLIED MATHEMATICS', 'GO FOR GOLD', 'STUDENT-ATHLETE']
 
 const BASE = import.meta.env.BASE_URL
+
+const BG_WORDS = [
+  'ROBBY MEEK', 'US SAILING TEAM', 'OLYMPICS',
+  'LOS ANGELES', 'APPLIED MATHEMATICS', 'HARVARD',
+  'SAILING', 'CAMPAIGN', 'LA 2028', 'BOSTON',
+  'ROBBY MEEK', 'STUDENT-ATHLETE', 'ILCA 7',
+  'US SAILING TEAM', 'ANNAPOLIS',
+]
 
 const PRESS = [
   { t: 'ILCAs dominate US Open Long Beach', u: 'https://www.sailingscuttlebutt.com/2023/07/16/ilcas-dominate-us-open-long-beach/' },
@@ -21,50 +25,90 @@ const PRESS = [
 ]
 
 export default function Biography({ onNavigate }) {
-  useEffect(() => { document.body.style.background = 'rgb(18,0,120)' }, [])
+  useEffect(() => { document.body.style.background = 'rgb(18,0,200)' }, [])
 
   return (
-    <div style={{ background: 'rgb(18,0,120)', minHeight: '100vh' }}>
-      {/* Hero gradient + marquees */}
+    <div style={{ background: 'rgb(18,0,200)', minHeight: '100vh' }}>
+      {/* ===== TOP SECTION: Bright blue with text background ===== */}
       <div style={{
-        background: 'linear-gradient(180deg, rgb(18,0,120) 0%, rgb(0,100,255) 50%, rgb(0,200,255) 100%)',
+        background: 'rgb(18,0,200)',
+        position: 'relative',
         overflow: 'hidden',
       }}>
         <Nav current="Biography" onNavigate={onNavigate} variant="blue" />
 
-        <div style={{ padding: '16px 0', opacity: 0.6 }}>
-          <Marquee items={MARQUEE_1} speed={40} color="rgba(255,255,255,0.08)" fontSize={42} />
-        </div>
-
-        {/* Hero image */}
+        {/* Background text wall */}
         <div style={{
-          maxWidth: 1100, margin: '12px auto', position: 'relative',
-          height: 420, overflow: 'hidden',
+          position: 'relative',
+          padding: '20px 40px 0',
+          maxWidth: 1100,
+          margin: '0 auto',
         }}>
-          <img
-            src={`${BASE}IMG_5957.JPG`}
-            alt="Robby Meek sailing"
-            style={{
-              width: '100%', height: '100%',
-              objectFit: 'cover', objectPosition: 'center 30%',
-              display: 'block',
-            }}
-          />
+          {/* The large text words behind everything */}
           <div style={{
-            position: 'absolute', inset: 0,
-            background: 'linear-gradient(0deg, rgb(18,0,120) 0%, transparent 30%, transparent 70%, rgba(0,80,200,0.3) 100%)',
-          }} />
-        </div>
+            color: 'rgba(255,255,255,0.08)',
+            fontSize: 'clamp(48px, 7vw, 90px)',
+            fontWeight: 900,
+            lineHeight: 1.0,
+            letterSpacing: '-2px',
+            textTransform: 'uppercase',
+            wordBreak: 'break-word',
+            userSelect: 'none',
+          }}>
+            {BG_WORDS.map((word, i) => (
+              <span key={i}>{word} </span>
+            ))}
+          </div>
 
-        <div style={{ padding: '12px 0', opacity: 0.6 }}>
-          <Marquee items={MARQUEE_2} speed={35} color="rgba(255,255,255,0.08)" fontSize={42} />
+          {/* Sailing photo overlaid on top of text - with colored border */}
+          <div style={{
+            position: 'relative',
+            maxWidth: 500,
+            margin: '-180px auto 0',
+            zIndex: 2,
+          }}>
+            <div style={{
+              border: '6px solid rgb(0,80,255)',
+              background: 'rgb(0,80,255)',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            }}>
+              <img
+                src={`${BASE}P1177244.jpeg`}
+                alt="Robby Meek sailing"
+                style={{
+                  width: '100%',
+                  display: 'block',
+                  objectFit: 'cover',
+                  maxHeight: 380,
+                }}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Second nav + bio text */}
-      <div style={{ background: 'rgb(18,0,120)' }}>
+      {/* ===== HARD TRANSITION to deeper blue ===== */}
+      <div style={{ background: 'rgb(10,0,180)' }}>
+        {/* ILCA Logo - white on blue */}
+        <div style={{
+          textAlign: 'center',
+          padding: '60px 40px',
+        }}>
+          <img
+            src={`${BASE}ilca-logo.png`}
+            alt="ILCA"
+            style={{
+              width: 'clamp(200px, 30vw, 380px)',
+              filter: 'brightness(0) invert(1)',
+              opacity: 0.9,
+            }}
+          />
+        </div>
+
+        {/* Second nav */}
         <Nav current="Biography" onNavigate={onNavigate} variant="blue" />
 
+        {/* Bio text */}
         <div style={{
           maxWidth: 850, margin: '0 auto', padding: '20px 40px 60px',
           color: 'rgba(255,255,255,0.85)', fontSize: 15, lineHeight: 1.7,
@@ -87,9 +131,9 @@ export default function Biography({ onNavigate }) {
         <div style={{
           display: 'flex', justifyContent: 'center', gap: 80, padding: '50px 20px',
           borderTop: '1px solid rgba(255,255,255,0.08)',
-          maxWidth: 850, margin: '0 auto',
+          maxWidth: 850, margin: '0 auto', flexWrap: 'wrap',
         }}>
-          {[['6x', 'National Championships'], ['3x', 'Continental Championships.'], ['8 years', 'In the ILCA.']].map(([n, l]) => (
+          {[['6x', 'National Championships'], ['3x', 'Continental Championships'], ['8 years', 'In the ILCA']].map(([n, l]) => (
             <div key={l} style={{ textAlign: 'center' }}>
               <div style={{ color: '#fff', fontSize: 48, fontWeight: 800 }}>{n}</div>
               <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, fontWeight: 500, marginTop: 4 }}>{l}</div>
@@ -113,7 +157,7 @@ export default function Biography({ onNavigate }) {
               }}
             >
               <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>+</span>
-              <span style={{ color: 'rgba(0,0,0,0.75)', fontSize: 13 }}>{item.t}</span>
+              <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>{item.t}</span>
             </a>
           ))}
         </div>
