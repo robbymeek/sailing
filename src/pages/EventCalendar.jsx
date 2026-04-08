@@ -220,14 +220,14 @@ export default function EventCalendar({ onNavigate }) {
           <p
             className="chrome-text"
             style={{
-              fontSize: 'clamp(16px, 2.5vw, 22px)',
-              fontWeight: 800,
-              letterSpacing: '-0.5px',
+              fontSize: 'clamp(12px, 1.8vw, 16px)',
+              fontWeight: 600,
+              letterSpacing: '-0.3px',
               margin: 0,
               whiteSpace: 'nowrap',
             }}
           >
-            Next Event — European Championships, Split — {nextEvent.days} days
+            Next Event: European Championships, Split in {nextEvent.days} Days
           </p>
         </div>
 
