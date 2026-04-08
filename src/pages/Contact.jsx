@@ -40,28 +40,28 @@ export default function Contact({ onNavigate }) {
           {/* Tan bar spanning full width */}
           <div style={{
             width: '100%',
-            background: 'rgba(210,195,170,0.92)',
+            background: 'rgba(240,240,240,0.94)',
             padding: '48px 20px',
             textAlign: 'center',
           }}>
             <h1 style={{
-              color: 'rgb(40,30,20)', fontSize: 22, fontWeight: 600, margin: '0 0 4px',
+              color: 'rgb(30,30,30)', fontSize: 22, fontWeight: 600, margin: '0 0 4px',
               letterSpacing: '-0.3px',
             }}>Robby Meek</h1>
-            <p style={{ color: 'rgb(120,105,85)', fontSize: 14, margin: '0 0 24px' }}>
+            <p style={{ color: 'rgb(110,110,110)', fontSize: 14, margin: '0 0 24px' }}>
               Annapolis, Maryland
             </p>
-            <p style={{ color: 'rgb(90,75,60)', fontSize: 13, margin: '0 0 4px' }}>
+            <p style={{ color: 'rgb(80,80,80)', fontSize: 13, margin: '0 0 4px' }}>
               Sailing: robbymeek+LA2028@gmail.com
             </p>
-            <p style={{ color: 'rgb(90,75,60)', fontSize: 13, margin: '0 0 24px' }}>
+            <p style={{ color: 'rgb(80,80,80)', fontSize: 13, margin: '0 0 24px' }}>
               Personal: robbymeek@gmail.com
             </p>
             <button
               onClick={() => onNavigate('Team')}
               style={{
-                display: 'inline-block', color: 'rgb(60,50,35)', fontSize: 13,
-                border: '1px solid rgb(160,145,120)', padding: '10px 28px',
+                display: 'inline-block', color: 'rgb(60,60,60)', fontSize: 13,
+                border: '1px solid rgb(180,180,180)', padding: '10px 28px',
                 background: 'none', cursor: 'pointer',
               }}
             >
