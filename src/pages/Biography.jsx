@@ -32,9 +32,19 @@ const PRESS = [
 ]
 
 export default function Biography({ onNavigate }) {
-  useEffect(() => { document.body.style.background = 'rgb(18,0,120)' }, [])
-
   const [scrollY, setScrollY] = useState(0)
+  const [bgVisible, setBgVisible] = useState(false)
+  const [contentVisible, setContentVisible] = useState(false)
+  const [bannersVisible, setBannersVisible] = useState(false)
+  const [bioVisible, setBioVisible] = useState(false)
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setBgVisible(true), 100)
+    const t2 = setTimeout(() => setContentVisible(true), 400)
+    const t3 = setTimeout(() => setBannersVisible(true), 700)
+    const t4 = setTimeout(() => setBioVisible(true), 1000)
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4) }
+  }, [])
 
   useEffect(() => {
     const onScroll = () => setScrollY(window.scrollY)
@@ -42,19 +52,20 @@ export default function Biography({ onNavigate }) {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Photo banner moves slightly faster than ILCA
   const photoOffset = scrollY * 0.35
   const ilcaOffset = scrollY * 0.18
 
   return (
     <div style={{ background: 'rgb(18,0,120)', minHeight: '100vh' }}>
 
-      {/* ===== FIXED BACKGROUND: text + photos always visible behind everything ===== */}
+      {/* ===== FIXED BACKGROUND: text + photos — fades in slowly ===== */}
       <div style={{
         position: 'fixed', top: 0, left: 0, right: 0,
         height: '100vh',
         zIndex: 0,
         background: 'rgb(100,150,255)',
+        opacity: bgVisible ? 1 : 0,
+        transition: 'opacity 1.2s ease',
       }}>
         {/* Photo grid */}
         <div style={{
@@ -114,19 +125,20 @@ export default function Biography({ onNavigate }) {
       {/* ===== SCROLLABLE CONTENT ===== */}
       <div style={{ position: 'relative', zIndex: 1 }}>
 
-        {/* Dark navy header */}
-        <div style={{ background: 'rgb(18,0,120)' }}>
-          <Nav current="Biography" onNavigate={onNavigate} variant="blue" />
-        </div>
-
         {/* Transparent spacer - lets the fixed background show through */}
-        <div style={{ height: '70vh' }} />
+        <div style={{
+          height: '70vh',
+          opacity: contentVisible ? 1 : 0,
+          transition: 'opacity 0.8s ease',
+        }} />
 
         {/* Photo banner - scrolls slightly faster */}
         <div style={{
           background: 'rgb(0,70,255)',
           position: 'relative',
-          transform: `translateY(-${photoOffset}px)`,
+          transform: `translateY(-${photoOffset}px) scale(${bannersVisible ? 1 : 0.97})`,
+          opacity: bannersVisible ? 1 : 0,
+          transition: 'opacity 0.7s ease, transform 0.7s ease',
           willChange: 'transform',
         }}>
           <div style={{
@@ -154,7 +166,9 @@ export default function Biography({ onNavigate }) {
         <div style={{
           background: 'rgb(0,70,255)',
           position: 'relative',
-          transform: `translateY(-${ilcaOffset}px)`,
+          transform: `translateY(-${ilcaOffset}px) scale(${bannersVisible ? 1 : 0.97})`,
+          opacity: bannersVisible ? 1 : 0,
+          transition: 'opacity 0.7s ease 0.15s, transform 0.7s ease 0.15s',
           willChange: 'transform',
         }}>
           <div style={{
@@ -173,7 +187,12 @@ export default function Biography({ onNavigate }) {
         </div>
 
         {/* Bio content on dark blue */}
-        <div style={{ background: 'rgb(18,0,120)' }}>
+        <div style={{
+          background: 'rgb(18,0,120)',
+          opacity: bioVisible ? 1 : 0,
+          transform: bioVisible ? 'translateY(0)' : 'translateY(20px)',
+          transition: 'opacity 0.8s ease, transform 0.8s ease',
+        }}>
           <Nav current="Biography" onNavigate={onNavigate} variant="blue" />
 
           <div style={{

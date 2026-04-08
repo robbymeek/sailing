@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
-import Nav from '../components/Nav'
+import { useState } from 'react'
 import Footer from '../components/Footer'
 import useCountdown from '../hooks/useCountdown'
+import usePageEntrance from '../hooks/usePageEntrance'
 
 const EVENTS = [
   {
@@ -188,15 +188,13 @@ function EventModal({ event, onClose }) {
 }
 
 export default function EventCalendar({ onNavigate }) {
-  useEffect(() => { document.body.style.background = 'rgb(0,0,0)' }, [])
-
   const [selected, setSelected] = useState(null)
   const target = new Date('2028-07-14T00:00:00')
   const { days, hrs, mins, secs } = useCountdown(target)
+  const entrance = usePageEntrance(4, { staggerMs: 150, initialDelayMs: 0 })
 
   return (
     <div style={{ background: 'rgb(0,0,0)', minHeight: '100vh' }}>
-      <Nav current="Event Calendar" onNavigate={onNavigate} variant="dark" />
 
       <div style={{ textAlign: 'center', padding: '40px 20px 20px' }}>
         <h1 style={{
@@ -204,16 +202,17 @@ export default function EventCalendar({ onNavigate }) {
           letterSpacing: '-4px', margin: '0 0 10px',
         }}>LA 2028</h1>
         <p style={{
+          ...entrance.style(1),
           color: 'rgb(153,153,153)', fontSize: 18, fontWeight: 500, margin: '0 0 8px',
         }}>
           {days} : {String(hrs).padStart(2, '0')} : {String(mins).padStart(2, '0')} : {String(secs).padStart(2, '0')}
         </p>
-        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, margin: 0 }}>
+        <p style={{ ...entrance.style(2), color: 'rgba(255,255,255,0.35)', fontSize: 12, margin: 0 }}>
           Click on event to learn more.
         </p>
       </div>
 
-      <div style={{ maxWidth: 900, margin: '40px auto', padding: '0 40px' }}>
+      <div style={{ ...entrance.style(3), maxWidth: 900, margin: '40px auto', padding: '0 40px' }}>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
           {EVENTS.map((e, i) => (
             <div key={i} onClick={() => setSelected(e)}>

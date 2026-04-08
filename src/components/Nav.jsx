@@ -19,12 +19,13 @@ export default function Nav({ current, onNavigate, variant }) {
               color: item === current ? active : dim,
               fontSize: 14, fontWeight: item === current ? 500 : 400,
               letterSpacing: '-0.3px', padding: '4px 8px',
+              transition: 'color 0.4s ease',
             }}
           >
             {item}
           </button>
           {i < PAGES.length - 1 && (
-            <span style={{ color: dim, fontSize: 14 }}>|</span>
+            <span style={{ color: dim, fontSize: 14, transition: 'color 0.4s ease' }}>|</span>
           )}
         </div>
       ))}

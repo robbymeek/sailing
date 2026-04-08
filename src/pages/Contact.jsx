@@ -1,10 +1,13 @@
-import { useEffect } from 'react'
-import Nav from '../components/Nav'
+import { useState, useEffect } from 'react'
 
 const BASE = import.meta.env.BASE_URL
 
 export default function Contact({ onNavigate }) {
-  useEffect(() => { document.body.style.background = 'rgb(10,30,80)' }, [])
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), 50)
+    return () => clearTimeout(t)
+  }, [])
 
   return (
     <div style={{
@@ -30,14 +33,17 @@ export default function Contact({ onNavigate }) {
       </div>
 
       {/* Content */}
-      <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <Nav current="Contact" onNavigate={onNavigate} variant="blue" />
-
+      <div style={{
+        position: 'relative', zIndex: 1, flex: 1,
+        display: 'flex', flexDirection: 'column',
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(8px)',
+        transition: 'opacity 0.5s ease, transform 0.5s ease',
+      }}>
         {/* Main content - centered */}
         <div style={{
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          {/* Tan bar spanning full width */}
           <div style={{
             width: '100%',
             background: 'rgba(240,240,240,0.94)',

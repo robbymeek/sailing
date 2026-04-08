@@ -1,6 +1,5 @@
-import { useEffect } from 'react'
-import Nav from '../components/Nav'
 import Footer from '../components/Footer'
+import usePageEntrance from '../hooks/usePageEntrance'
 
 const BASE = import.meta.env.BASE_URL
 
@@ -11,7 +10,7 @@ const SUPPORTERS = [
 ]
 
 export default function Team({ onNavigate }) {
-  useEffect(() => { document.body.style.background = 'rgb(18,0,120)' }, [])
+  const entrance = usePageEntrance(4, { staggerMs: 120, initialDelayMs: 50 })
 
   return (
     <div style={{ minHeight: '100vh', position: 'relative' }}>
@@ -33,9 +32,7 @@ export default function Team({ onNavigate }) {
 
       {/* Content */}
       <div style={{ position: 'relative', zIndex: 1 }}>
-        <Nav current="Team" onNavigate={onNavigate} variant="blue" />
-
-        <div style={{ textAlign: 'center', padding: '60px 20px 80px' }}>
+        <div style={{ ...entrance.style(0), textAlign: 'center', padding: '60px 20px 80px' }}>
           <h1 style={{
             color: '#fff', fontSize: 'clamp(36px, 6vw, 56px)', fontWeight: 800,
             letterSpacing: '-2px', margin: '0 0 12px', textTransform: 'uppercase',
@@ -49,12 +46,11 @@ export default function Team({ onNavigate }) {
         </div>
 
         {/* Sponsor grid */}
-        <div style={{ maxWidth: 1000, margin: '0 auto', padding: '0 40px' }}>
+        <div style={{ ...entrance.style(1), maxWidth: 1000, margin: '0 auto', padding: '0 40px' }}>
           <div style={{
             border: '1px solid rgba(255,255,255,0.1)',
             overflow: 'hidden',
           }}>
-            {/* Top row - 3 sponsors */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
               <div style={{
                 padding: '24px', textAlign: 'center', background: 'rgb(0,0,0)',
@@ -83,7 +79,6 @@ export default function Team({ onNavigate }) {
               </div>
             </div>
 
-            {/* Bottom row */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr' }}>
               <div style={{
                 padding: '16px', textAlign: 'center', background: 'rgb(255,255,255)',
@@ -118,7 +113,7 @@ export default function Team({ onNavigate }) {
         </div>
 
         {/* Thank you letter */}
-        <div style={{ maxWidth: 800, margin: '0 auto', padding: '60px 40px 60px' }}>
+        <div style={{ ...entrance.style(2), maxWidth: 800, margin: '0 auto', padding: '60px 40px 60px' }}>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.8, marginBottom: 16 }}>
             Thank you for the support I have received from sponsors, my family, friends, and coaches. Your belief in me has made this Olympic campaign possible. Sailing is a uniquely demanding sport. It is not enough to train hard on your own. To truly improve, you have to compete directly against the best, in the same waters, in the same wind, at the same time.
           </p>
@@ -134,7 +129,9 @@ export default function Team({ onNavigate }) {
           <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 14, lineHeight: 1.8 }}>Robby</p>
         </div>
 
-        <Footer variant="blue" onNavigate={onNavigate} />
+        <div style={entrance.style(3)}>
+          <Footer variant="blue" onNavigate={onNavigate} />
+        </div>
       </div>
     </div>
   )
