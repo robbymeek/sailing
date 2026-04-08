@@ -95,6 +95,39 @@ export default function MainView({ onNavigate }) {
     }
   }, [mode, transitioning, handleToggle, onNavigate])
 
+  // Auto-transition on inactivity
+  // Dark home: 10s → toggle to landing
+  // Landing: 10s → navigate to Team
+  useEffect(() => {
+    if (transitioning) return
+
+    let timer = null
+    const delay = 10000
+
+    const resetTimer = () => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => {
+        if (mode === 'home') {
+          handleToggle()
+        } else if (mode === 'landing') {
+          onNavigate('Team')
+        }
+      }, delay)
+    }
+
+    // Reset on any interaction
+    const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'wheel', 'scroll']
+    events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }))
+
+    // Start the timer
+    resetTimer()
+
+    return () => {
+      if (timer) clearTimeout(timer)
+      events.forEach(e => window.removeEventListener(e, resetTimer))
+    }
+  }, [mode, transitioning, handleToggle, onNavigate])
+
   // Countdown + clock
   const target = new Date('2028-07-14T00:00:00')
   const { days, hrs, mins, secs } = useCountdown(target)
