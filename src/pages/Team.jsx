@@ -44,10 +44,24 @@ export default function Team({ onNavigate }) {
           }}>The Team</h1>
           <p style={{
             color: 'rgba(255,255,255,0.5)', fontSize: 14, maxWidth: 500,
-            margin: '0 auto', lineHeight: 1.6,
+            margin: '0 auto 24px', lineHeight: 1.6,
           }}>
             The sponsors, families, and supporters who make this Olympic campaign possible.
           </p>
+          <a
+            href="mailto:robbymeek+LA2028@gmail.com?subject=Supporting%20Your%20Olympic%20Campaign"
+            style={{
+              display: 'inline-block',
+              color: 'rgba(255,255,255,0.7)',
+              fontSize: 13, fontWeight: 400,
+              border: '1px solid rgba(255,255,255,0.2)',
+              padding: '10px 28px',
+              textDecoration: 'none',
+              letterSpacing: '-0.2px',
+            }}
+          >
+            Support the Campaign
+          </a>
         </div>
 
         {/* Sponsor grid */}
