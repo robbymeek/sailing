@@ -13,6 +13,12 @@ button {
   font-family: inherit;
 }
 
+/* Fast spin for page transition */
+@keyframes spinFast {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 /* Marquee animation */
 @keyframes marquee {
   0% { transform: translateX(0); }
