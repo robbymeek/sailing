@@ -80,7 +80,7 @@ function EventRow({ event }) {
         borderBottom: '1px solid rgba(255,255,255,0.1)',
         cursor: 'pointer',
         background: hovered ? 'rgb(0,20,120)' : 'transparent',
-        borderRadius: hovered ? 6 : 0,
+        borderRadius: 0,
         margin: hovered ? '4px -20px' : '0',
         transition: 'all 0.25s ease',
       }}
