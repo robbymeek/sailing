@@ -32,7 +32,7 @@ export default function Team({ onNavigate }) {
 
       {/* Content */}
       <div style={{ position: 'relative', zIndex: 1 }}>
-        <div style={{ ...entrance.style(0), textAlign: 'center', padding: '60px 20px 80px' }}>
+        <div style={{ textAlign: 'center', padding: '60px 20px 80px' }}>
           <h1 style={{
             color: '#fff', fontSize: 'clamp(36px, 6vw, 56px)', fontWeight: 800,
             letterSpacing: '-2px', margin: '0 0 12px', textTransform: 'uppercase',

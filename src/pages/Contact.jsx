@@ -1,13 +1,6 @@
-import { useState, useEffect } from 'react'
-
 const BASE = import.meta.env.BASE_URL
 
 export default function Contact({ onNavigate }) {
-  const [visible, setVisible] = useState(false)
-  useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 50)
-    return () => clearTimeout(t)
-  }, [])
 
   return (
     <div style={{
@@ -36,9 +29,6 @@ export default function Contact({ onNavigate }) {
       <div style={{
         position: 'relative', zIndex: 1, flex: 1,
         display: 'flex', flexDirection: 'column',
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0)' : 'translateY(8px)',
-        transition: 'opacity 0.5s ease, transform 0.5s ease',
       }}>
         {/* Main content - centered */}
         <div style={{
