@@ -78,18 +78,34 @@ export default function Home({ onNavigate }) {
           </p>
         </div>
 
-        {/* Center - Sailboat GIF */}
-        <img
-          src={`${BASE}[0001-0250].gif`}
-          alt="Sailboat"
-          onClick={() => onNavigate('Team')}
-          style={{
-            width: 'clamp(120px, 18vw, 200px)',
-            height: 'clamp(120px, 18vw, 200px)',
-            cursor: 'pointer',
-            flexShrink: 0,
-          }}
-        />
+        {/* Center - Sailboat GIF + Support button */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, flexShrink: 0 }}>
+          <img
+            src={`${BASE}[0001-0250].gif`}
+            alt="Sailboat"
+            onClick={() => onNavigate('Landing')}
+            style={{
+              width: 'clamp(120px, 18vw, 200px)',
+              height: 'clamp(120px, 18vw, 200px)',
+              cursor: 'pointer',
+            }}
+          />
+          <button
+            onClick={() => onNavigate('Team')}
+            style={{
+              background: 'none',
+              border: '1px solid rgba(255,255,255,0.15)',
+              color: 'rgba(255,255,255,0.4)',
+              fontSize: 12,
+              fontWeight: 400,
+              letterSpacing: '-0.2px',
+              padding: '8px 22px',
+              cursor: 'pointer',
+            }}
+          >
+            Support the Journey
+          </button>
+        </div>
 
         {/* Right - Biography */}
         <div style={{ textAlign: 'center', flexShrink: 0 }}>
