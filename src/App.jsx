@@ -55,6 +55,13 @@ export default function App() {
   useEffect(() => {
     if (location.pathname !== displayLocation.pathname) {
       setTransitionStage('exiting')
+      // Fallback timer in case onTransitionEnd doesn't fire
+      const t = setTimeout(() => {
+        setDisplayLocation(location)
+        setTransitionStage('entered')
+        window.scrollTo(0, 0)
+      }, 400)
+      return () => clearTimeout(t)
     }
   }, [location])
 
@@ -67,26 +74,28 @@ export default function App() {
     }
   }
 
-  // Background color management
+  // Background color management - use TARGET location so bg changes immediately
   useEffect(() => {
     document.body.style.background = BG_MAP[location.pathname] || 'rgb(19,23,31)'
     document.body.style.transition = 'background 0.4s ease'
   }, [location.pathname])
 
-  const isHomePage = location.pathname === '/' || location.pathname === '/landing'
-  const [showNav, setShowNav] = useState(false)
+  // Nav visibility based on DISPLAY location (what's currently showing)
+  // so it doesn't flash before the exit animation completes
+  const displayPath = displayLocation.pathname
+  const isDisplayHome = displayPath === '/' || displayPath === '/landing'
+  const isTargetHome = location.pathname === '/' || location.pathname === '/landing'
+
 
   return (
-    <div
-      onMouseMove={isHomePage ? (e) => setShowNav(e.clientY < 80) : undefined}
-      onMouseLeave={isHomePage ? () => setShowNav(false) : undefined}
-    >
-      {/* Persistent Nav - hidden on home/landing, always visible on inner pages */}
-      {!isHomePage && (
+    <div>
+      {/* Persistent Nav - only on inner pages, not home/landing */}
+      {!isTargetHome && (
         <div style={{
           position: 'relative', zIndex: 50,
           background: BG_MAP[location.pathname] || 'transparent',
           transition: 'background 0.4s ease',
+          opacity: transitionStage === 'exiting' && isDisplayHome ? 0 : 1,
         }}>
           <Nav
             current={CURRENT_MAP[location.pathname] || 'Home'}
@@ -100,7 +109,7 @@ export default function App() {
       <div
         style={{
           opacity: transitionStage === 'exiting' ? 0 : 1,
-          transition: 'opacity 0.25s ease',
+          transition: 'opacity 0.35s ease',
         }}
         onTransitionEnd={handleExitComplete}
       >
