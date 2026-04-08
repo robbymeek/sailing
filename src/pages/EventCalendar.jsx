@@ -82,20 +82,22 @@ const EVENTS = [
   },
 ]
 
-function EventRow({ event }) {
+function EventRow({ event, isActive, onActivate }) {
   const [hovered, setHovered] = useState(false)
+  const highlighted = hovered || isActive
 
   return (
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onClick={() => onActivate()}
       style={{
-        padding: hovered ? '22px 20px' : '18px 0',
+        padding: highlighted ? '22px 20px' : '18px 0',
         borderBottom: '1px solid rgba(255,255,255,0.1)',
         cursor: 'pointer',
-        background: hovered ? 'rgb(0,20,120)' : 'transparent',
+        background: highlighted ? 'rgb(0,20,120)' : 'transparent',
         borderRadius: 0,
-        margin: hovered ? '4px -20px' : '0',
+        margin: highlighted ? '4px -20px' : '0',
         transition: 'all 0.25s ease',
       }}
     >
@@ -215,9 +217,12 @@ export default function EventCalendar({ onNavigate }) {
       <div style={{ ...entrance.style(3), maxWidth: 900, margin: '40px auto', padding: '0 40px' }}>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
           {EVENTS.map((e, i) => (
-            <div key={i} onClick={() => setSelected(e)}>
-              <EventRow event={e} />
-            </div>
+            <EventRow
+              key={i}
+              event={e}
+              isActive={selected === e}
+              onActivate={() => setSelected(e)}
+            />
           ))}
         </div>
       </div>

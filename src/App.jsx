@@ -7,9 +7,7 @@ import EventCalendar from './pages/EventCalendar'
 import Team from './pages/Team'
 import Contact from './pages/Contact'
 
-const BG_MAP = {
-  '/': 'rgb(19,23,31)',
-  '/landing': 'rgb(245,245,245)',
+const INNER_BG = {
   '/biography': 'rgb(18,0,120)',
   '/event-calendar': 'rgb(0,0,0)',
   '/team': 'rgb(18,0,120)',
@@ -34,16 +32,41 @@ const CURRENT_MAP = {
   '/contact': 'Contact',
 }
 
-// Nav behavior per route
 function getNavMode(pathname) {
-  if (pathname === '/') return 'hover'       // dark home: hover-reveal
-  if (pathname === '/landing') return 'fixed' // landing: always visible, absolute
-  return 'static'                             // inner pages: always visible, in flow
+  if (pathname === '/') return 'hover'
+  if (pathname === '/landing') return 'fixed'
+  return 'static'
 }
 
 export default function App() {
   const navigate = useNavigate()
   const location = useLocation()
+
+  // System dark mode
+  const [sysDark, setSysDark] = useState(
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const h = (e) => setSysDark(e.matches)
+    mq.addEventListener('change', h)
+    return () => mq.removeEventListener('change', h)
+  }, [])
+
+  // Dynamic backgrounds for home pages based on system dark mode
+  const homeDarkBg = 'rgb(19,23,31)'
+  const landingBg = sysDark ? 'rgb(19,23,31)' : 'rgb(245,245,245)'
+
+  function getBg(pathname) {
+    if (pathname === '/') return homeDarkBg
+    if (pathname === '/landing') return landingBg
+    return INNER_BG[pathname] || 'rgb(19,23,31)'
+  }
+
+  function getVariant(pathname) {
+    if (pathname === '/landing') return sysDark ? 'dark' : 'light'
+    return VARIANT_MAP[pathname] || 'dark'
+  }
 
   const go = (page) => {
     const routes = {
@@ -63,7 +86,6 @@ export default function App() {
 
   useEffect(() => {
     if (location.pathname !== displayLocation.pathname) {
-      // Skip exit animation for home↔landing toggle (MainView handles its own)
       const homePages = ['/', '/landing']
       const isHomeSwap = homePages.includes(location.pathname) && homePages.includes(displayLocation.pathname)
 
@@ -93,20 +115,16 @@ export default function App() {
 
   // Background color management
   useEffect(() => {
-    document.body.style.background = BG_MAP[location.pathname] || 'rgb(19,23,31)'
+    document.body.style.background = getBg(location.pathname)
     document.body.style.transition = 'background 0.4s ease'
-  }, [location.pathname])
+  }, [location.pathname, sysDark])
 
-  // During exit: use the DISPLAY location for nav behavior (what's still showing)
-  // After enter: use the TARGET location
   const isExiting = transitionStage === 'exiting'
   const navPath = isExiting ? displayLocation.pathname : location.pathname
   const navMode = getNavMode(navPath)
 
-  // Hover state for dark home
   const [hoverNav, setHoverNav] = useState(false)
 
-  // Visibility logic
   let navVisible
   if (navMode === 'hover') {
     navVisible = hoverNav
@@ -114,22 +132,20 @@ export default function App() {
     navVisible = true
   }
 
-  // Position logic
   const navPosition = navMode === 'static' ? 'relative' : 'absolute'
 
-  // Background + variant use TARGET location so they transition
-  // at the same time as the body background (no lagging color bar)
+  // Nav background uses TARGET for immediate color change
   const targetMode = getNavMode(location.pathname)
   let navBg
   if (targetMode === 'hover') {
     navBg = 'transparent'
   } else if (targetMode === 'fixed') {
-    navBg = 'rgb(245,245,245)'
+    navBg = landingBg
   } else {
-    navBg = BG_MAP[location.pathname] || 'transparent'
+    navBg = getBg(location.pathname)
   }
 
-  const navVariant = VARIANT_MAP[location.pathname] || 'dark'
+  const navVariant = getVariant(location.pathname)
 
   return (
     <div
@@ -140,7 +156,6 @@ export default function App() {
         if (getNavMode(location.pathname) === 'hover') setHoverNav(false)
       }}
     >
-      {/* Single persistent Nav - never unmounts */}
       <div style={{
         position: navPosition,
         top: 0, left: 0, right: 0,
@@ -158,7 +173,6 @@ export default function App() {
         />
       </div>
 
-      {/* Content area with exit animation */}
       <div
         style={{
           opacity: isExiting ? 0 : 1,

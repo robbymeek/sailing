@@ -1,9 +1,15 @@
 const PAGES = ['Home', 'Biography', 'Event Calendar', 'Team', 'Contact']
 
+const SHORT_LABELS = {
+  'Biography': 'Bio',
+  'Event Calendar': 'Events',
+}
+
 export default function Nav({ current, onNavigate, variant }) {
   const dark = variant !== 'light'
   const dim = dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)'
   const active = dark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)'
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 600
 
   return (
     <div style={{
@@ -22,7 +28,7 @@ export default function Nav({ current, onNavigate, variant }) {
               transition: 'color 0.4s ease',
             }}
           >
-            {item}
+            {isMobile && SHORT_LABELS[item] ? SHORT_LABELS[item] : item}
           </button>
           {i < PAGES.length - 1 && (
             <span style={{ color: dim, fontSize: 14, transition: 'color 0.4s ease' }}>|</span>
