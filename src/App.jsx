@@ -38,14 +38,14 @@ export default function App() {
 
   const go = (page) => {
     const routes = {
-      'Home': '/',
+      'Home': '/landing',
       'Landing': '/landing',
       'Biography': '/biography',
       'Event Calendar': '/event-calendar',
       'Team': '/team',
       'Contact': '/contact',
     }
-    navigate(routes[page] || '/')
+    navigate(routes[page] || '/landing')
   }
 
   // Exit/enter animation state
@@ -79,27 +79,25 @@ export default function App() {
     document.body.style.transition = 'background 0.4s ease'
   }, [location.pathname])
 
-  // Is the TARGET an inner page or home?
-  const isHome = location.pathname === '/' || location.pathname === '/landing'
-  const isLanding = location.pathname === '/landing'
+  const isHomePage = location.pathname === '/' || location.pathname === '/landing'
 
-  // Hover-reveal state for Home page nav
+  // Hover-reveal state for home pages
   const [hoverNav, setHoverNav] = useState(false)
 
-  // On inner pages: always visible. On home: hover-reveal. On landing: hidden (has own nav).
-  const navVisible = isLanding ? false : (isHome ? hoverNav : true)
+  // On inner pages: always visible. On home/landing: hover-reveal.
+  const navVisible = isHomePage ? hoverNav : true
 
   return (
     <div
-      onMouseMove={(e) => { if (isHome) setHoverNav(e.clientY < 80) }}
-      onMouseLeave={() => { if (isHome) setHoverNav(false) }}
+      onMouseMove={(e) => { if (isHomePage) setHoverNav(e.clientY < 80) }}
+      onMouseLeave={() => { if (isHomePage) setHoverNav(false) }}
     >
       {/* Single persistent Nav - never unmounts */}
       <div style={{
-        position: isHome ? 'absolute' : 'relative',
+        position: isHomePage ? 'absolute' : 'relative',
         top: 0, left: 0, right: 0,
         zIndex: 50,
-        background: isHome ? 'transparent' : (BG_MAP[location.pathname] || 'transparent'),
+        background: isHomePage ? 'transparent' : (BG_MAP[location.pathname] || 'transparent'),
         opacity: navVisible ? 1 : 0,
         transform: navVisible ? 'translateY(0)' : 'translateY(-10px)',
         transition: 'opacity 0.3s ease, transform 0.3s ease, background 0.4s ease',
@@ -108,7 +106,7 @@ export default function App() {
         <Nav
           current={CURRENT_MAP[location.pathname] || 'Home'}
           onNavigate={go}
-          variant={isHome ? 'dark' : (VARIANT_MAP[location.pathname] || 'dark')}
+          variant={isHomePage ? 'dark' : (VARIANT_MAP[location.pathname] || 'dark')}
         />
       </div>
 

@@ -163,30 +163,8 @@ export default function MainView({ onNavigate }) {
         overflow: 'hidden',
         transition: 'background 0.7s ease',
       }}>
-        <nav style={{
-          ...textFade,
-          display: 'flex', justifyContent: 'center', alignItems: 'center',
-          gap: 8, padding: '20px 0', width: '100%',
-        }}>
-          {['Home', 'Biography', 'Event Calendar', 'Team', 'Contact'].map((item, i) => (
-            <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <button
-                onClick={() => item === 'Home' ? handleToggle() : onNavigate(item)}
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: textNav, fontSize: 14, fontWeight: 400,
-                  letterSpacing: '-0.3px', padding: '4px 8px',
-                  transition: 'color 0.5s ease',
-                }}
-              >
-                {item}
-              </button>
-              {i < 4 && (
-                <span style={{ color: textNav, fontSize: 14, transition: 'color 0.5s ease' }}>|</span>
-              )}
-            </div>
-          ))}
-        </nav>
+        {/* Nav handled by App.jsx */}
+        <div style={{ height: 60 }} />
 
         <div style={{
           flex: 1, display: 'flex', flexDirection: 'column',
