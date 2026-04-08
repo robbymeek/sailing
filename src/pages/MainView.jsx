@@ -122,6 +122,7 @@ export default function MainView({ onNavigate }) {
         position: 'relative', cursor: 'pointer', flexShrink: 0,
       }}
     >
+      {/* Dark boat is the reference frame */}
       <img
         src={darkGif}
         alt="Sailboat dark"
@@ -132,14 +133,18 @@ export default function MainView({ onNavigate }) {
           transition: 'opacity 0.7s ease',
         }}
       />
+      {/* Light boat: scaled and offset to align hull with dark boat */}
       <img
         src={lightGif}
         alt="Sailboat light"
         style={{
-          position: 'absolute', inset: 0,
+          position: 'absolute',
+          top: 0, left: 0,
           width: '100%', height: '100%',
           opacity: showDarkGif ? 0 : 1,
           transition: 'opacity 0.7s ease',
+          transform: 'scale(0.82) translate(6%, 8%)',
+          transformOrigin: 'center center',
         }}
       />
     </div>
