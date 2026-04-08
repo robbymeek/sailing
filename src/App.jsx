@@ -83,7 +83,11 @@ export default function App() {
     >
       {/* Persistent Nav - hidden on home/landing, always visible on inner pages */}
       {!isHomePage && (
-        <div style={{ position: 'relative', zIndex: 50 }}>
+        <div style={{
+          position: 'relative', zIndex: 50,
+          background: BG_MAP[location.pathname] || 'transparent',
+          transition: 'background 0.4s ease',
+        }}>
           <Nav
             current={CURRENT_MAP[location.pathname] || 'Home'}
             onNavigate={go}
