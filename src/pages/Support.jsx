@@ -167,11 +167,11 @@ export default function Support({ onNavigate }) {
           <Timeline />
         </div>
 
-        {/* Content area */}
-        <div style={{ flex: 1, minWidth: 0, padding: '40px 40px 0 20px' }}>
+        {/* Content area — center aligned */}
+        <div style={{ flex: 1, minWidth: 0, padding: '40px 40px 0 20px', textAlign: 'center' }}>
 
           {/* Body text */}
-          <div style={{ ...fade(0.2), maxWidth: 550, marginBottom: 40 }}>
+          <div style={{ ...fade(0.2), maxWidth: 550, margin: '0 auto 40px' }}>
             <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 15, lineHeight: 1.9, margin: '0 0 20px' }}>
               There is no shortcut. The only way to improve is to race the top sailors under the same conditions, on the same water, at the same time. That means traveling to wherever the best regattas are happening.
             </p>
@@ -197,10 +197,10 @@ export default function Support({ onNavigate }) {
           </div>
 
           {/* Where support goes */}
-          <div style={{ ...fade(0.3), maxWidth: 450, marginBottom: 40 }}>
+          <div style={{ ...fade(0.3), maxWidth: 400, margin: '0 auto 40px', textAlign: 'left' }}>
             <p style={{
               color: 'rgba(255,255,255,0.3)', fontSize: 11, textTransform: 'uppercase',
-              letterSpacing: '2px', marginBottom: 20,
+              letterSpacing: '2px', marginBottom: 20, textAlign: 'center',
             }}>
               Where Your Support Goes
             </p>
@@ -219,76 +219,53 @@ export default function Support({ onNavigate }) {
             </div>
           </div>
 
-          {/* Photo strip */}
-          <div style={{
-            ...fade(0.35),
-            display: 'grid', gridTemplateColumns: '1fr 1fr',
-            gap: 2, marginBottom: 50,
-          }}>
-            <img src={`${BASE}IMG_5957 2.JPG`} alt="" style={{ width: '100%', height: 180, objectFit: 'cover' }} />
-            <img src={`${BASE}IMG_5854.JPG`} alt="" style={{ width: '100%', height: 180, objectFit: 'cover' }} />
+          {/* Photos stacked */}
+          <div style={{ ...fade(0.35), maxWidth: 500, margin: '0 auto 50px' }}>
+            <img src={`${BASE}IMG_5957 2.JPG`} alt="" style={{ width: '100%', height: 240, objectFit: 'cover', display: 'block', marginBottom: 2 }} />
+            <img src={`${BASE}IMG_5854.JPG`} alt="" style={{ width: '100%', height: 240, objectFit: 'cover', display: 'block' }} />
           </div>
 
-          {/* Actions */}
-          <div style={{ ...fade(0.4), marginBottom: 50 }}>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <a
-                href="mailto:robbymeek+LA2028@gmail.com?subject=Supporting%20Your%20Olympic%20Campaign"
-                style={{
-                  color: 'rgb(12,0,60)', fontSize: 14, fontWeight: 600,
-                  background: '#fff', padding: '14px 36px',
-                  textDecoration: 'none', textAlign: 'center',
-                }}
-              >
-                Email to Donate
-              </a>
-              <a
-                href="https://venmo.com/robbymeek"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  color: 'rgba(255,255,255,0.7)', fontSize: 14,
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  padding: '14px 36px',
-                  textDecoration: 'none', textAlign: 'center',
-                }}
-              >
-                Donate via Venmo
-              </a>
-            </div>
+          {/* Actions — unified look */}
+          <div style={{ ...fade(0.4), marginBottom: 40 }}>
+            <a
+              href="mailto:robbymeek+LA2028@gmail.com?subject=Supporting%20Your%20Olympic%20Campaign"
+              style={{
+                color: 'rgb(12,0,60)', fontSize: 14, fontWeight: 600,
+                background: '#fff', padding: '14px 40px',
+                textDecoration: 'none', display: 'inline-block',
+                marginBottom: 12,
+              }}
+            >
+              Email to Support
+            </a>
+            <br />
+            <a
+              href="https://venmo.com/robbymeek"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: 'rgba(255,255,255,0.5)', fontSize: 13,
+                textDecoration: 'underline', textUnderlineOffset: '3px',
+              }}
+            >
+              or Venmo
+            </a>
           </div>
 
           {/* Connect */}
-          <div style={{ ...fade(0.45), marginBottom: 40 }}>
-            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, lineHeight: 1.7, margin: '0 0 16px', maxWidth: 420 }}>
+          <div style={{ ...fade(0.45), marginBottom: 60 }}>
+            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, lineHeight: 1.7, margin: '0 auto 12px', maxWidth: 400 }}>
               Not looking to donate? If you have advice, connections, or just want to follow along, I would love to hear from you.
             </p>
             <a
               href="mailto:robbymeek+LA2028@gmail.com?subject=Connecting"
               style={{
-                color: '#fff', fontSize: 14, fontWeight: 500,
-                textDecoration: 'underline', textUnderlineOffset: '4px',
-                textDecorationColor: 'rgb(200,40,40)',
+                color: 'rgba(255,255,255,0.5)', fontSize: 13,
+                textDecoration: 'underline', textUnderlineOffset: '3px',
               }}
             >
-              Reach Out
+              Reach out
             </a>
-          </div>
-
-          {/* Back to Team */}
-          <div style={{ marginBottom: 50 }}>
-            <button
-              onClick={() => onNavigate('Team')}
-              style={{
-                background: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                cursor: 'pointer', color: '#fff', fontSize: 14, fontWeight: 500,
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                padding: '10px 28px',
-              }}
-            >
-              <span>&larr;</span> Back to Team
-            </button>
           </div>
         </div>
       </div>
