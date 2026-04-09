@@ -54,7 +54,7 @@ button {
   }
 }
 
-/* Bio hero — medium screens: cards go horizontal below image */
+/* Bio hero — medium screens: cards move below image */
 @media (max-width: 900px) {
   .bio-hero {
     display: flex !important;
@@ -85,7 +85,7 @@ button {
     top: auto !important;
     width: 100% !important;
     flex-direction: row !important;
-    align-items: stretch !important;
+    align-items: center !important;
     justify-content: center !important;
     padding: 24px 16px !important;
     gap: 12px !important;
@@ -93,25 +93,27 @@ button {
 
   .bio-regatta-cards > div {
     flex: 1 1 0 !important;
-    max-width: 240px !important;
+    max-width: 200px !important;
+    width: auto !important;
+    transform: none !important;
   }
 
   /* Shrink card innards on medium */
   .bio-regatta-cards .card-date-num {
-    font-size: 24px !important;
+    font-size: 28px !important;
   }
   .bio-regatta-cards .card-date-month {
     font-size: 10px !important;
   }
   .bio-regatta-cards .card-date-badge {
-    padding: 8px 12px !important;
+    padding: 14px 12px !important;
   }
   .bio-regatta-cards .card-body {
-    padding: 12px !important;
+    padding: 14px 12px 18px !important;
   }
   .bio-regatta-cards .card-status {
     font-size: 9px !important;
-    margin-bottom: 4px !important;
+    margin-bottom: 6px !important;
   }
   .bio-regatta-cards .card-name {
     font-size: 14px !important;

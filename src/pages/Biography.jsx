@@ -161,69 +161,72 @@ export default function Biography({ onNavigate }) {
           </div>
         </div>
 
-        {/* Right side: Regatta cards — vertical stack on desktop */}
+        {/* Right side: Regatta cards — horizontal row on desktop, portrait orientation */}
         <div style={{
-          position: 'absolute', right: '4%', top: '10%',
-          display: 'flex', flexDirection: 'column', gap: 12,
-          alignItems: 'stretch',
+          position: 'absolute', right: '3%', top: '8%',
+          display: 'flex', flexDirection: 'row', gap: 14,
+          alignItems: 'center',
           zIndex: 2,
-          width: 220,
         }}
           className="bio-regatta-cards"
         >
-          {REGATTAS.map((r, i) => (
+          {REGATTAS.map((r, i) => {
+            const isMid = r.current
+            const cardWidth = isMid ? 210 : 175
+            return (
             <div key={i} style={{
               background: r.current ? 'rgb(18,0,120)' : 'rgb(50,55,65)',
               padding: '0',
-              width: '100%',
+              width: cardWidth,
               flexShrink: 0,
               position: 'relative',
               overflow: 'hidden',
+              transform: isMid ? 'scale(1)' : 'scale(0.95)',
             }}>
               {/* Date badge */}
               <div className="card-date-badge" style={{
                 background: r.current ? 'rgb(0,80,255)' : 'rgba(255,255,255,0.1)',
-                padding: '12px 16px',
+                padding: isMid ? '24px 16px' : '18px 16px',
                 textAlign: 'center',
               }}>
                 <div className="card-date-num" style={{
-                  color: '#fff', fontSize: r.current ? 36 : 28, fontWeight: 800,
+                  color: '#fff', fontSize: isMid ? 48 : 36, fontWeight: 800,
                   lineHeight: 1,
                 }}>{r.date.split(' ')[0]}</div>
                 <div className="card-date-month" style={{
-                  color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: 600,
-                  letterSpacing: '1px',
+                  color: 'rgba(255,255,255,0.7)', fontSize: isMid ? 14 : 12, fontWeight: 600,
+                  letterSpacing: '1px', marginTop: 4,
                 }}>{r.month}</div>
               </div>
               {/* Content */}
-              <div className="card-body" style={{ padding: '16px' }}>
+              <div className="card-body" style={{ padding: isMid ? '20px 16px 28px' : '16px 14px 22px' }}>
                 <div className="card-status" style={{
                   color: r.current ? 'rgb(0,180,255)' : r.past ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.5)',
                   fontSize: 10, fontWeight: 700, letterSpacing: '1px',
-                  marginBottom: 8, textTransform: 'uppercase',
+                  marginBottom: 10, textTransform: 'uppercase',
                 }}>{r.status}</div>
                 <div className="card-name" style={{
-                  color: '#fff', fontSize: r.current ? 20 : 15, fontWeight: 700,
-                  marginBottom: 6, lineHeight: 1.3,
+                  color: '#fff', fontSize: isMid ? 20 : 16, fontWeight: 700,
+                  marginBottom: 8, lineHeight: 1.3,
                 }}>{r.name}</div>
                 <div className="card-league" style={{
                   color: 'rgba(255,255,255,0.5)', fontSize: 12,
-                  marginBottom: 4,
+                  marginBottom: 6,
                 }}>{r.league}</div>
                 <div className="card-location" style={{
                   color: 'rgba(255,255,255,0.35)', fontSize: 11,
                 }}>{r.location}</div>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* Logos — desktop: below events on right; mobile: between image and events */}
         <div className="bio-logos" style={{
-          position: 'absolute', right: '4%', bottom: '5%',
+          position: 'absolute', right: '3%', bottom: '5%',
           display: 'flex', gap: 32, alignItems: 'center', justifyContent: 'center',
           zIndex: 2,
-          width: 220,
         }}>
           <div style={{
             width: 90, height: 90,
