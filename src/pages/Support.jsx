@@ -3,16 +3,22 @@ import Footer from '../components/Footer'
 
 const BASE = import.meta.env.BASE_URL
 
-const TIMELINE = [
-  { year: '2017', label: 'Started racing ILCA', past: true },
-  { year: '2019', label: 'First National Championship', past: true },
-  { year: '2021', label: 'ILCA 6 Youth Worlds', past: true },
-  { year: '2022', label: 'Harvard Sailing Team', past: true },
-  { year: '2023', label: 'US Sailing Team ODP', past: true },
-  { year: '2024', label: '6x National Champion', past: true },
-  { year: '2025', label: 'Top American at Europeans', past: true },
-  { year: '2026', label: 'Full-time Olympic Campaign', current: true },
-  { year: '2027', label: 'World Championship Contender' },
+const PRE_ILCA = [
+  { label: "Opti's", past: true },
+]
+
+const POST_ILCA = [
+  { year: '2017', label: 'Started racing in the ILCA', past: true },
+  { year: '2018', label: 'First Youth Champs, ILCA 6', past: true },
+  { year: '2019', label: '5th at High School Nationals as a freshman, ILCA 6', past: true },
+  { year: '2020', label: 'Covid', past: true },
+  { year: '2021', label: 'High School National Champion ILCA 6, Orange Bowl Champion, 9th at ILCA 6 Youth Worlds, North American Champion ILCA 6', past: true },
+  { year: '2022', label: 'High School National Champion ILCA 7, 5th at ILCA 6 Youth Worlds', past: true },
+  { year: '2023', label: 'Harvard Sailing, ILCA 7 North American Champion', past: true },
+  { year: '2024', label: 'Train and work at CrossnoKaye', past: true },
+  { year: '2025', label: 'Train, ILCA 7 North American Champion, Top American at Europeans', past: true },
+  { year: '2026', label: 'School and full-time Olympic training', current: true },
+  { year: '2027', label: 'World Championship contender' },
   { year: '2028', label: 'LA Olympics' },
 ]
 
@@ -109,36 +115,72 @@ export default function Support({ onNavigate }) {
         }}>
           The Journey So Far — And Where Your Support Goes
         </p>
+
+        {/* Pre-ILCA era */}
+        <div style={{ marginBottom: 20 }}>
+          <p style={{
+            color: 'rgba(255,255,255,0.25)', fontSize: 10, textTransform: 'uppercase',
+            letterSpacing: '2px', marginBottom: 12, fontStyle: 'italic',
+          }}>
+            Pre-ILCA
+          </p>
+          <div style={{ position: 'relative', paddingLeft: 32 }}>
+            <div style={{
+              position: 'absolute', left: 7, top: 0, bottom: 0, width: 2,
+              background: 'rgba(255,255,255,0.08)',
+            }} />
+            {PRE_ILCA.map((item, i) => (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center',
+                marginBottom: 8, position: 'relative',
+              }}>
+                <div style={{
+                  width: 10, height: 10, borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.25)',
+                  position: 'absolute', left: -29,
+                }} />
+                <span style={{
+                  color: 'rgba(255,255,255,0.4)', fontSize: 13, fontStyle: 'italic',
+                }}>{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Post-ILCA era */}
+        <p style={{
+          color: 'rgba(255,255,255,0.25)', fontSize: 10, textTransform: 'uppercase',
+          letterSpacing: '2px', marginBottom: 12, fontStyle: 'italic',
+        }}>
+          Post-ILCA
+        </p>
         <div style={{ position: 'relative', paddingLeft: 32 }}>
-          {/* Vertical line */}
           <div style={{
             position: 'absolute', left: 7, top: 0, bottom: 0, width: 2,
             background: 'linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgb(200,40,40) 70%, rgba(255,255,255,0.3) 100%)',
           }} />
-          {TIMELINE.map((item, i) => (
+          {POST_ILCA.map((item, i) => (
             <div key={i} style={{
-              display: 'flex', alignItems: 'flex-start', gap: 16,
-              marginBottom: i < TIMELINE.length - 1 ? 24 : 0,
+              marginBottom: i < POST_ILCA.length - 1 ? 20 : 0,
               position: 'relative',
             }}>
-              {/* Dot */}
               <div style={{
-                width: 16, height: 16, borderRadius: '50%',
+                width: item.current ? 16 : 12, height: item.current ? 16 : 12, borderRadius: '50%',
                 background: item.current ? 'rgb(200,40,40)' : item.past ? '#fff' : 'rgba(255,255,255,0.2)',
                 border: item.current ? '3px solid rgba(200,40,40,0.3)' : 'none',
-                flexShrink: 0, marginTop: 2,
-                position: 'absolute', left: -32,
+                position: 'absolute', left: item.current ? -34 : -32, top: 2,
                 boxShadow: item.current ? '0 0 12px rgba(200,40,40,0.5)' : 'none',
               }} />
               <div>
                 <span style={{
-                  color: item.current ? 'rgb(200,40,40)' : item.past ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.3)',
+                  color: item.current ? 'rgb(200,40,40)' : item.past ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.25)',
                   fontSize: 12, fontWeight: 700, letterSpacing: '1px',
-                  marginRight: 12,
+                  marginRight: 10,
                 }}>{item.year}</span>
                 <span style={{
-                  color: item.current ? '#fff' : item.past ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.4)',
-                  fontSize: 14, fontWeight: item.current ? 600 : 400,
+                  color: item.current ? '#fff' : item.past ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)',
+                  fontSize: 13, fontWeight: item.current ? 600 : 400,
+                  lineHeight: 1.5,
                 }}>
                   {item.label}
                 </span>
