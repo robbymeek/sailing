@@ -88,9 +88,9 @@ export default function Biography({ onNavigate }) {
           display: 'flex', alignItems: 'flex-end',
           zIndex: 2,
         }}>
-          {/* Cutout image — scrolls up from bottom */}
+          {/* Cutout image — starts centered, scrolls up */}
           <div ref={imageRef} style={{
-            position: 'absolute', bottom: -60, left: '5%',
+            position: 'absolute', top: '10%', left: '5%',
             width: '85%', maxWidth: 500,
             willChange: 'transform',
           }}>
@@ -107,7 +107,7 @@ export default function Biography({ onNavigate }) {
 
         {/* Text banners — left-aligned, scroll faster */}
         <div style={{
-          position: 'absolute', left: 0, top: '35%',
+          position: 'absolute', left: 0, top: '25%',
           zIndex: 3, pointerEvents: 'none',
         }}>
           <div ref={text1Ref} style={{ willChange: 'transform' }}>
