@@ -4,10 +4,11 @@ export default function Contact({ onNavigate }) {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      height: '100dvh',
       position: 'relative',
       display: 'flex',
       flexDirection: 'column',
+      overflow: 'hidden',
     }}>
       {/* Background photo */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0 }}>
