@@ -29,36 +29,36 @@ const COSTS = [
 function Timeline() {
   return (
     <div style={{ position: 'relative' }}>
-      {/* Vertical line — left side */}
+      {/* Vertical line — right side */}
       <div style={{
-        position: 'absolute', left: 6, top: 0, bottom: 0, width: 2,
+        position: 'absolute', right: 6, top: 0, bottom: 0, width: 2,
         background: 'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.15) 30%, rgb(200,40,40) 75%, rgba(255,255,255,0.12) 100%)',
       }} />
 
       {/* B.I. / A.I. header */}
-      <div style={{ paddingLeft: 24, marginBottom: 8 }}>
-        <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, fontStyle: 'italic', letterSpacing: '1px' }}>
-          B.I.
-        </span>
-        <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 10, margin: '0 6px' }}>|</span>
+      <div style={{ textAlign: 'right', paddingRight: 24, marginBottom: 8 }}>
         <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, fontStyle: 'italic' }}>
           Opti's
         </span>
+        <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 10, margin: '0 6px' }}>|</span>
+        <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, fontStyle: 'italic', letterSpacing: '1px' }}>
+          B.I.
+        </span>
       </div>
-      <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', marginLeft: 24, marginBottom: 12 }} />
-      <div style={{ paddingLeft: 24, marginBottom: 16 }}>
+      <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', marginRight: 24, marginBottom: 12 }} />
+      <div style={{ textAlign: 'right', paddingRight: 24, marginBottom: 16 }}>
         <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, fontStyle: 'italic', letterSpacing: '1px' }}>A.I.</span>
       </div>
 
       {/* Entries */}
       {TIMELINE_DATA.map((item, i) => (
-        <div key={i} style={{ position: 'relative', paddingLeft: 24, marginBottom: 20 }}>
+        <div key={i} style={{ position: 'relative', paddingRight: 24, marginBottom: 20, textAlign: 'right' }}>
           {/* Dot on the line */}
           <div style={{
             width: item.current ? 14 : 10, height: item.current ? 14 : 10,
             borderRadius: '50%',
             background: item.current ? 'rgb(200,40,40)' : item.past ? '#fff' : 'rgba(255,255,255,0.15)',
-            position: 'absolute', left: item.current ? 0 : 2, top: 2,
+            position: 'absolute', right: item.current ? 0 : 2, top: 2,
             zIndex: 1,
             boxShadow: item.current ? '0 0 12px rgba(200,40,40,0.5)' : 'none',
           }} />
@@ -155,20 +155,8 @@ export default function Support({ onNavigate }) {
         className="support-layout"
       >
 
-        {/* Timeline sidebar */}
-        <div style={{
-          width: 220, flexShrink: 0,
-          padding: '40px 24px 40px 40px',
-          position: 'sticky', top: 60, alignSelf: 'flex-start',
-          height: 'fit-content',
-        }}
-          className="timeline-sidebar"
-        >
-          <Timeline />
-        </div>
-
         {/* Content area — center aligned */}
-        <div style={{ flex: 1, minWidth: 0, padding: '40px 40px 0 20px', textAlign: 'center' }}>
+        <div style={{ flex: 1, minWidth: 0, padding: '40px 40px 0 40px', textAlign: 'center' }}>
 
           {/* Body text */}
           <div style={{ ...fade(0.2), maxWidth: 550, margin: '0 auto 40px' }}>
@@ -267,6 +255,18 @@ export default function Support({ onNavigate }) {
               Reach out
             </a>
           </div>
+        </div>
+
+        {/* Timeline sidebar — right side */}
+        <div style={{
+          width: 'clamp(180px, 20vw, 240px)', flexShrink: 0,
+          padding: '40px 40px 40px 24px',
+          position: 'sticky', top: 60, alignSelf: 'flex-start',
+          height: 'fit-content',
+        }}
+          className="timeline-sidebar"
+        >
+          <Timeline />
         </div>
       </div>
 
