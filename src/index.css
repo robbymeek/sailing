@@ -104,7 +104,11 @@ button {
 
   .bio-regatta-cards > div {
     width: auto !important;
-    transform: none !important;
+    transform: scale(0.92) !important;
+  }
+
+  .bio-regatta-cards > div:nth-child(2) {
+    transform: scale(1) !important;
   }
 
   /* Scale card text with viewport so ratios stay constant */
