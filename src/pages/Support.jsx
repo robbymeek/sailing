@@ -32,6 +32,7 @@ const COSTS = [
 
 export default function Support({ onNavigate }) {
   const [visible, setVisible] = useState(false)
+  const [showBio, setShowBio] = useState(false)
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 50)
     return () => clearTimeout(t)
@@ -106,6 +107,108 @@ export default function Support({ onNavigate }) {
           Whether it is financial support, advice, a connection, or simply following along, it all matters. I am grateful for every person who has been part of this.
         </p>
       </div>
+
+      {/* Bio popup trigger */}
+      <div style={{ ...fade(0.22), textAlign: 'center', padding: '0 40px 10px' }}>
+        <button
+          onClick={() => setShowBio(true)}
+          style={{
+            background: 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            color: 'rgba(255,255,255,0.6)',
+            fontSize: 13, fontWeight: 500,
+            padding: '10px 24px',
+            cursor: 'pointer',
+            letterSpacing: '-0.2px',
+          }}
+        >
+          About Robby Meek
+        </button>
+      </div>
+
+      {/* Bio popup */}
+      {showBio && (
+        <div
+          onClick={() => setShowBio(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 100,
+            background: 'rgba(0,0,0,0.7)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'rgb(18,0,100)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              maxWidth: 520, width: '100%',
+              maxHeight: '80vh', overflowY: 'auto',
+            }}
+          >
+            <img
+              src={`${BASE}IMG_5957 2.JPG`}
+              alt="Robby Meek sailing"
+              style={{ width: '100%', height: 220, objectFit: 'cover', display: 'block' }}
+            />
+            <div style={{ padding: '28px 32px' }}>
+              <h2 style={{
+                color: '#fff', fontSize: 22, fontWeight: 700,
+                margin: '0 0 6px', letterSpacing: '-0.5px',
+              }}>Robby Meek</h2>
+              <p style={{
+                color: 'rgba(255,255,255,0.4)', fontSize: 13, margin: '0 0 20px',
+              }}>Harvard Sailing | US Sailing Team ODP | ILCA 7</p>
+
+              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, lineHeight: 1.7, margin: '0 0 16px' }}>
+                Campaigning for the 2028 Olympic Games in the ILCA 7. Sailing since age nine, racing the ILCA since twelve. Six national championships, three continental titles. Currently studying Applied Mathematics and Economics at Harvard College while serving as Team Captain.
+              </p>
+
+              <div style={{
+                display: 'flex', gap: 24, margin: '0 0 24px',
+                borderTop: '1px solid rgba(255,255,255,0.08)',
+                paddingTop: 16,
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ color: '#fff', fontSize: 28, fontWeight: 800 }}>6x</div>
+                  <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>National Champ</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ color: '#fff', fontSize: 28, fontWeight: 800 }}>3x</div>
+                  <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>Continental Champ</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ color: '#fff', fontSize: 28, fontWeight: 800 }}>9+</div>
+                  <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>Years in ILCA</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button
+                  onClick={() => { setShowBio(false); onNavigate('Biography'); }}
+                  style={{
+                    background: '#fff', color: 'rgb(18,0,100)',
+                    border: 'none', fontSize: 13, fontWeight: 600,
+                    padding: '10px 24px', cursor: 'pointer',
+                  }}
+                >
+                  Full Biography
+                </button>
+                <button
+                  onClick={() => setShowBio(false)}
+                  style={{
+                    background: 'none', color: 'rgba(255,255,255,0.5)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    fontSize: 13, padding: '10px 24px', cursor: 'pointer',
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Timeline */}
       <div style={{ ...fade(0.25), maxWidth: 700, margin: '0 auto', padding: '40px 40px 50px' }}>
