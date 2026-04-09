@@ -88,9 +88,9 @@ export default function Biography({ onNavigate }) {
           display: 'flex', alignItems: 'flex-end',
           zIndex: 2,
         }}>
-          {/* Cutout image — starts centered, scrolls up */}
+          {/* Cutout image — starts below text, scrolls up */}
           <div ref={imageRef} style={{
-            position: 'absolute', top: '10%', left: '5%',
+            position: 'absolute', top: '40%', left: '5%',
             width: '85%', maxWidth: 500,
             willChange: 'transform',
           }}>
@@ -107,7 +107,7 @@ export default function Biography({ onNavigate }) {
 
         {/* Text banners — left-aligned, scroll faster */}
         <div style={{
-          position: 'absolute', left: 0, top: '25%',
+          position: 'absolute', left: 0, top: '12%',
           zIndex: 3, pointerEvents: 'none',
         }}>
           <div ref={text1Ref} style={{ willChange: 'transform' }}>
@@ -213,52 +213,57 @@ export default function Biography({ onNavigate }) {
           ))}
         </div>
 
-        {/* Subtle shadow at bottom */}
-        <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, height: 120,
-          background: 'linear-gradient(0deg, rgb(18,0,120) 0%, transparent 100%)',
-          zIndex: 4,
-        }} />
       </div>
 
-      {/* ===== BIO CONTENT — dark blue ===== */}
-      <div style={{ background: 'rgb(18,0,120)', position: 'relative', zIndex: 5 }}>
-        <Nav current="Biography" onNavigate={onNavigate} variant="blue" />
+      {/* ===== BIO CONTENT — black, matching event calendar vibe ===== */}
+      <div style={{ background: 'rgb(0,0,0)', position: 'relative', zIndex: 5 }}>
 
+        {/* Stats — bold, immediate */}
         <div style={{
-          maxWidth: 850, margin: '0 auto', padding: '20px 40px 60px',
-          color: 'rgba(255,255,255,0.85)', fontSize: 15, lineHeight: 1.7,
+          display: 'flex', justifyContent: 'center', gap: 'clamp(40px, 8vw, 100px)',
+          padding: '60px 20px 50px', maxWidth: 900, margin: '0 auto', flexWrap: 'wrap',
         }}>
-          <p style={{ marginBottom: 20 }}>
-            I'm currently campaigning for the 2028 Olympic Games in the ILCA 7, the men's single-handed sailing class. I've been sailing since I was nine years old and started racing in the ILCA class at age twelve. Since then, I've been fortunate to win six national championships and three continental titles. I now compete as part of the Harvard Sailing Team while studying Applied Mathematics and Economics at Harvard College.
-          </p>
-          <p style={{ marginBottom: 20 }}>
-            At Harvard, I serve as Team Captain and have won the Team Race National Championship in double-handed boats (Boat Starters On Top) and the Single-Handed National Championship. You can find me in the gym working on my sailing fitness, in class, or hanging with some friends.
-          </p>
-          <p style={{ marginBottom: 20 }}>
-            Originally from Annapolis, Maryland, sailing has always been a central part of my life. Outside of training and academics, I enjoy painting, cooking, and spending time with my family. I'm also deeply interested in architecture, start-ups, and investing interests I pursue through campus clubs and side projects.
-          </p>
-          <p>
-            I'm incredibly grateful for the opportunity to chase this Olympic dream and excited for everything the journey ahead holds.
-          </p>
-        </div>
-
-        {/* Stats */}
-        <div style={{
-          display: 'flex', justifyContent: 'center', gap: 80, padding: '50px 20px',
-          borderTop: '1px solid rgba(255,255,255,0.08)',
-          maxWidth: 850, margin: '0 auto', flexWrap: 'wrap',
-        }}>
-          {[['6x', 'National Championships'], ['3x', 'Continental Championships'], ['9+', 'Years in the ILCA']].map(([n, l]) => (
+          {[['6x', 'National Champion'], ['3x', 'Continental Champion'], ['9+', 'Years in ILCA']].map(([n, l]) => (
             <div key={l} style={{ textAlign: 'center' }}>
-              <div style={{ color: '#fff', fontSize: 48, fontWeight: 800 }}>{n}</div>
-              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, fontWeight: 500, marginTop: 4 }}>{l}</div>
+              <div style={{ color: '#fff', fontSize: 56, fontWeight: 800, letterSpacing: '-2px' }}>{n}</div>
+              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: 500, marginTop: 4, textTransform: 'uppercase', letterSpacing: '1px' }}>{l}</div>
             </div>
           ))}
         </div>
 
-        {/* Press clippings */}
-        <div style={{ maxWidth: 850, margin: '0 auto', padding: '30px 40px 60px' }}>
+        <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', maxWidth: 900, margin: '0 auto' }} />
+
+        {/* Bio text — clean two-column on desktop */}
+        <div style={{
+          maxWidth: 900, margin: '0 auto', padding: '50px 40px',
+          display: 'flex', gap: 40, flexWrap: 'wrap',
+        }}>
+          <div style={{ flex: '1 1 380px', minWidth: 280 }}>
+            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.8, margin: '0 0 20px' }}>
+              I'm currently campaigning for the 2028 Olympic Games in the ILCA 7, the men's single-handed sailing class. I've been sailing since I was nine years old and started racing in the ILCA class at age twelve. Since then, I've been fortunate to win six national championships and three continental titles.
+            </p>
+            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.8, margin: 0 }}>
+              I now compete as part of the Harvard Sailing Team while studying Applied Mathematics and Economics at Harvard College. At Harvard, I serve as Team Captain and have won the Team Race National Championship and the Single-Handed National Championship.
+            </p>
+          </div>
+          <div style={{ flex: '1 1 380px', minWidth: 280 }}>
+            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.8, margin: '0 0 20px' }}>
+              Originally from Annapolis, Maryland, sailing has always been a central part of my life. Outside of training and academics, I enjoy painting, cooking, and spending time with my family.
+            </p>
+            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.8, margin: 0 }}>
+              I'm incredibly grateful for the opportunity to chase this Olympic dream and excited for everything the journey ahead holds.
+            </p>
+          </div>
+        </div>
+
+        <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', maxWidth: 900, margin: '0 auto' }} />
+
+        {/* Press — clean list */}
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 40px 60px' }}>
+          <p style={{
+            color: 'rgba(255,255,255,0.3)', fontSize: 11, textTransform: 'uppercase',
+            letterSpacing: '2px', marginBottom: 20,
+          }}>Press</p>
           {PRESS.map((item, i) => (
             <a
               key={i}
@@ -266,19 +271,20 @@ export default function Biography({ onNavigate }) {
               target="_blank"
               rel="noopener noreferrer"
               style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '14px 18px', marginBottom: 6,
-                background: 'rgba(100,100,160,0.25)',
+                display: 'block',
+                padding: '14px 0',
+                borderBottom: '1px solid rgba(255,255,255,0.06)',
                 textDecoration: 'none',
+                color: 'rgba(255,255,255,0.6)',
+                fontSize: 13,
               }}
             >
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>+</span>
-              <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>{item.t}</span>
+              {item.t}
             </a>
           ))}
         </div>
 
-        <Footer variant="blue" onNavigate={onNavigate} />
+        <Footer variant="dark" onNavigate={onNavigate} />
       </div>
     </div>
   )
