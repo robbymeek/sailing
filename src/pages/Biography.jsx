@@ -77,10 +77,12 @@ export default function Biography({ onNavigate }) {
       {/* ===== HERO SECTION — Messi-inspired parallax ===== */}
       <div style={{
         position: 'relative',
-        height: '100vh',
+        minHeight: '100vh',
         overflow: 'hidden',
         background: 'rgb(230,235,240)',
-      }}>
+      }}
+        className="bio-hero"
+      >
         {/* Left side: Image of me + text banners */}
         <div style={{
           position: 'absolute', bottom: 0, left: 0,
@@ -162,15 +164,17 @@ export default function Biography({ onNavigate }) {
         {/* Right side: Regatta cards */}
         <div style={{
           position: 'absolute', right: '3%', top: '20%',
-          display: 'flex', gap: 12,
+          display: 'flex', gap: 12, alignItems: 'center',
           zIndex: 2,
           maxWidth: '45%',
-        }}>
+        }}
+          className="bio-regatta-cards"
+        >
           {REGATTAS.map((r, i) => (
             <div key={i} style={{
               background: r.current ? 'rgb(18,0,120)' : 'rgb(50,55,65)',
               padding: '0',
-              width: 180,
+              width: r.current ? 210 : 160,
               flexShrink: 0,
               position: 'relative',
               overflow: 'hidden',
@@ -182,7 +186,7 @@ export default function Biography({ onNavigate }) {
                 textAlign: 'center',
               }}>
                 <div style={{
-                  color: '#fff', fontSize: 32, fontWeight: 800,
+                  color: '#fff', fontSize: r.current ? 40 : 28, fontWeight: 800,
                   lineHeight: 1,
                 }}>{r.date.split(' ')[0]}</div>
                 <div style={{
@@ -198,7 +202,7 @@ export default function Biography({ onNavigate }) {
                   marginBottom: 8, textTransform: 'uppercase',
                 }}>{r.status}</div>
                 <div style={{
-                  color: '#fff', fontSize: 16, fontWeight: 700,
+                  color: '#fff', fontSize: r.current ? 20 : 15, fontWeight: 700,
                   marginBottom: 6, lineHeight: 1.3,
                 }}>{r.name}</div>
                 <div style={{
@@ -216,7 +220,7 @@ export default function Biography({ onNavigate }) {
       </div>
 
       {/* ===== BIO CONTENT — black, matching event calendar vibe ===== */}
-      <div style={{ background: 'rgb(0,0,0)', position: 'relative', zIndex: 5 }}>
+      <div style={{ background: 'rgb(18,0,120)', position: 'relative', zIndex: 5 }}>
 
         {/* Stats — bold, immediate */}
         <div style={{
@@ -284,7 +288,7 @@ export default function Biography({ onNavigate }) {
           ))}
         </div>
 
-        <Footer variant="dark" onNavigate={onNavigate} />
+        <Footer variant="blue" onNavigate={onNavigate} />
       </div>
     </div>
   )

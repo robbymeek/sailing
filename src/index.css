@@ -54,6 +54,19 @@ button {
   }
 }
 
+/* Bio hero - stack regatta cards below on mobile */
+@media (max-width: 800px) {
+  .bio-regatta-cards {
+    position: relative !important;
+    right: auto !important;
+    top: auto !important;
+    max-width: 100% !important;
+    justify-content: center !important;
+    padding: 20px 16px !important;
+    flex-wrap: wrap !important;
+  }
+}
+
 /* Marquee animation */
 @keyframes marquee {
   0% { transform: translateX(0); }
