@@ -1,7 +1,88 @@
+import { useState } from 'react'
 import Footer from '../components/Footer'
 import usePageEntrance from '../hooks/usePageEntrance'
 
 const BASE = import.meta.env.BASE_URL
+
+const SPONSORS = [
+  {
+    name: 'AA ENT & Facial Plastic Surgery',
+    img: 'AAENT-Logo.png',
+    url: 'https://aaentandallergy.com/',
+    bg: '#000',
+    hoverBg: 'rgb(0,80,255)',
+    desc: 'Leading ENT and facial plastic surgery practice providing world-class care.',
+  },
+  {
+    name: 'US Sailing Team',
+    img: 'us-sailing-team-logo.png',
+    url: 'https://www.ussailing.org/teams/ussailingteam/',
+    bg: 'rgb(10,20,50)',
+    hoverBg: 'rgb(180,30,30)',
+    desc: 'The national sailing team representing the United States at the Olympic Games.',
+  },
+  {
+    name: 'Sailing Foundation of New York',
+    img: 'sfny-logo.png',
+    url: 'https://sfny.org/',
+    bg: '#fff',
+    hoverBg: 'rgb(10,10,10)',
+    desc: 'Supporting competitive sailors and maritime education across the country.',
+  },
+]
+
+function SponsorCard({ sponsor, borderRight }) {
+  const [hovered, setHovered] = useState(false)
+
+  return (
+    <a
+      href={sponsor.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: hovered ? sponsor.hoverBg : sponsor.bg,
+        padding: '50px 24px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        borderRight: borderRight ? '3px solid rgb(0,120,255)' : 'none',
+        position: 'relative', overflow: 'hidden',
+        textDecoration: 'none',
+        transition: 'background 0.35s ease',
+        minHeight: 160,
+      }}
+    >
+      <img
+        src={`${BASE}${sponsor.img}`}
+        alt={sponsor.name}
+        style={{
+          maxWidth: '75%', maxHeight: 70, objectFit: 'contain',
+          opacity: hovered ? 0.15 : 1,
+          transition: 'opacity 0.35s ease',
+          filter: hovered && sponsor.bg === '#fff' ? 'invert(1)' : 'none',
+        }}
+      />
+      {/* Hover overlay text */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        padding: '20px 16px',
+        opacity: hovered ? 1 : 0,
+        transition: 'opacity 0.35s ease',
+      }}>
+        <p style={{
+          color: '#fff', fontSize: 14, fontWeight: 700,
+          margin: '0 0 8px', textAlign: 'center',
+        }}>{sponsor.name}</p>
+        <p style={{
+          color: 'rgba(255,255,255,0.7)', fontSize: 11,
+          textAlign: 'center', lineHeight: 1.5, margin: 0,
+        }}>{sponsor.desc}</p>
+      </div>
+    </a>
+  )
+}
 
 const SUPPORTERS = [
   { name: 'Charter Financial Group', url: 'https://www.charterfinancialgroup.com/' },
@@ -66,37 +147,13 @@ export default function Team({ onNavigate }) {
 
         {/* Sponsors — bold full-width blocks with harsh lines */}
         <div style={{ ...entrance.style(1) }}>
-          {/* Red accent line */}
-          <div style={{ height: 4, background: 'rgb(200,40,40)' }} />
-
+          <div style={{ height: 4, background: 'rgb(0,120,255)' }} />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }}>
-            {/* AA ENT */}
-            <div style={{
-              background: '#000', padding: '50px 24px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              borderRight: '3px solid rgb(200,40,40)',
-            }}>
-              <img src={`${BASE}AAENT-Logo.png`} alt="AA ENT" style={{ maxWidth: '80%', maxHeight: 80, objectFit: 'contain' }} />
-            </div>
-            {/* US Sailing */}
-            <div style={{
-              background: 'rgb(10,20,50)', padding: '50px 24px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              borderRight: '3px solid rgb(200,40,40)',
-            }}>
-              <img src={`${BASE}us-sailing-team-logo.png`} alt="US Sailing Team" style={{ maxWidth: '80%', maxHeight: 80, objectFit: 'contain' }} />
-            </div>
-            {/* SFNY */}
-            <div style={{
-              background: '#fff', padding: '50px 24px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <img src={`${BASE}sfny-logo.png`} alt="Sailing Foundation of New York" style={{ maxWidth: '80%', maxHeight: 80, objectFit: 'contain' }} />
-            </div>
+            {SPONSORS.map((s, i) => (
+              <SponsorCard key={s.name} sponsor={s} borderRight={i < SPONSORS.length - 1} />
+            ))}
           </div>
-
-          {/* Blue accent line */}
-          <div style={{ height: 4, background: 'rgb(30,60,200)' }} />
+          <div style={{ height: 4, background: 'rgb(0,120,255)' }} />
         </div>
 
         {/* Action photo strip between sponsors and supporters */}
@@ -143,7 +200,7 @@ export default function Team({ onNavigate }) {
               const card = (
                 <div key={s.name} style={{
                   background: 'rgba(255,255,255,0.04)',
-                  borderLeft: '3px solid rgb(200,40,40)',
+                  borderLeft: '3px solid rgb(0,120,255)',
                   padding: '14px 24px',
                   color: '#fff',
                   fontSize: 14, fontWeight: 600,
@@ -188,7 +245,7 @@ export default function Team({ onNavigate }) {
                 alt=""
                 style={{ width: '100%', objectFit: 'cover', display: 'block' }}
               />
-              <div style={{ height: 3, background: 'rgb(200,40,40)' }} />
+              <div style={{ height: 3, background: 'rgb(0,120,255)' }} />
             </div>
             {/* Letter */}
             <div style={{ flex: 1, minWidth: 280 }}>
