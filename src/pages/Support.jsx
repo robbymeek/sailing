@@ -148,9 +148,21 @@ export default function Support({ onNavigate }) {
           <p style={{ ...fade(0.05), color: 'rgb(200,40,40)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '3px', margin: '0 0 20px', fontWeight: 600 }}>
             LA 2028 Olympic Campaign
           </p>
-          <h1 style={{ ...fade(0.1), color: '#fff', fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: 800, letterSpacing: '-2px', lineHeight: 1.1, margin: '0 0 20px' }}>
+          <h1 style={{ ...fade(0.1), color: '#fff', fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: 800, letterSpacing: '-2px', lineHeight: 1.1, margin: '0 0 12px' }}>
             Support the Journey.
           </h1>
+          <button
+            onClick={() => onNavigate('Team')}
+            style={{
+              ...fade(0.12),
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'rgba(255,255,255,0.45)', fontSize: 13,
+              padding: 0, margin: '0 0 20px',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            <span>&larr;</span> Back to Team
+          </button>
           <p style={{ ...fade(0.15), color: 'rgba(255,255,255,0.6)', fontSize: 15, lineHeight: 1.8, maxWidth: 500 }}>
             Olympic sailing demands competing against the best in the world. Your support makes that possible.
           </p>
