@@ -163,9 +163,11 @@ export default function Biography({ onNavigate }) {
 
         {/* Right side: Regatta cards + logos wrapper */}
         <div className="bio-events-wrapper" style={{
-          position: 'absolute', right: '3%', top: '8%',
+          position: 'absolute', right: '3%', top: '50%',
+          transform: 'translateY(-50%)',
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           zIndex: 2,
+          maxWidth: '60%',
         }}>
         <div style={{
           display: 'flex', flexDirection: 'row', gap: 14,
@@ -175,13 +177,12 @@ export default function Biography({ onNavigate }) {
         >
           {REGATTAS.map((r, i) => {
             const isMid = r.current
-            const cardWidth = isMid ? 210 : 175
             return (
             <div key={i} style={{
               background: r.current ? 'rgb(18,0,120)' : 'rgb(50,55,65)',
               padding: '0',
-              width: cardWidth,
-              flexShrink: 0,
+              flex: isMid ? '1.2 1 0' : '1 1 0',
+              minWidth: 0,
               position: 'relative',
               overflow: 'hidden',
               transform: isMid ? 'scale(1)' : 'scale(0.95)',

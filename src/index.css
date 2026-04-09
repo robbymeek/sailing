@@ -78,146 +78,67 @@ button {
     top: 12% !important;
   }
 
-  /* Events wrapper: below image, centered */
+  /* Events wrapper: below image, centered, no overlap */
   .bio-events-wrapper {
     position: relative !important;
     right: auto !important;
     top: auto !important;
-    width: 100% !important;
+    transform: none !important;
+    max-width: 100% !important;
+    width: 60% !important;
+    min-width: 320px !important;
     align-items: center !important;
+    align-self: center !important;
+    margin-top: 0 !important;
   }
 
-  /* Regatta cards: horizontal row below the image */
+  /* Regatta cards: horizontal row, flex ratios preserved from inline styles */
   .bio-regatta-cards {
     width: 100% !important;
     flex-direction: row !important;
-    align-items: center !important;
+    align-items: stretch !important;
     justify-content: center !important;
-    padding: 24px 16px !important;
-    gap: 12px !important;
+    padding: 24px 8px !important;
+    gap: 10px !important;
   }
 
   .bio-regatta-cards > div {
-    flex: 1 1 0 !important;
-    max-width: 200px !important;
     width: auto !important;
     transform: none !important;
   }
 
-  /* Shrink card innards on medium */
+  /* Scale card text with viewport so ratios stay constant */
   .bio-regatta-cards .card-date-num {
-    font-size: 28px !important;
+    font-size: clamp(18px, 3.5vw, 36px) !important;
   }
   .bio-regatta-cards .card-date-month {
-    font-size: 10px !important;
+    font-size: clamp(7px, 1.2vw, 12px) !important;
   }
   .bio-regatta-cards .card-date-badge {
-    padding: 14px 12px !important;
+    padding: clamp(8px, 1.5vw, 18px) clamp(6px, 1vw, 16px) !important;
   }
   .bio-regatta-cards .card-body {
-    padding: 14px 12px 18px !important;
+    padding: clamp(8px, 1.5vw, 18px) clamp(6px, 1vw, 14px) clamp(10px, 2vw, 22px) !important;
   }
   .bio-regatta-cards .card-status {
-    font-size: 9px !important;
-    margin-bottom: 6px !important;
+    font-size: clamp(6px, 1vw, 10px) !important;
+    margin-bottom: clamp(3px, 0.6vw, 8px) !important;
   }
   .bio-regatta-cards .card-name {
-    font-size: 14px !important;
+    font-size: clamp(9px, 1.8vw, 18px) !important;
+    margin-bottom: clamp(3px, 0.5vw, 8px) !important;
   }
   .bio-regatta-cards .card-league {
-    font-size: 11px !important;
+    font-size: clamp(7px, 1.3vw, 12px) !important;
+    margin-bottom: clamp(2px, 0.4vw, 6px) !important;
   }
   .bio-regatta-cards .card-location {
-    font-size: 10px !important;
+    font-size: clamp(6px, 1.2vw, 11px) !important;
   }
 
   /* Logos */
   .bio-logos {
     padding: 16px 16px 24px !important;
-  }
-}
-
-/* Bio hero — small screens: shrink cards, stay horizontal */
-@media (max-width: 550px) {
-  .bio-regatta-cards {
-    flex-direction: row !important;
-    align-items: center !important;
-    padding: 12px 8px !important;
-    gap: 6px !important;
-  }
-
-  .bio-regatta-cards > div {
-    max-width: 150px !important;
-    width: auto !important;
-  }
-
-  .bio-regatta-cards > div:nth-child(2) {
-    max-width: 170px !important;
-    flex-shrink: 0 !important;
-  }
-
-  .bio-regatta-cards .card-date-num {
-    font-size: 22px !important;
-  }
-  .bio-regatta-cards .card-date-month {
-    font-size: 8px !important;
-  }
-  .bio-regatta-cards .card-date-badge {
-    padding: 8px 6px !important;
-  }
-  .bio-regatta-cards .card-body {
-    padding: 8px 6px 10px !important;
-  }
-  .bio-regatta-cards .card-status {
-    font-size: 7px !important;
-    margin-bottom: 4px !important;
-  }
-  .bio-regatta-cards .card-name {
-    font-size: 11px !important;
-    margin-bottom: 4px !important;
-  }
-  .bio-regatta-cards .card-league {
-    font-size: 9px !important;
-    margin-bottom: 3px !important;
-  }
-  .bio-regatta-cards .card-location {
-    font-size: 8px !important;
-  }
-}
-
-/* Bio hero — extra small screens */
-@media (max-width: 380px) {
-  .bio-regatta-cards {
-    padding: 8px 4px !important;
-    gap: 4px !important;
-  }
-
-  .bio-regatta-cards > div {
-    max-width: 110px !important;
-  }
-
-  .bio-regatta-cards > div:nth-child(2) {
-    max-width: 130px !important;
-  }
-
-  .bio-regatta-cards .card-date-num {
-    font-size: 18px !important;
-  }
-  .bio-regatta-cards .card-date-badge {
-    padding: 6px 4px !important;
-  }
-  .bio-regatta-cards .card-body {
-    padding: 6px 4px 8px !important;
-  }
-  .bio-regatta-cards .card-name {
-    font-size: 9px !important;
-    margin-bottom: 3px !important;
-  }
-  .bio-regatta-cards .card-league {
-    font-size: 8px !important;
-  }
-  .bio-regatta-cards .card-location {
-    font-size: 7px !important;
   }
 }
 
