@@ -45,14 +45,13 @@ button {
 /* Support page layout - stack on mobile, timeline on top */
 @media (max-width: 700px) {
   .support-layout {
-    flex-direction: column-reverse !important;
+    flex-direction: column !important;
   }
   .timeline-sidebar {
     width: 100% !important;
     position: relative !important;
     padding: 30px 24px !important;
     border-bottom: 1px solid rgba(255,255,255,0.08);
-    order: 1;
     display: flex !important;
     justify-content: center !important;
   }

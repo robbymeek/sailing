@@ -155,8 +155,20 @@ export default function Support({ onNavigate }) {
         className="support-layout"
       >
 
+        {/* Timeline sidebar — left side, mirrored style */}
+        <div style={{
+          width: 'clamp(180px, 20vw, 240px)', flexShrink: 0,
+          padding: '40px 24px 40px 40px',
+          position: 'sticky', top: 60, alignSelf: 'flex-start',
+          height: 'fit-content',
+        }}
+          className="timeline-sidebar"
+        >
+          <Timeline />
+        </div>
+
         {/* Content area — center aligned */}
-        <div style={{ flex: 1, minWidth: 0, padding: '40px 40px 0 40px', textAlign: 'center' }}>
+        <div style={{ flex: 1, minWidth: 0, padding: '40px 40px 0 20px', textAlign: 'center' }}>
 
           {/* Body text */}
           <div style={{ ...fade(0.2), maxWidth: 550, margin: '0 auto 40px' }}>
@@ -257,17 +269,6 @@ export default function Support({ onNavigate }) {
           </div>
         </div>
 
-        {/* Timeline sidebar — right side */}
-        <div style={{
-          width: 'clamp(180px, 20vw, 240px)', flexShrink: 0,
-          padding: '40px 40px 40px 24px',
-          position: 'sticky', top: 60, alignSelf: 'flex-start',
-          height: 'fit-content',
-        }}
-          className="timeline-sidebar"
-        >
-          <Timeline />
-        </div>
       </div>
 
       {/* Bio popup */}
