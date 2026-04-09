@@ -93,28 +93,28 @@ export default function Support({ onNavigate }) {
             background: 'linear-gradient(180deg, rgba(12,0,60,0.7) 0%, rgba(12,0,60,0.85) 50%, rgb(12,0,60) 100%)',
           }} />
         </div>
-        <div style={{ position: 'relative', zIndex: 1, padding: '80px 40px 80px', maxWidth: 900, margin: '0 auto' }}>
+        <div style={{ position: 'relative', zIndex: 1, padding: '80px 40px 80px', maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
           <p style={{ ...fade(0.05), color: 'rgb(200,40,40)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '3px', margin: '0 0 20px', fontWeight: 600 }}>
             LA 2028 Olympic Campaign
           </p>
-          <h1 style={{ ...fade(0.1), color: '#fff', fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: 800, letterSpacing: '-2px', lineHeight: 1.1, margin: '0 0 12px' }}>
-            Support the Journey.
+          <h1 style={{ ...fade(0.1), color: '#fff', fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: 800, letterSpacing: '-2px', lineHeight: 1.1, margin: '0 0 16px' }}>
+            Support the journey
           </h1>
+          <p style={{ ...fade(0.15), color: 'rgba(255,255,255,0.5)', fontSize: 14, lineHeight: 1.7, maxWidth: 500, margin: '0 auto 24px' }}>
+            Olympic sailing demands competing against the best in the world. Your support makes that possible.
+          </p>
           <button
             onClick={() => onNavigate('Team')}
             style={{
-              ...fade(0.12),
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: 'rgba(255,255,255,0.45)', fontSize: 13,
-              padding: 0, margin: '0 0 20px',
-              display: 'flex', alignItems: 'center', gap: 6,
+              ...fade(0.2),
+              background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)',
+              cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 500,
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '10px 24px',
             }}
           >
             <span>&larr;</span> Back to Team
           </button>
-          <p style={{ ...fade(0.15), color: 'rgba(255,255,255,0.6)', fontSize: 15, lineHeight: 1.8, maxWidth: 500 }}>
-            Olympic sailing demands competing against the best in the world. Your support makes that possible.
-          </p>
         </div>
       </div>
 
