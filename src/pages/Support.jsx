@@ -23,11 +23,11 @@ const POST_ILCA = [
 ]
 
 const COSTS = [
-  { label: 'Travel', pct: 40, color: 'rgb(200,40,40)' },
-  { label: 'Entry Fees', pct: 20, color: 'rgb(220,220,240)' },
-  { label: 'Equipment', pct: 18, color: 'rgb(60,80,180)' },
-  { label: 'Coaching', pct: 15, color: 'rgb(200,40,40)' },
-  { label: 'Training', pct: 7, color: 'rgb(220,220,240)' },
+  { label: 'Training', pct: 50, color: 'rgb(200,40,40)' },
+  { label: 'Equipment', pct: 20, color: 'rgb(220,220,240)' },
+  { label: 'Travel', pct: 15, color: 'rgb(60,80,180)' },
+  { label: 'Coaching', pct: 10, color: 'rgb(200,40,40)' },
+  { label: 'Entry Fees', pct: 5, color: 'rgb(220,220,240)' },
 ]
 
 export default function Support({ onNavigate }) {
