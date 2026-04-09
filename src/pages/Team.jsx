@@ -6,28 +6,36 @@ const BASE = import.meta.env.BASE_URL
 
 const SPONSORS = [
   {
-    name: 'AA ENT & Facial Plastic Surgery',
-    img: 'AAENT-Logo.png',
+    name: 'AA ENT',
+    photo: 'sponsor-aaent.jpg',
+    logo: 'AAENT-Logo.png',
     url: 'https://aaentmd.com/',
-    bg: '#000',
     hoverBg: 'rgb(0,80,255)',
     desc: 'Leading ENT and facial plastic surgery practice providing world-class care.',
   },
   {
     name: 'US Sailing Team',
-    img: 'us-sailing-team-logo.png',
+    photo: 'sponsor-ussailing.jpg',
+    logo: 'us-sailing-team-logo.png',
     url: 'https://www.ussailing.org/teams/ussailingteam/',
-    bg: 'rgb(10,20,50)',
     hoverBg: 'rgb(180,30,30)',
     desc: 'The national sailing team representing the United States at the Olympic Games.',
   },
   {
-    name: 'Sailing Foundation of New York',
-    img: 'sfny-logo.png',
+    name: 'Sailing Foundation of NY',
+    photo: 'sponsor-sfny.jpg',
+    logo: 'sfny-logo.png',
     url: 'https://sfny.org/',
-    bg: '#fff',
-    hoverBg: 'rgb(10,10,10)',
+    hoverBg: 'rgb(0,60,200)',
     desc: 'Supporting competitive sailors and maritime education across the country.',
+  },
+  {
+    name: 'Annapolis Yacht Club',
+    photo: 'sponsor-ayc.jpg',
+    logo: null,
+    url: 'https://www.annapolisyc.com/',
+    hoverBg: 'rgb(10,40,80)',
+    desc: 'Historic yacht club in Annapolis, Maryland. Where the journey started.',
   },
 ]
 
@@ -42,41 +50,73 @@ function SponsorCard({ sponsor }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: sponsor.bg,
-        padding: '40px 24px',
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
         position: 'relative', overflow: 'hidden',
         textDecoration: 'none',
-        transition: 'transform 0.4s ease, box-shadow 0.4s ease',
-        transform: hovered ? 'scale(1.05)' : 'scale(1)',
-        boxShadow: hovered ? '0 12px 40px rgba(0,0,0,0.4)' : '0 0 0 rgba(0,0,0,0)',
-        minHeight: 180,
-        zIndex: hovered ? 2 : 1,
+        display: 'block',
+        aspectRatio: '3/4',
       }}
     >
+      {/* Photo — always visible, brightens on hover */}
       <img
-        src={`${BASE}${sponsor.img}`}
+        src={`${BASE}${sponsor.photo}`}
         alt={sponsor.name}
         style={{
-          maxWidth: '70%', maxHeight: 70, objectFit: 'contain',
-          transition: 'filter 0.4s ease, transform 0.4s ease',
-          filter: hovered ? 'brightness(1.3)' : 'brightness(1)',
+          width: '100%', height: '100%',
+          objectFit: 'cover',
+          transition: 'transform 0.5s ease, filter 0.5s ease',
           transform: hovered ? 'scale(1.08)' : 'scale(1)',
+          filter: hovered ? 'brightness(0.3)' : 'brightness(1.1) saturate(1.2)',
+          display: 'block',
         }}
       />
-      {/* Description on hover */}
+      {/* Hover overlay — colored bg, logo, description */}
       <div style={{
-        maxHeight: hovered ? 60 : 0,
+        position: 'absolute', inset: 0,
+        background: sponsor.hoverBg,
+        opacity: hovered ? 0.9 : 0,
+        transition: 'opacity 0.4s ease',
+      }} />
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        padding: '24px 16px',
         opacity: hovered ? 1 : 0,
-        overflow: 'hidden',
-        transition: 'max-height 0.4s ease, opacity 0.3s ease 0.1s',
-        marginTop: hovered ? 16 : 0,
+        transform: hovered ? 'translateY(0)' : 'translateY(10px)',
+        transition: 'opacity 0.4s ease, transform 0.4s ease',
+      }}>
+        {sponsor.logo && (
+          <img
+            src={`${BASE}${sponsor.logo}`}
+            alt=""
+            style={{
+              maxWidth: '60%', maxHeight: 50, objectFit: 'contain',
+              marginBottom: 16,
+              filter: 'brightness(0) invert(1)',
+            }}
+          />
+        )}
+        <p style={{
+          color: '#fff', fontSize: 13, fontWeight: 700,
+          margin: sponsor.logo ? 0 : '0 0 8px', textAlign: 'center',
+        }}>{sponsor.name}</p>
+        <p style={{
+          color: 'rgba(255,255,255,0.7)', fontSize: 11,
+          textAlign: 'center', lineHeight: 1.5, margin: '8px 0 0',
+        }}>{sponsor.desc}</p>
+      </div>
+      {/* Bottom label when not hovered */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        background: 'linear-gradient(0deg, rgba(0,0,0,0.7) 0%, transparent 100%)',
+        padding: '30px 12px 12px',
+        opacity: hovered ? 0 : 1,
+        transition: 'opacity 0.3s ease',
       }}>
         <p style={{
-          color: sponsor.bg === '#fff' ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.6)',
-          fontSize: 11, textAlign: 'center', lineHeight: 1.5, margin: 0,
-        }}>{sponsor.desc}</p>
+          color: '#fff', fontSize: 12, fontWeight: 600,
+          margin: 0, textAlign: 'center',
+        }}>{sponsor.name}</p>
       </div>
     </a>
   )
@@ -88,7 +128,6 @@ const SUPPORTERS = [
   { name: 'The Ziskind Family' },
   { name: 'The Callahan Family' },
   { name: 'Parabh Gill' },
-  { name: 'Annapolis YC' },
 ]
 
 const EMPTY_SLOTS = 4
@@ -144,10 +183,10 @@ export default function Team({ onNavigate }) {
         </div>
 
         {/* Sponsors — bold full-width blocks with harsh lines */}
-        <div style={{ ...entrance.style(1), maxWidth: 1000, margin: '0 auto', padding: '0 40px' }}>
+        <div style={{ ...entrance.style(1), maxWidth: 1100, margin: '0 auto', padding: '0 40px' }}>
           <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: 16,
+            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: 12,
           }}>
             {SPONSORS.map((s) => (
               <SponsorCard key={s.name} sponsor={s} />
@@ -155,42 +194,34 @@ export default function Team({ onNavigate }) {
           </div>
         </div>
 
-        {/* Action photo strip between sponsors and supporters */}
-        <div style={{ ...entrance.style(2), position: 'relative', height: 250, overflow: 'hidden' }}>
-          <img
-            src={`${BASE}IMG_5957 2.JPG`}
-            alt=""
-            style={{
-              width: '100%', height: '100%',
-              objectFit: 'cover', objectPosition: 'center 20%',
-            }}
-          />
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: 'linear-gradient(180deg, rgba(18,0,120,0.6) 0%, rgba(18,0,120,0.3) 50%, rgba(18,0,120,0.6) 100%)',
-          }} />
-          <div style={{
-            position: 'absolute', inset: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
+        {/* Individual Supporters over LA 2028 photo */}
+        <div style={{ ...entrance.style(2), position: 'relative', overflow: 'hidden', padding: '50px 40px' }}>
+          {/* Background photo */}
+          <div style={{ position: 'absolute', inset: 0 }}>
+            <img
+              src={`${BASE}IMG_5957 2.JPG`}
+              alt=""
+              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 20%' }}
+            />
+            <div style={{
+              position: 'absolute', inset: 0,
+              background: 'rgba(18,0,120,0.75)',
+            }} />
+          </div>
+          <div style={{ position: 'relative', zIndex: 1 }}>
             <p style={{
-              color: '#fff', fontSize: 'clamp(20px, 3vw, 32px)', fontWeight: 800,
+              color: '#fff', fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 800,
               letterSpacing: '-1px', textTransform: 'uppercase',
-              textAlign: 'center',
+              textAlign: 'center', margin: '0 0 8px',
+            }}>
+              Individual Supporters
+            </p>
+            <p style={{
+              color: 'rgba(255,255,255,0.3)', fontSize: 12,
+              textAlign: 'center', margin: '0 0 30px',
             }}>
               LA 2028
             </p>
-          </div>
-        </div>
-
-        {/* Individual Supporters — bold cards */}
-        <div style={{ ...entrance.style(3), padding: '50px 40px' }}>
-          <p style={{
-            color: 'rgba(255,255,255,0.3)', fontSize: 11, textTransform: 'uppercase',
-            letterSpacing: '2px', marginBottom: 24, textAlign: 'center',
-          }}>
-            Individual Supporters
-          </p>
           <div style={{
             display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 0,
             maxWidth: 900, margin: '0 auto',
@@ -228,6 +259,7 @@ export default function Team({ onNavigate }) {
                 Your Name
               </div>
             ))}
+          </div>
           </div>
         </div>
 
