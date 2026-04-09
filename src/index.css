@@ -136,17 +136,87 @@ button {
   }
 }
 
-/* Bio hero — small screens: cards go vertical */
+/* Bio hero — small screens: shrink cards, stay horizontal */
 @media (max-width: 550px) {
   .bio-regatta-cards {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    padding: 24px 16px !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    padding: 12px 8px !important;
+    gap: 6px !important;
   }
 
   .bio-regatta-cards > div {
-    max-width: 100% !important;
-    width: 100% !important;
+    max-width: 150px !important;
+    width: auto !important;
+  }
+
+  .bio-regatta-cards > div:nth-child(2) {
+    max-width: 170px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .bio-regatta-cards .card-date-num {
+    font-size: 22px !important;
+  }
+  .bio-regatta-cards .card-date-month {
+    font-size: 8px !important;
+  }
+  .bio-regatta-cards .card-date-badge {
+    padding: 8px 6px !important;
+  }
+  .bio-regatta-cards .card-body {
+    padding: 8px 6px 10px !important;
+  }
+  .bio-regatta-cards .card-status {
+    font-size: 7px !important;
+    margin-bottom: 4px !important;
+  }
+  .bio-regatta-cards .card-name {
+    font-size: 11px !important;
+    margin-bottom: 4px !important;
+  }
+  .bio-regatta-cards .card-league {
+    font-size: 9px !important;
+    margin-bottom: 3px !important;
+  }
+  .bio-regatta-cards .card-location {
+    font-size: 8px !important;
+  }
+}
+
+/* Bio hero — extra small screens */
+@media (max-width: 380px) {
+  .bio-regatta-cards {
+    padding: 8px 4px !important;
+    gap: 4px !important;
+  }
+
+  .bio-regatta-cards > div {
+    max-width: 110px !important;
+  }
+
+  .bio-regatta-cards > div:nth-child(2) {
+    max-width: 130px !important;
+  }
+
+  .bio-regatta-cards .card-date-num {
+    font-size: 18px !important;
+  }
+  .bio-regatta-cards .card-date-badge {
+    padding: 6px 4px !important;
+  }
+  .bio-regatta-cards .card-body {
+    padding: 6px 4px 8px !important;
+  }
+  .bio-regatta-cards .card-name {
+    font-size: 9px !important;
+    margin-bottom: 3px !important;
+  }
+  .bio-regatta-cards .card-league {
+    font-size: 8px !important;
+  }
+  .bio-regatta-cards .card-location {
+    font-size: 7px !important;
   }
 }
 
