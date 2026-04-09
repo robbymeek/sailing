@@ -9,7 +9,7 @@ import Contact from './pages/Contact'
 import Support from './pages/Support'
 
 const INNER_BG = {
-  '/biography': 'rgb(18,0,120)',
+  '/biography': 'rgb(230,235,240)',
   '/event-calendar': 'rgb(0,0,0)',
   '/team': 'rgb(18,0,120)',
   '/contact': 'rgb(10,30,80)',
@@ -19,7 +19,7 @@ const INNER_BG = {
 const VARIANT_MAP = {
   '/': 'dark',
   '/landing': 'light',
-  '/biography': 'blue',
+  '/biography': 'light',
   '/event-calendar': 'dark',
   '/team': 'blue',
   '/contact': 'blue',

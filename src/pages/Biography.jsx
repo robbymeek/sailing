@@ -1,22 +1,33 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useRef } from 'react'
 import Nav from '../components/Nav'
 import Footer from '../components/Footer'
 
 const BASE = import.meta.env.BASE_URL
 
-const WORDS = [
-  'ROBBY MEEK', 'US SAILING TEAM', 'OLYMPICS',
-  'LOS ANGELES', 'APPLIED MATHEMATICS', 'HARVARD',
-  'SAILING', 'CAMPAIGN', 'LA 2028', 'BOSTON',
-  'STUDENT-ATHLETE', 'ILCA 7', 'ANNAPOLIS',
-  'ROBBY MEEK', 'US SAILING TEAM', 'OLYMPICS',
-  'LOS ANGELES', 'HARVARD', 'SAILING', 'CAMPAIGN',
-]
-
-const PHOTOS = [
-  'IMG_5854.JPG', 'IMG_5866.JPG', 'IMG_5956.JPG',
-  'IMG_5957.JPG', 'IMG_5958.JPG', 'IMG_5959.JPG',
-  'IMG_8856.JPG', 'P1166617.jpeg',
+const REGATTAS = [
+  {
+    date: '27 MAR', month: 'MAR',
+    status: 'FINISHED',
+    name: 'Trofeo Princesa Sofia',
+    league: 'Grand Slam',
+    location: 'Palma, Spain',
+    past: true,
+  },
+  {
+    date: '16 MAY', month: 'MAY',
+    status: 'UPCOMING',
+    name: 'European Championships',
+    league: 'Senior Europeans',
+    location: 'Split, Croatia',
+    current: true,
+  },
+  {
+    date: '20 JUL', month: 'JUL',
+    status: 'UPCOMING',
+    name: 'San Pedro OCR',
+    league: 'Olympic Classes',
+    location: 'Los Angeles, CA',
+  },
 ]
 
 const PRESS = [
@@ -26,38 +37,33 @@ const PRESS = [
   { t: 'Robby Meek Named NEISA Open Sailor of the Week', u: 'https://gocrimson.com/news/2024/9/18/sailing-robby-meek-named-neisa-open-sailor-of-the-week' },
   { t: 'ILCA 6 Youth Worlds: quest for best', u: 'https://www.sailingscuttlebutt.com/2021/07/28/ilca-6-youth-worlds-midway-point/' },
   { t: 'ILCA 6 Youth Worlds: Midway point', u: 'https://www.sailingscuttlebutt.com/2021/07/30/ilca-6-youth-worlds-quest-for-best/' },
-  { t: 'This has turned into a Robby Meek feed this week. Congrats goes out to the sophomore!', u: 'https://www.threads.com/@harvardsailing/post/DAEgzXRvfyN' },
-  { t: 'Robby Meek - 2022 West Marine US Open Sailing Series Ft. Lauderdale', u: 'https://www.sail-world.com/photo/345661' },
+  { t: 'Robby Meek feed this week. Congrats goes out to the sophomore!', u: 'https://www.threads.com/@harvardsailing/post/DAEgzXRvfyN' },
+  { t: 'Robby Meek - 2022 West Marine US Open Sailing Series', u: 'https://www.sail-world.com/photo/345661' },
   { t: 'No. 1 Sailing Wins 2025 ICSA Open Team Race National Championship', u: 'https://gocrimson.com/news/2025/4/26/no-1-sailing-wins-2025-icsa-open-team-race-national-championship.aspx' },
 ]
 
 export default function Biography({ onNavigate }) {
-  const [bgVisible, setBgVisible] = useState(false)
-  const [contentVisible, setContentVisible] = useState(false)
-  const [bannersVisible, setBannersVisible] = useState(false)
-  const [bioVisible, setBioVisible] = useState(false)
-
-  const photoRef = useRef(null)
+  const imageRef = useRef(null)
+  const text1Ref = useRef(null)
+  const text2Ref = useRef(null)
   const ilcaRef = useRef(null)
 
-  useEffect(() => {
-    const t1 = setTimeout(() => setBgVisible(true), 100)
-    const t2 = setTimeout(() => setContentVisible(true), 400)
-    const t3 = setTimeout(() => setBannersVisible(true), 700)
-    const t4 = setTimeout(() => setBioVisible(true), 1000)
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4) }
-  }, [])
-
-  // Smooth scroll-driven parallax using rAF + refs (no React re-renders)
+  // Parallax: text moves faster than image, image moves faster than page
   useEffect(() => {
     let rafId
     const update = () => {
       const y = window.scrollY
-      if (photoRef.current) {
-        photoRef.current.style.transform = `translateY(-${y * 0.35}px)`
+      if (imageRef.current) {
+        imageRef.current.style.transform = `translateY(-${y * 0.3}px)`
+      }
+      if (text1Ref.current) {
+        text1Ref.current.style.transform = `translateY(-${y * 0.55}px)`
+      }
+      if (text2Ref.current) {
+        text2Ref.current.style.transform = `translateY(-${y * 0.5}px)`
       }
       if (ilcaRef.current) {
-        ilcaRef.current.style.transform = `translateY(-${y * 0.18}px)`
+        ilcaRef.current.style.transform = `translateY(-${y * 0.45}px)`
       }
       rafId = requestAnimationFrame(update)
     }
@@ -66,198 +72,213 @@ export default function Biography({ onNavigate }) {
   }, [])
 
   return (
-    <div style={{ background: 'rgb(18,0,120)', minHeight: '100vh' }}>
+    <div style={{ background: 'rgb(230,235,240)', minHeight: '100vh' }}>
 
-      {/* ===== FIXED BACKGROUND: text + photos — fades in slowly ===== */}
+      {/* ===== HERO SECTION — Messi-inspired parallax ===== */}
       <div style={{
-        position: 'fixed', top: 0, left: 0, right: 0,
+        position: 'relative',
         height: '100vh',
-        zIndex: 0,
-        background: 'rgb(100,150,255)',
-        opacity: bgVisible ? 1 : 0,
-        transition: 'opacity 1.2s ease',
+        overflow: 'hidden',
+        background: 'rgb(230,235,240)',
       }}>
-        {/* Photo grid */}
+        {/* Left side: Image of me + text banners */}
         <div style={{
-          position: 'absolute', inset: 0,
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gridAutoRows: '1fr',
-          gap: 0,
+          position: 'absolute', bottom: 0, left: 0,
+          width: '55%', height: '100%',
+          display: 'flex', alignItems: 'flex-end',
+          zIndex: 2,
         }}>
-          {PHOTOS.map((p, i) => (
-            <img
-              key={i}
-              src={`${BASE}${p}`}
-              alt=""
-              style={{
-                width: '100%', height: '100%',
-                objectFit: 'cover',
-                opacity: 0.4,
-                filter: 'saturate(0.2) brightness(1.2)',
-              }}
-            />
-          ))}
-        </div>
-        {/* Text overlay */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          display: 'flex', alignItems: 'center',
-          padding: '0 10px',
-          overflow: 'hidden',
-        }}>
-          <div style={{
-            fontSize: 'clamp(60px, 10vw, 140px)',
-            fontWeight: 900,
-            lineHeight: 0.92,
-            letterSpacing: '-4px',
-            textTransform: 'uppercase',
-            wordBreak: 'break-word',
-            userSelect: 'none',
-            color: 'rgb(80,130,255)',
-            mixBlendMode: 'multiply',
-            opacity: 0.7,
-          }}>
-            {WORDS.map((word, i) => (
-              <span key={i}>{word} </span>
-            ))}
-          </div>
-        </div>
-        {/* Color overlay */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'rgba(90,140,255,0.45)',
-          pointerEvents: 'none',
-          mixBlendMode: 'color',
-        }} />
-      </div>
-
-      {/* ===== SCROLLABLE CONTENT ===== */}
-      <div style={{ position: 'relative', zIndex: 1 }}>
-
-        {/* Transparent spacer - lets the fixed background show through */}
-        <div style={{
-          height: '70vh',
-          opacity: contentVisible ? 1 : 0,
-          transition: 'opacity 0.8s ease',
-        }} />
-
-        {/* Photo banner - scrolls slightly faster */}
-        <div ref={photoRef} style={{
-          background: 'rgb(0,70,255)',
-          position: 'relative',
-          opacity: bannersVisible ? 1 : 0,
-          transition: 'opacity 0.7s ease',
-          willChange: 'transform',
-        }}>
-          <div style={{
-            maxWidth: 600,
-            margin: '0 auto',
-            padding: '50px 40px',
+          {/* Cutout image — scrolls up from bottom */}
+          <div ref={imageRef} style={{
+            position: 'absolute', bottom: -60, left: '5%',
+            width: '85%', maxWidth: 500,
+            willChange: 'transform',
           }}>
             <img
               src={`${BASE}IMG_5957 2.JPG`}
-              alt="Robby Meek sailing"
+              alt="Robby Meek hiking"
               style={{
-                width: '100%',
-                display: 'block',
-                objectFit: 'cover',
-                maxHeight: 420,
+                width: '100%', display: 'block',
+                filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.3))',
               }}
             />
           </div>
         </div>
 
-        {/* Gap between banners - fixed background shows through */}
-        <div style={{ height: 60 }} />
-
-        {/* ILCA banner - scrolls slightly slower than photo */}
-        <div ref={ilcaRef} style={{
-          background: 'rgb(0,70,255)',
-          position: 'relative',
-          opacity: bannersVisible ? 1 : 0,
-          transition: 'opacity 0.7s ease 0.15s',
-          willChange: 'transform',
-        }}>
-          <div style={{
-            textAlign: 'center',
-            padding: '50px 40px',
-          }}>
-            <img
-              src={`${BASE}ilca-logo.png`}
-              alt="ILCA"
-              style={{
-                width: 'clamp(250px, 40vw, 500px)',
-                filter: 'brightness(0) invert(1)',
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Bio content on dark blue */}
+        {/* Text banners — left-aligned, scroll faster */}
         <div style={{
-          background: 'rgb(18,0,120)',
-          opacity: bioVisible ? 1 : 0,
-          transform: bioVisible ? 'translateY(0)' : 'translateY(20px)',
-          transition: 'opacity 0.8s ease, transform 0.8s ease',
+          position: 'absolute', left: 0, top: '35%',
+          zIndex: 3, pointerEvents: 'none',
         }}>
-          <Nav current="Biography" onNavigate={onNavigate} variant="blue" />
-
-          <div style={{
-            maxWidth: 850, margin: '0 auto', padding: '20px 40px 60px',
-            color: 'rgba(255,255,255,0.85)', fontSize: 15, lineHeight: 1.7,
-          }}>
-            <p style={{ marginBottom: 20 }}>
-              I'm currently campaigning for the 2028 Olympic Games in the ILCA 7, the men's single-handed sailing class. I've been sailing since I was nine years old and started racing in the ILCA class at age twelve. Since then, I've been fortunate to win six national championships and three continental titles. I now compete as part of the Harvard Sailing Team while studying Applied Mathematics and Economics at Harvard College.
-            </p>
-            <p style={{ marginBottom: 20 }}>
-              At Harvard, I serve as Team Captain and have won the Team Race National Championship in double-handed boats (Boat Starters On Top) and the Single-Handed National Championship. You can find me in the gym working on my sailing fitness, in class, or hanging with some friends.
-            </p>
-            <p style={{ marginBottom: 20 }}>
-              Originally from Annapolis, Maryland, sailing has always been a central part of my life. Outside of training and academics, I enjoy painting, cooking, and spending time with my family. I'm also deeply interested in architecture, start-ups, and investing interests I pursue through campus clubs and side projects.
-            </p>
-            <p>
-              I'm incredibly grateful for the opportunity to chase this Olympic dream and excited for everything the journey ahead holds.
-            </p>
+          <div ref={text1Ref} style={{ willChange: 'transform' }}>
+            <div style={{
+              background: 'rgba(255,255,255,0.85)',
+              padding: '12px 40px 12px 40px',
+              marginBottom: 4,
+              display: 'inline-block',
+            }}>
+              <span style={{
+                color: 'rgb(18,0,120)', fontSize: 'clamp(20px, 3vw, 36px)',
+                fontWeight: 800, textTransform: 'uppercase', letterSpacing: '-1px',
+              }}>
+                Welcome to Robby Meek's
+              </span>
+            </div>
           </div>
-
-          {/* Stats */}
-          <div style={{
-            display: 'flex', justifyContent: 'center', gap: 80, padding: '50px 20px',
-            borderTop: '1px solid rgba(255,255,255,0.08)',
-            maxWidth: 850, margin: '0 auto', flexWrap: 'wrap',
-          }}>
-            {[['6x', 'National Championships'], ['3x', 'Continental Championships'], ['8 years', 'In the ILCA']].map(([n, l]) => (
-              <div key={l} style={{ textAlign: 'center' }}>
-                <div style={{ color: '#fff', fontSize: 48, fontWeight: 800 }}>{n}</div>
-                <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, fontWeight: 500, marginTop: 4 }}>{l}</div>
-              </div>
-            ))}
+          <div ref={text2Ref} style={{ willChange: 'transform' }}>
+            <div style={{
+              background: 'rgb(18,0,120)',
+              padding: '14px 40px 14px 40px',
+              marginBottom: 4,
+              display: 'inline-block',
+            }}>
+              <span style={{
+                color: '#fff', fontSize: 'clamp(24px, 3.5vw, 44px)',
+                fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-1px',
+              }}>
+                Website and Biography
+              </span>
+            </div>
           </div>
-
-          {/* Press clippings */}
-          <div style={{ maxWidth: 850, margin: '0 auto', padding: '30px 40px 60px' }}>
-            {PRESS.map((item, i) => (
-              <a
-                key={i}
-                href={item.u}
-                target="_blank"
-                rel="noopener noreferrer"
+          <div ref={ilcaRef} style={{ willChange: 'transform' }}>
+            <div style={{
+              background: 'rgb(0,80,255)',
+              padding: '10px 40px',
+              display: 'inline-block',
+            }}>
+              <img
+                src={`${BASE}ilca-logo.png`}
+                alt="ILCA"
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '14px 18px', marginBottom: 6,
-                  background: 'rgba(100,100,160,0.25)', borderRadius: 4,
-                  textDecoration: 'none',
+                  height: 'clamp(24px, 3vw, 40px)',
+                  filter: 'brightness(0) invert(1)',
+                  display: 'block',
                 }}
-              >
-                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>+</span>
-                <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>{item.t}</span>
-              </a>
-            ))}
+              />
+            </div>
           </div>
-
-          <Footer variant="blue" onNavigate={onNavigate} />
         </div>
+
+        {/* Right side: Regatta cards */}
+        <div style={{
+          position: 'absolute', right: '3%', top: '20%',
+          display: 'flex', gap: 12,
+          zIndex: 2,
+          maxWidth: '45%',
+        }}>
+          {REGATTAS.map((r, i) => (
+            <div key={i} style={{
+              background: r.current ? 'rgb(18,0,120)' : 'rgb(50,55,65)',
+              padding: '0',
+              width: 180,
+              flexShrink: 0,
+              position: 'relative',
+              overflow: 'hidden',
+            }}>
+              {/* Date badge */}
+              <div style={{
+                background: r.current ? 'rgb(0,80,255)' : 'rgba(255,255,255,0.1)',
+                padding: '12px 16px',
+                textAlign: 'center',
+              }}>
+                <div style={{
+                  color: '#fff', fontSize: 32, fontWeight: 800,
+                  lineHeight: 1,
+                }}>{r.date.split(' ')[0]}</div>
+                <div style={{
+                  color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: 600,
+                  letterSpacing: '1px',
+                }}>{r.month}</div>
+              </div>
+              {/* Content */}
+              <div style={{ padding: '16px' }}>
+                <div style={{
+                  color: r.current ? 'rgb(0,180,255)' : r.past ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.5)',
+                  fontSize: 10, fontWeight: 700, letterSpacing: '1px',
+                  marginBottom: 8, textTransform: 'uppercase',
+                }}>{r.status}</div>
+                <div style={{
+                  color: '#fff', fontSize: 16, fontWeight: 700,
+                  marginBottom: 6, lineHeight: 1.3,
+                }}>{r.name}</div>
+                <div style={{
+                  color: 'rgba(255,255,255,0.5)', fontSize: 12,
+                  marginBottom: 4,
+                }}>{r.league}</div>
+                <div style={{
+                  color: 'rgba(255,255,255,0.35)', fontSize: 11,
+                }}>{r.location}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Subtle shadow at bottom */}
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, height: 120,
+          background: 'linear-gradient(0deg, rgb(18,0,120) 0%, transparent 100%)',
+          zIndex: 4,
+        }} />
+      </div>
+
+      {/* ===== BIO CONTENT — dark blue ===== */}
+      <div style={{ background: 'rgb(18,0,120)', position: 'relative', zIndex: 5 }}>
+        <Nav current="Biography" onNavigate={onNavigate} variant="blue" />
+
+        <div style={{
+          maxWidth: 850, margin: '0 auto', padding: '20px 40px 60px',
+          color: 'rgba(255,255,255,0.85)', fontSize: 15, lineHeight: 1.7,
+        }}>
+          <p style={{ marginBottom: 20 }}>
+            I'm currently campaigning for the 2028 Olympic Games in the ILCA 7, the men's single-handed sailing class. I've been sailing since I was nine years old and started racing in the ILCA class at age twelve. Since then, I've been fortunate to win six national championships and three continental titles. I now compete as part of the Harvard Sailing Team while studying Applied Mathematics and Economics at Harvard College.
+          </p>
+          <p style={{ marginBottom: 20 }}>
+            At Harvard, I serve as Team Captain and have won the Team Race National Championship in double-handed boats (Boat Starters On Top) and the Single-Handed National Championship. You can find me in the gym working on my sailing fitness, in class, or hanging with some friends.
+          </p>
+          <p style={{ marginBottom: 20 }}>
+            Originally from Annapolis, Maryland, sailing has always been a central part of my life. Outside of training and academics, I enjoy painting, cooking, and spending time with my family. I'm also deeply interested in architecture, start-ups, and investing interests I pursue through campus clubs and side projects.
+          </p>
+          <p>
+            I'm incredibly grateful for the opportunity to chase this Olympic dream and excited for everything the journey ahead holds.
+          </p>
+        </div>
+
+        {/* Stats */}
+        <div style={{
+          display: 'flex', justifyContent: 'center', gap: 80, padding: '50px 20px',
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+          maxWidth: 850, margin: '0 auto', flexWrap: 'wrap',
+        }}>
+          {[['6x', 'National Championships'], ['3x', 'Continental Championships'], ['9+', 'Years in the ILCA']].map(([n, l]) => (
+            <div key={l} style={{ textAlign: 'center' }}>
+              <div style={{ color: '#fff', fontSize: 48, fontWeight: 800 }}>{n}</div>
+              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, fontWeight: 500, marginTop: 4 }}>{l}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Press clippings */}
+        <div style={{ maxWidth: 850, margin: '0 auto', padding: '30px 40px 60px' }}>
+          {PRESS.map((item, i) => (
+            <a
+              key={i}
+              href={item.u}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '14px 18px', marginBottom: 6,
+                background: 'rgba(100,100,160,0.25)',
+                textDecoration: 'none',
+              }}
+            >
+              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>+</span>
+              <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>{item.t}</span>
+            </a>
+          ))}
+        </div>
+
+        <Footer variant="blue" onNavigate={onNavigate} />
       </div>
     </div>
   )
