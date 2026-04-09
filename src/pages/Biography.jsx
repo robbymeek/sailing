@@ -84,7 +84,7 @@ export default function Biography({ onNavigate }) {
         className="bio-hero"
       >
         {/* Left side: Image of me + text banners */}
-        <div style={{
+        <div className="bio-left-side" style={{
           position: 'absolute', bottom: 0, left: 0,
           width: '55%', height: '100%',
           display: 'flex', alignItems: 'flex-end',
@@ -108,7 +108,7 @@ export default function Biography({ onNavigate }) {
         </div>
 
         {/* Text banners — left-aligned, scroll faster */}
-        <div style={{
+        <div className="bio-text-banners" style={{
           position: 'absolute', left: 0, top: '12%',
           zIndex: 3, pointerEvents: 'none',
         }}>
@@ -161,12 +161,13 @@ export default function Biography({ onNavigate }) {
           </div>
         </div>
 
-        {/* Right side: Regatta cards */}
+        {/* Right side: Regatta cards — vertical stack on desktop */}
         <div style={{
-          position: 'absolute', right: '3%', top: '20%',
-          display: 'flex', gap: 12, alignItems: 'center',
+          position: 'absolute', right: '4%', top: '10%',
+          display: 'flex', flexDirection: 'column', gap: 12,
+          alignItems: 'stretch',
           zIndex: 2,
-          maxWidth: '45%',
+          width: 220,
         }}
           className="bio-regatta-cards"
         >
@@ -174,7 +175,7 @@ export default function Biography({ onNavigate }) {
             <div key={i} style={{
               background: r.current ? 'rgb(18,0,120)' : 'rgb(50,55,65)',
               padding: '0',
-              width: r.current ? 210 : 160,
+              width: '100%',
               flexShrink: 0,
               position: 'relative',
               overflow: 'hidden',
@@ -186,7 +187,7 @@ export default function Biography({ onNavigate }) {
                 textAlign: 'center',
               }}>
                 <div style={{
-                  color: '#fff', fontSize: r.current ? 40 : 28, fontWeight: 800,
+                  color: '#fff', fontSize: r.current ? 36 : 28, fontWeight: 800,
                   lineHeight: 1,
                 }}>{r.date.split(' ')[0]}</div>
                 <div style={{
@@ -215,6 +216,45 @@ export default function Biography({ onNavigate }) {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Logos — desktop: below events on right; mobile: between image and events */}
+        <div className="bio-logos" style={{
+          position: 'absolute', right: '4%', bottom: '5%',
+          display: 'flex', gap: 32, alignItems: 'center', justifyContent: 'center',
+          zIndex: 2,
+          width: 220,
+        }}>
+          <div style={{
+            width: 90, height: 90,
+            perspective: '600px',
+          }}>
+            <img
+              src={`${BASE}harvard-crest.png`}
+              alt="Harvard Crest"
+              style={{
+                width: '100%', height: '100%', objectFit: 'contain',
+                transform: 'rotateY(-8deg) rotateX(4deg)',
+                filter: 'drop-shadow(4px 8px 16px rgba(0,0,0,0.35))',
+                transition: 'transform 0.3s ease',
+              }}
+            />
+          </div>
+          <div style={{
+            width: 90, height: 90,
+            perspective: '600px',
+          }}>
+            <img
+              src={`${BASE}us-sailing-team-logo.png`}
+              alt="US Sailing Team"
+              style={{
+                width: '100%', height: '100%', objectFit: 'contain',
+                transform: 'rotateY(8deg) rotateX(4deg)',
+                filter: 'drop-shadow(4px 8px 16px rgba(0,0,0,0.35))',
+                transition: 'transform 0.3s ease',
+              }}
+            />
+          </div>
         </div>
 
       </div>

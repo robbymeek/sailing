@@ -54,16 +54,70 @@ button {
   }
 }
 
-/* Bio hero - stack regatta cards below on mobile */
-@media (max-width: 800px) {
+/* Bio hero — medium screens: cards go horizontal below image */
+@media (max-width: 900px) {
+  .bio-hero {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+
+  .bio-hero > .bio-left-side {
+    position: relative !important;
+    width: 100% !important;
+    height: 100vh !important;
+    min-height: 100vh !important;
+    bottom: auto !important;
+    left: auto !important;
+  }
+
+  .bio-hero > .bio-text-banners {
+    position: absolute !important;
+    left: 0 !important;
+    top: 12% !important;
+  }
+
+  /* Regatta cards: horizontal row below the image */
   .bio-regatta-cards {
     position: relative !important;
     right: auto !important;
     top: auto !important;
-    max-width: 100% !important;
+    width: 100% !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
     justify-content: center !important;
-    padding: 20px 16px !important;
-    flex-wrap: wrap !important;
+    padding: 24px 16px !important;
+    gap: 12px !important;
+  }
+
+  .bio-regatta-cards > div {
+    flex: 1 1 0 !important;
+    max-width: 240px !important;
+  }
+
+  /* Logos: between image/text and events */
+  .bio-logos {
+    position: relative !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 40px 16px 24px !important;
+  }
+}
+
+/* Bio hero — small screens: cards go vertical */
+@media (max-width: 550px) {
+  .bio-regatta-cards {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 24px 16px !important;
+  }
+
+  .bio-regatta-cards > div {
+    max-width: 100% !important;
+    width: 100% !important;
   }
 }
 
