@@ -6,10 +6,19 @@ const SHORT_LABELS = {
 }
 
 export default function Nav({ current, onNavigate, variant }) {
-  const dark = variant !== 'light'
-  const dim = dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)'
-  const active = dark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)'
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 600
+
+  let dim, active
+  if (variant === 'red') {
+    dim = 'rgba(80,0,0,0.7)'
+    active = 'rgba(120,0,0,0.9)'
+  } else if (variant === 'light') {
+    dim = 'rgba(0,0,0,0.4)'
+    active = 'rgba(0,0,0,0.6)'
+  } else {
+    dim = 'rgba(255,255,255,0.5)'
+    active = 'rgba(255,255,255,0.6)'
+  }
 
   return (
     <div style={{

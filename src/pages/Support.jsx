@@ -58,24 +58,9 @@ export default function Support({ onNavigate }) {
         </div>
 
         <div style={{ position: 'relative', zIndex: 1 }}>
-          {/* Back to Team — top */}
-          <div style={{ ...fade(0), padding: '20px 40px' }}>
-            <button
-              onClick={() => onNavigate('Team')}
-              style={{
-                background: 'rgba(255,255,255,0.1)',
-                border: '1px solid rgba(255,255,255,0.2)',
-                cursor: 'pointer',
-                color: '#fff', fontSize: 13, fontWeight: 500,
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '8px 20px',
-              }}
-            >
-              <span>&larr;</span> Back to Team
-            </button>
-          </div>
+          {/* Nav handled by App.jsx — sticky red transparent bar */}
 
-          <div style={{ padding: '40px 40px 80px', maxWidth: 700, margin: '0 auto' }}>
+          <div style={{ padding: '80px 40px 80px', maxWidth: 700, margin: '0 auto' }}>
             <p style={{
               ...fade(0.05),
               color: 'rgb(200,40,40)', fontSize: 11, textTransform: 'uppercase',

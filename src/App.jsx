@@ -23,7 +23,7 @@ const VARIANT_MAP = {
   '/event-calendar': 'dark',
   '/team': 'blue',
   '/contact': 'blue',
-  '/support': 'blue',
+  '/support': 'red',
 }
 
 const CURRENT_MAP = {
@@ -33,13 +33,13 @@ const CURRENT_MAP = {
   '/event-calendar': 'Event Calendar',
   '/team': 'Team',
   '/contact': 'Contact',
-  '/support': 'Team',
+  '/support': 'Support',
 }
 
 function getNavMode(pathname) {
   if (pathname === '/') return 'hover'
   if (pathname === '/landing') return 'fixed'
-  if (pathname === '/support') return 'hidden'
+  if (pathname === '/support') return 'sticky'
   return 'static'
 }
 
@@ -132,15 +132,16 @@ export default function App() {
   const [hoverNav, setHoverNav] = useState(false)
 
   let navVisible
-  if (navMode === 'hidden') {
-    navVisible = false
-  } else if (navMode === 'hover') {
+  if (navMode === 'hover') {
     navVisible = hoverNav
   } else {
     navVisible = true
   }
 
-  const navPosition = navMode === 'static' ? 'relative' : 'absolute'
+  let navPosition
+  if (navMode === 'static') navPosition = 'relative'
+  else if (navMode === 'sticky') navPosition = 'sticky'
+  else navPosition = 'absolute'
 
   // Nav background uses TARGET for immediate color change
   const targetMode = getNavMode(location.pathname)
@@ -149,6 +150,8 @@ export default function App() {
     navBg = 'transparent'
   } else if (targetMode === 'fixed') {
     navBg = landingBg
+  } else if (targetMode === 'sticky') {
+    navBg = 'rgba(180,30,30,0.85)'
   } else {
     navBg = getBg(location.pathname)
   }

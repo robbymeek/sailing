@@ -54,7 +54,7 @@ export default function Contact({ onNavigate }) {
               Personal: robbymeek@gmail.com
             </p>
             <button
-              onClick={() => onNavigate('Team')}
+              onClick={() => onNavigate('Support')}
               style={{
                 display: 'inline-block', color: 'rgb(60,60,60)', fontSize: 13,
                 border: '1px solid rgb(180,180,180)', padding: '10px 28px',
