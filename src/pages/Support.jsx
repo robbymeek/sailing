@@ -86,10 +86,55 @@ function Timeline() {
   )
 }
 
+function MobileTimeline() {
+  return (
+    <div style={{ padding: '24px 16px', overflowX: 'auto', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', minWidth: 'max-content', paddingTop: 30, paddingBottom: 8 }}>
+        {/* Horizontal line */}
+        <div style={{
+          position: 'absolute', left: 0, right: 0, top: 24, height: 2,
+          background: 'linear-gradient(90deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.15) 30%, rgb(200,40,40) 75%, rgba(255,255,255,0.12) 100%)',
+        }} />
+        {TIMELINE_DATA.map((item, i) => (
+          <div key={i} style={{
+            textAlign: 'center', minWidth: 70, padding: '0 6px',
+            position: 'relative',
+          }}>
+            {/* Dot */}
+            <div style={{
+              width: item.current ? 12 : 8, height: item.current ? 12 : 8,
+              borderRadius: '50%',
+              background: item.current ? 'rgb(200,40,40)' : item.past ? '#fff' : 'rgba(255,255,255,0.15)',
+              position: 'absolute', top: item.current ? -8 : -6, left: '50%',
+              transform: 'translateX(-50%)', zIndex: 1,
+              boxShadow: item.current ? '0 0 10px rgba(200,40,40,0.5)' : 'none',
+            }} />
+            <div style={{
+              color: item.current ? 'rgb(200,40,40)' : item.past ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)',
+              fontSize: 10, fontWeight: 800, letterSpacing: '0.5px', marginBottom: 2,
+            }}>{item.year}</div>
+            <div style={{
+              color: item.current ? '#fff' : item.past ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.25)',
+              fontSize: 9, lineHeight: 1.3, maxWidth: 80,
+            }}>{item.main}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function Support({ onNavigate }) {
   const routerNavigate = useNavigate()
   const [visible, setVisible] = useState(false)
   const [showBio, setShowBio] = useState(false)
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 700)
+
+  useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 700)
+    window.addEventListener('resize', h)
+    return () => window.removeEventListener('resize', h)
+  }, [])
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 50)
     return () => clearTimeout(t)
@@ -149,25 +194,26 @@ export default function Support({ onNavigate }) {
 
       <div style={{ height: 4, background: 'rgb(200,40,40)' }} />
 
+      {/* Mobile: horizontal scrollable timeline */}
+      {isMobile && <MobileTimeline />}
+
       {/* Main layout: timeline left, content right */}
       <div style={{
         maxWidth: 1100, margin: '0 auto',
         display: 'flex', position: 'relative',
-      }}
-        className="support-layout"
-      >
+      }}>
 
-        {/* Timeline sidebar — left side, mirrored style */}
-        <div style={{
-          width: 'clamp(180px, 20vw, 240px)', flexShrink: 0,
-          padding: '40px 24px 40px 40px',
-          position: 'sticky', top: 60, alignSelf: 'flex-start',
-          height: 'fit-content',
-        }}
-          className="timeline-sidebar"
-        >
-          <Timeline />
-        </div>
+        {/* Timeline sidebar — desktop only */}
+        {!isMobile && (
+          <div style={{
+            width: 'clamp(180px, 20vw, 240px)', flexShrink: 0,
+            padding: '40px 24px 40px 40px',
+            position: 'sticky', top: 60, alignSelf: 'flex-start',
+            height: 'fit-content',
+          }}>
+            <Timeline />
+          </div>
+        )}
 
         {/* Content area — center aligned */}
         <div style={{ flex: 1, minWidth: 0, padding: '40px 40px 0 20px', textAlign: 'center' }}>

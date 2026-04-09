@@ -42,7 +42,7 @@ button {
   animation: chromeShimmer 6s ease infinite;
 }
 
-/* Support page layout - stack on mobile, timeline on top */
+/* Support page layout - stack on mobile */
 @media (max-width: 700px) {
   .support-layout {
     flex-direction: column !important;
@@ -50,10 +50,7 @@ button {
   .timeline-sidebar {
     width: 100% !important;
     position: relative !important;
-    padding: 30px 24px !important;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    display: flex !important;
-    justify-content: center !important;
+    padding: 0 !important;
   }
 }
 
