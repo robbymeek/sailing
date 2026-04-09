@@ -95,6 +95,76 @@ export default function MainView({ onNavigate }) {
     }
   }, [mode, transitioning, handleToggle, onNavigate])
 
+  // Scroll-driven navigation on Landing page
+  // Desktop: scroll up → Contact, scroll down → Home (dark)
+  // Mobile: scroll up → Event Calendar, scroll down → Biography
+  useEffect(() => {
+    if (mode !== 'landing' || transitioning) return
+
+    let accumulated = 0
+    const maxScroll = 300
+    let triggered = false
+    const isDesktop = () => window.innerWidth > 900
+
+    const onWheel = (e) => {
+      if (triggered || transitioning) return
+      accumulated += e.deltaY
+      accumulated = Math.max(-maxScroll, Math.min(maxScroll, accumulated))
+
+      const progress = accumulated / maxScroll
+      setScrollProgress(progress)
+
+      if (progress >= 1) {
+        triggered = true
+        if (isDesktop()) {
+          handleToggle() // → Home
+        } else {
+          onNavigate('Biography')
+        }
+      } else if (progress <= -1) {
+        triggered = true
+        onNavigate(isDesktop() ? 'Contact' : 'Event Calendar')
+      }
+    }
+
+    let touchStartY = 0
+    const onTouchStart = (e) => { touchStartY = e.touches[0].clientY }
+    const onTouchEnd = (e) => {
+      if (triggered || transitioning) return
+      const delta = e.changedTouches[0].clientY - touchStartY
+      if (delta < -80) {
+        triggered = true
+        if (isDesktop()) {
+          handleToggle()
+        } else {
+          onNavigate('Biography')
+        }
+      } else if (delta > 80) {
+        triggered = true
+        onNavigate(isDesktop() ? 'Contact' : 'Event Calendar')
+      }
+    }
+
+    const snapBack = setInterval(() => {
+      if (triggered) return
+      if (Math.abs(accumulated) > 0 && Math.abs(accumulated) < maxScroll * 0.9) {
+        accumulated *= 0.92
+        if (Math.abs(accumulated) < 5) accumulated = 0
+        setScrollProgress(accumulated / maxScroll)
+      }
+    }, 50)
+
+    window.addEventListener('wheel', onWheel, { passive: true })
+    window.addEventListener('touchstart', onTouchStart, { passive: true })
+    window.addEventListener('touchend', onTouchEnd, { passive: true })
+    return () => {
+      window.removeEventListener('wheel', onWheel)
+      window.removeEventListener('touchstart', onTouchStart)
+      window.removeEventListener('touchend', onTouchEnd)
+      clearInterval(snapBack)
+    }
+  }, [mode, transitioning, handleToggle, onNavigate])
+
   // Auto-transition on inactivity
   // Dark home: 10s → toggle to landing
   // Landing: 10s → navigate to Team
@@ -243,6 +313,13 @@ export default function MainView({ onNavigate }) {
     </div>
   )
 
+  // Landing scroll style — text moves with scroll direction
+  const landingScrollStyle = !inHome && absProgress > 0.02 ? {
+    opacity: scrollTextOpacity,
+    transform: `translateY(${scrollTextOffset}px)`,
+    transition: 'none',
+  } : textFade
+
   // ========== LANDING MODE ==========
   if (!inHome) {
     return (
@@ -264,7 +341,7 @@ export default function MainView({ onNavigate }) {
           <button
             onClick={() => onNavigate('Team')}
             style={{
-              ...textFade,
+              ...landingScrollStyle,
               position: 'absolute',
               top: `calc(50% + ${BOAT_SIZE / 2 + 28}px)`,
               background: 'none',
@@ -278,7 +355,7 @@ export default function MainView({ onNavigate }) {
           </button>
         </div>
 
-        <div style={{ padding: '20px 32px', width: '100%', textAlign: 'center', ...textFade }}>
+        <div style={{ padding: '20px 32px', width: '100%', textAlign: 'center', ...landingScrollStyle }}>
           <p style={{ color: textDim, fontSize: 10, transition: 'color 0.5s ease' }}>
             Website designed and made by Robby Meek
           </p>
