@@ -71,6 +71,51 @@ export default function Biography({ onNavigate }) {
     return () => cancelAnimationFrame(rafId)
   }, [])
 
+  // Scroll-based page navigation at top of page
+  // Desktop: scroll up → Contact | Mobile: scroll up → Event Calendar
+  useEffect(() => {
+    let accumulated = 0
+    const threshold = 150
+    let cooldown = false
+
+    const getTarget = () => window.innerWidth <= 900 ? 'Event Calendar' : 'Contact'
+
+    const handleWheel = (e) => {
+      if (cooldown) return
+      if (window.scrollY > 10) { accumulated = 0; return }
+      if (e.deltaY < 0) {
+        accumulated += Math.abs(e.deltaY)
+        if (accumulated > threshold) {
+          cooldown = true
+          onNavigate(getTarget())
+        }
+      } else {
+        accumulated = 0
+      }
+    }
+
+    let touchStartY = 0
+    const handleTouchStart = (e) => { touchStartY = e.touches[0].clientY }
+    const handleTouchEnd = (e) => {
+      if (cooldown) return
+      if (window.scrollY > 10) return
+      const delta = e.changedTouches[0].clientY - touchStartY
+      if (delta > 80) {
+        cooldown = true
+        onNavigate(getTarget())
+      }
+    }
+
+    window.addEventListener('wheel', handleWheel, { passive: true })
+    window.addEventListener('touchstart', handleTouchStart, { passive: true })
+    window.addEventListener('touchend', handleTouchEnd, { passive: true })
+    return () => {
+      window.removeEventListener('wheel', handleWheel)
+      window.removeEventListener('touchstart', handleTouchStart)
+      window.removeEventListener('touchend', handleTouchEnd)
+    }
+  }, [onNavigate])
+
   return (
     <div style={{ background: 'rgb(230,235,240)', minHeight: '100vh' }}>
 
