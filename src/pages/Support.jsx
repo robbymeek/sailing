@@ -136,27 +136,32 @@ export default function Support({ onNavigate }) {
             background: 'linear-gradient(180deg, rgba(12,0,60,0.7) 0%, rgba(12,0,60,0.85) 50%, rgb(12,0,60) 100%)',
           }} />
         </div>
-        <div style={{ position: 'relative', zIndex: 1, padding: '80px 40px 80px', maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
-          <p style={{ ...fade(0.05), color: 'rgb(200,40,40)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '3px', margin: '0 0 20px', fontWeight: 600 }}>
-            LA 2028 Olympic Campaign
-          </p>
-          <h1 style={{ ...fade(0.1), color: '#fff', fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: 800, letterSpacing: '-2px', lineHeight: 1.1, margin: '0 0 16px' }}>
+        <div style={{ position: 'relative', zIndex: 1, padding: '60px 20px 80px', textAlign: 'center' }}>
+          <h1 style={{
+            ...fade(0.1), color: '#fff', fontSize: 'clamp(36px, 6vw, 56px)', fontWeight: 800,
+            letterSpacing: '-2px', margin: '0 0 12px', textTransform: 'uppercase',
+          }}>
             Support the journey
           </h1>
-          <p style={{ ...fade(0.15), color: 'rgba(255,255,255,0.5)', fontSize: 14, lineHeight: 1.7, maxWidth: 500, margin: '0 auto 24px' }}>
+          <p style={{
+            ...fade(0.15), color: 'rgba(255,255,255,0.5)', fontSize: 14, maxWidth: 500,
+            margin: '0 auto 24px', lineHeight: 1.6,
+          }}>
             Olympic sailing demands competing against the best in the world. Your support makes that possible.
           </p>
           <button
             onClick={() => onNavigate('Team')}
             style={{
               ...fade(0.2),
-              background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)',
-              cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 500,
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '10px 24px',
+              display: 'inline-block',
+              color: 'rgba(255,255,255,0.7)',
+              fontSize: 13, fontWeight: 400,
+              border: '1px solid rgba(255,255,255,0.2)',
+              padding: '10px 28px',
+              background: 'none', cursor: 'pointer',
             }}
           >
-            <span>&larr;</span> Back to Team
+            Back to Team
           </button>
         </div>
       </div>
