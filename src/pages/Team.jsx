@@ -15,7 +15,7 @@ const SUPPORTERS = [
 const EMPTY_SLOTS = 4
 
 export default function Team({ onNavigate }) {
-  const entrance = usePageEntrance(4, { staggerMs: 120, initialDelayMs: 50 })
+  const entrance = usePageEntrance(5, { staggerMs: 100, initialDelayMs: 50 })
 
   return (
     <div style={{ minHeight: '100vh', position: 'relative' }}>
@@ -37,6 +37,7 @@ export default function Team({ onNavigate }) {
 
       {/* Content */}
       <div style={{ position: 'relative', zIndex: 1 }}>
+        {/* Hero */}
         <div style={{ textAlign: 'center', padding: '60px 20px 80px' }}>
           <h1 style={{
             color: '#fff', fontSize: 'clamp(36px, 6vw, 56px)', fontWeight: 800,
@@ -57,86 +58,116 @@ export default function Team({ onNavigate }) {
               border: '1px solid rgba(255,255,255,0.2)',
               padding: '10px 28px',
               background: 'none', cursor: 'pointer',
-              letterSpacing: '-0.2px',
             }}
           >
             Support the Campaign
           </button>
         </div>
 
-        {/* Sponsor grid */}
-        <div style={{ ...entrance.style(1), maxWidth: 1000, margin: '0 auto', padding: '0 40px' }}>
-          <div style={{
-            border: '1px solid rgba(255,255,255,0.1)',
-            overflow: 'hidden',
-          }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
-              <div style={{
-                padding: '24px', textAlign: 'center', background: 'rgb(0,0,0)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                minHeight: 140, borderRight: '1px solid rgba(255,255,255,0.1)',
-                borderBottom: '1px solid rgba(255,255,255,0.1)',
-              }}>
-                <img src={`${BASE}AAENT-Logo.png`} alt="AA ENT & Facial Plastic Surgery" style={{ maxWidth: '80%', maxHeight: 100, objectFit: 'contain' }} />
-              </div>
-              <div style={{
-                padding: '24px', textAlign: 'center', background: 'rgb(15,25,50)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                minHeight: 140,
-                borderRight: '1px solid rgba(255,255,255,0.1)',
-                borderBottom: '1px solid rgba(255,255,255,0.1)',
-              }}>
-                <img src={`${BASE}us-sailing-team-logo.png`} alt="US Sailing Team" style={{ maxWidth: '80%', maxHeight: 100, objectFit: 'contain' }} />
-              </div>
-              <div style={{
-                padding: '24px', textAlign: 'center', background: 'rgb(255,255,255)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                minHeight: 140,
-                borderBottom: '1px solid rgba(255,255,255,0.1)',
-              }}>
-                <img src={`${BASE}sfny-logo.png`} alt="Sailing Foundation of New York" style={{ maxWidth: '80%', maxHeight: 100, objectFit: 'contain' }} />
-              </div>
-            </div>
+        {/* Sponsors — bold full-width blocks with harsh lines */}
+        <div style={{ ...entrance.style(1) }}>
+          {/* Red accent line */}
+          <div style={{ height: 4, background: 'rgb(200,40,40)' }} />
 
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }}>
+            {/* AA ENT */}
+            <div style={{
+              background: '#000', padding: '50px 24px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRight: '3px solid rgb(200,40,40)',
+            }}>
+              <img src={`${BASE}AAENT-Logo.png`} alt="AA ENT" style={{ maxWidth: '80%', maxHeight: 80, objectFit: 'contain' }} />
+            </div>
+            {/* US Sailing */}
+            <div style={{
+              background: 'rgb(10,20,50)', padding: '50px 24px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRight: '3px solid rgb(200,40,40)',
+            }}>
+              <img src={`${BASE}us-sailing-team-logo.png`} alt="US Sailing Team" style={{ maxWidth: '80%', maxHeight: 80, objectFit: 'contain' }} />
+            </div>
+            {/* SFNY */}
+            <div style={{
+              background: '#fff', padding: '50px 24px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <img src={`${BASE}sfny-logo.png`} alt="Sailing Foundation of New York" style={{ maxWidth: '80%', maxHeight: 80, objectFit: 'contain' }} />
+            </div>
+          </div>
+
+          {/* Blue accent line */}
+          <div style={{ height: 4, background: 'rgb(30,60,200)' }} />
+        </div>
+
+        {/* Action photo strip between sponsors and supporters */}
+        <div style={{ ...entrance.style(2), position: 'relative', height: 250, overflow: 'hidden' }}>
+          <img
+            src={`${BASE}IMG_5957 2.JPG`}
+            alt=""
+            style={{
+              width: '100%', height: '100%',
+              objectFit: 'cover', objectPosition: 'center 20%',
+            }}
+          />
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(180deg, rgba(18,0,120,0.6) 0%, rgba(18,0,120,0.3) 50%, rgba(18,0,120,0.6) 100%)',
+          }} />
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <p style={{
+              color: '#fff', fontSize: 'clamp(20px, 3vw, 32px)', fontWeight: 800,
+              letterSpacing: '-1px', textTransform: 'uppercase',
+              textAlign: 'center',
+            }}>
+              LA 2028
+            </p>
           </div>
         </div>
 
-        {/* Individual Supporters */}
-        <div style={{ maxWidth: 1000, margin: '40px auto 0', padding: '0 40px' }}>
+        {/* Individual Supporters — bold cards */}
+        <div style={{ ...entrance.style(3), padding: '50px 40px' }}>
           <p style={{
-            color: 'rgba(255,255,255,0.35)', fontSize: 12, textTransform: 'uppercase',
-            letterSpacing: '1px', marginBottom: 20, textAlign: 'center',
+            color: 'rgba(255,255,255,0.3)', fontSize: 11, textTransform: 'uppercase',
+            letterSpacing: '2px', marginBottom: 24, textAlign: 'center',
           }}>
             Individual Supporters
           </p>
           <div style={{
-            display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10,
+            display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 0,
+            maxWidth: 900, margin: '0 auto',
           }}>
             {SUPPORTERS.map((s) => {
-              const inner = (
+              const card = (
                 <div key={s.name} style={{
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  padding: '10px 20px',
-                  color: 'rgba(255,255,255,0.85)',
-                  fontSize: 13, fontWeight: 500,
+                  background: 'rgba(255,255,255,0.04)',
+                  borderLeft: '3px solid rgb(200,40,40)',
+                  padding: '14px 24px',
+                  color: '#fff',
+                  fontSize: 14, fontWeight: 600,
+                  borderBottom: '1px solid rgba(255,255,255,0.06)',
+                  width: '100%', maxWidth: 280,
                 }}>
                   {s.name}
                 </div>
               )
               return s.url ? (
-                <a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-                  {inner}
+                <a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', width: '100%', maxWidth: 280 }}>
+                  {card}
                 </a>
-              ) : inner
+              ) : <div key={s.name} style={{ width: '100%', maxWidth: 280 }}>{card}</div>
             })}
             {Array.from({ length: EMPTY_SLOTS }).map((_, i) => (
               <div key={`empty-${i}`} style={{
                 background: 'transparent',
-                border: '1px dashed rgba(255,255,255,0.15)',
-                padding: '10px 20px',
+                borderLeft: '3px solid rgba(255,255,255,0.08)',
+                padding: '14px 24px',
                 color: 'rgba(255,255,255,0.2)',
-                fontSize: 13, fontStyle: 'italic',
+                fontSize: 14, fontStyle: 'italic',
+                borderBottom: '1px solid rgba(255,255,255,0.03)',
+                width: '100%', maxWidth: 280,
               }}>
                 Your Name
               </div>
@@ -144,29 +175,44 @@ export default function Team({ onNavigate }) {
           </div>
         </div>
 
-        {/* Thank you letter */}
-        <div style={{ ...entrance.style(2), maxWidth: 800, margin: '0 auto', padding: '60px 40px 60px' }}>
-          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.8, marginBottom: 16 }}>
-            I wanted to take a moment to express my deepest gratitude for any and all guidance and support throughout my Olympic sailing journey. Belief in me has meant more than words can say, and it has been one of the driving forces behind every step I have taken on this path.
-          </p>
-          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.8, marginBottom: 16 }}>
-            Some of you have been with me since the very beginning, learning to sail on the Chesapeake Bay, to racing for the United States on the world stage. Whether it was encouragement after a tough regatta, advice on a difficult decision, or simply the confidence that someone believed in what I was working toward, those moments have shaped who I am as a sailor and as a person.
-          </p>
-          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.8, marginBottom: 16 }}>
-            As I look ahead to this chapter of dedicating myself full-time to the LA 2028 Olympic campaign, I will carry forward everything I learn. The discipline, the resilience, the joy of competition, and the understanding that no great achievement is ever accomplished alone.
-          </p>
-          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.8, marginBottom: 16 }}>
-            Thank you for being part of this journey. I am incredibly fortunate to have people in my corner, and I promise to continue working every day.
-          </p>
-          <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 14, lineHeight: 1.8, marginBottom: 4 }}>
-            With my sincerest thanks and appreciation,
-          </p>
-          <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 14, lineHeight: 1.8 }}>Robby</p>
+        {/* White accent line */}
+        <div style={{ height: 2, background: 'rgba(255,255,255,0.1)', maxWidth: 120, margin: '0 auto' }} />
+
+        {/* Thank you letter — with sailing photo alongside */}
+        <div style={{ ...entrance.style(4), maxWidth: 900, margin: '0 auto', padding: '50px 40px 40px' }}>
+          <div style={{ display: 'flex', gap: 40, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            {/* Photo */}
+            <div style={{ flex: '0 0 auto', width: 'clamp(200px, 25vw, 280px)' }}>
+              <img
+                src={`${BASE}IMG_5958.JPG`}
+                alt=""
+                style={{ width: '100%', objectFit: 'cover', display: 'block' }}
+              />
+              <div style={{ height: 3, background: 'rgb(200,40,40)' }} />
+            </div>
+            {/* Letter */}
+            <div style={{ flex: 1, minWidth: 280 }}>
+              <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.8, marginBottom: 16 }}>
+                I wanted to take a moment to express my deepest gratitude for any and all guidance and support throughout my Olympic sailing journey. Belief in me has meant more than words can say, and it has been one of the driving forces behind every step I have taken on this path.
+              </p>
+              <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.8, marginBottom: 16 }}>
+                Some of you have been with me since the very beginning, learning to sail on the Chesapeake Bay, to racing for the United States on the world stage. Whether it was encouragement after a tough regatta, advice on a difficult decision, or simply the confidence that someone believed in what I was working toward, those moments have shaped who I am as a sailor and as a person.
+              </p>
+              <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.8, marginBottom: 16 }}>
+                As I look ahead to this chapter of dedicating myself full-time to the LA 2028 Olympic campaign, I will carry forward everything I learn. The discipline, the resilience, the joy of competition, and the understanding that no great achievement is ever accomplished alone.
+              </p>
+              <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.8, marginBottom: 16 }}>
+                Thank you for being part of this journey. I am incredibly fortunate to have people in my corner, and I promise to continue working every day.
+              </p>
+              <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 14, lineHeight: 1.8, marginBottom: 4 }}>
+                With my sincerest thanks and appreciation,
+              </p>
+              <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 14, lineHeight: 1.8 }}>Robby</p>
+            </div>
+          </div>
         </div>
 
-        <div style={entrance.style(3)}>
-          <Footer variant="blue" onNavigate={onNavigate} />
-        </div>
+        <Footer variant="blue" onNavigate={onNavigate} />
       </div>
     </div>
   )
