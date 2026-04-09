@@ -53,6 +53,8 @@ button {
     padding: 30px 24px !important;
     border-bottom: 1px solid rgba(255,255,255,0.08);
     order: 1;
+    display: flex !important;
+    justify-content: center !important;
   }
 }
 
