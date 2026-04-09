@@ -28,80 +28,59 @@ const COSTS = [
 
 function Timeline() {
   return (
-    <div style={{ position: 'relative', paddingRight: 14 }}>
-      {/* Vertical line on the right edge — strikes through dots */}
+    <div style={{ position: 'relative' }}>
+      {/* Vertical line — left side */}
       <div style={{
-        position: 'absolute', right: 4, top: 0, bottom: 0, width: 2,
-        background: 'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.12) 20%, rgb(200,40,40) 75%, rgba(255,255,255,0.15) 100%)',
+        position: 'absolute', left: 6, top: 0, bottom: 0, width: 2,
+        background: 'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.15) 30%, rgb(200,40,40) 75%, rgba(255,255,255,0.12) 100%)',
       }} />
 
-      {/* Pre-ILCA label */}
-      <div style={{ textAlign: 'right', paddingRight: 20, marginBottom: 6, position: 'relative' }}>
-        <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: 9, fontStyle: 'italic', letterSpacing: '1px' }}>
-          B.I. (Before ILCA)
-        </div>
-        <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, fontStyle: 'italic' }}>
+      {/* B.I. / A.I. header */}
+      <div style={{ paddingLeft: 24, marginBottom: 8 }}>
+        <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, fontStyle: 'italic', letterSpacing: '1px' }}>
+          B.I.
+        </span>
+        <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 10, margin: '0 6px' }}>|</span>
+        <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, fontStyle: 'italic' }}>
           Opti's
-        </div>
+        </span>
       </div>
-      {/* Horizontal divider — era break */}
-      <div style={{
-        height: 1, background: 'rgba(255,255,255,0.1)',
-        marginBottom: 12, marginRight: -2,
-      }} />
-      <div style={{ textAlign: 'right', paddingRight: 20, marginBottom: 12 }}>
-        <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: 9, fontStyle: 'italic', letterSpacing: '1px' }}>
-          A.I. (After ILCA)
-        </div>
+      <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', marginLeft: 24, marginBottom: 12 }} />
+      <div style={{ paddingLeft: 24, marginBottom: 16 }}>
+        <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, fontStyle: 'italic', letterSpacing: '1px' }}>A.I.</span>
       </div>
 
-      {/* Timeline entries */}
-      {TIMELINE_DATA.map((item, i) => {
-        const dotSize = item.current ? 12 : 8
-        const mainColor = item.current ? '#fff' : item.past ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.3)'
-        const yearColor = item.current ? 'rgb(200,40,40)' : item.past ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.2)'
-
-        return (
-          <div key={i} style={{ position: 'relative', marginBottom: item.sub ? 4 : 14 }}>
-            {/* Main dot — line strikes through it */}
-            <div style={{
-              width: dotSize, height: dotSize, borderRadius: '50%',
-              background: item.current ? 'rgb(200,40,40)' : item.past ? '#fff' : 'rgba(255,255,255,0.15)',
-              position: 'absolute', right: 4 - dotSize / 2 + 1, top: 1,
-              zIndex: 1,
-              boxShadow: item.current ? '0 0 10px rgba(200,40,40,0.5)' : 'none',
-            }} />
-            {/* Main event + year */}
-            <div style={{ textAlign: 'right', paddingRight: 20 }}>
-              <span style={{ color: mainColor, fontSize: 10, fontWeight: 600 }}>
-                {item.main}
-              </span>
-              <span style={{ color: yearColor, fontSize: 10, fontWeight: 700, marginLeft: 6, letterSpacing: '0.5px' }}>
-                {item.year}
-              </span>
-            </div>
-            {/* Sub-items — smaller dots on the line */}
-            {item.sub && item.sub.map((s, si) => (
-              <div key={si} style={{ position: 'relative', marginTop: 3 }}>
-                <div style={{
-                  width: 4, height: 4, borderRadius: '50%',
-                  background: item.current ? 'rgba(200,40,40,0.5)' : 'rgba(255,255,255,0.2)',
-                  position: 'absolute', right: 3, top: 4, zIndex: 1,
-                }} />
-                <div style={{
-                  textAlign: 'right', paddingRight: 20,
-                  color: item.past ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.18)',
-                  fontSize: 9,
-                }}>
-                  {s}
-                </div>
-              </div>
-            ))}
-            {/* Spacer after sub-items */}
-            {item.sub && <div style={{ height: 10 }} />}
-          </div>
-        )
-      })}
+      {/* Entries */}
+      {TIMELINE_DATA.map((item, i) => (
+        <div key={i} style={{ position: 'relative', paddingLeft: 24, marginBottom: 20 }}>
+          {/* Dot on the line */}
+          <div style={{
+            width: item.current ? 14 : 10, height: item.current ? 14 : 10,
+            borderRadius: '50%',
+            background: item.current ? 'rgb(200,40,40)' : item.past ? '#fff' : 'rgba(255,255,255,0.15)',
+            position: 'absolute', left: item.current ? 0 : 2, top: 2,
+            zIndex: 1,
+            boxShadow: item.current ? '0 0 12px rgba(200,40,40,0.5)' : 'none',
+          }} />
+          {/* Year */}
+          <div style={{
+            color: item.current ? 'rgb(200,40,40)' : item.past ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)',
+            fontSize: 11, fontWeight: 800, letterSpacing: '1px', marginBottom: 2,
+          }}>{item.year}</div>
+          {/* Main event */}
+          <div style={{
+            color: item.current ? '#fff' : item.past ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.3)',
+            fontSize: 12, fontWeight: 600, lineHeight: 1.4,
+          }}>{item.main}</div>
+          {/* Sub events */}
+          {item.sub && item.sub.map((s, si) => (
+            <div key={si} style={{
+              color: item.past ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.2)',
+              fontSize: 10, lineHeight: 1.4, marginTop: 2,
+            }}>{s}</div>
+          ))}
+        </div>
+      ))}
     </div>
   )
 }
@@ -172,15 +151,16 @@ export default function Support({ onNavigate }) {
       <div style={{
         maxWidth: 1100, margin: '0 auto',
         display: 'flex', position: 'relative',
-      }}>
+      }}
+        className="support-layout"
+      >
 
-        {/* Timeline — fixed to left on desktop, faded overlay on mobile */}
+        {/* Timeline sidebar */}
         <div style={{
-          width: 200, flexShrink: 0,
-          padding: '40px 20px 40px 40px',
+          width: 220, flexShrink: 0,
+          padding: '40px 24px 40px 40px',
           position: 'sticky', top: 60, alignSelf: 'flex-start',
           height: 'fit-content',
-          // On narrow screens this will be hidden via the media query approach below
         }}
           className="timeline-sidebar"
         >
