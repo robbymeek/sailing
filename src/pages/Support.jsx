@@ -88,34 +88,46 @@ function Timeline() {
 
 function MobileTimeline() {
   return (
-    <div style={{ padding: '24px 16px', overflowX: 'auto', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-      <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', minWidth: 'max-content', paddingTop: 30, paddingBottom: 8 }}>
+    <div style={{
+      padding: '32px 0',
+      overflowX: 'auto',
+      borderBottom: '1px solid rgba(255,255,255,0.06)',
+      WebkitOverflowScrolling: 'touch',
+    }}>
+      <div style={{
+        position: 'relative',
+        display: 'flex', alignItems: 'flex-start',
+        minWidth: 'max-content',
+        padding: '0 24px',
+      }}>
         {/* Horizontal line */}
         <div style={{
-          position: 'absolute', left: 0, right: 0, top: 24, height: 2,
-          background: 'linear-gradient(90deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.15) 30%, rgb(200,40,40) 75%, rgba(255,255,255,0.12) 100%)',
+          position: 'absolute', left: 0, right: 0, top: 8, height: 2,
+          background: 'linear-gradient(90deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.12) 30%, rgb(200,40,40) 75%, rgba(255,255,255,0.1) 100%)',
         }} />
         {TIMELINE_DATA.map((item, i) => (
           <div key={i} style={{
-            textAlign: 'center', minWidth: 70, padding: '0 6px',
+            textAlign: 'center',
+            width: 90,
             position: 'relative',
+            paddingTop: 24,
           }}>
-            {/* Dot */}
+            {/* Dot on the line */}
             <div style={{
-              width: item.current ? 12 : 8, height: item.current ? 12 : 8,
+              width: item.current ? 14 : 8, height: item.current ? 14 : 8,
               borderRadius: '50%',
               background: item.current ? 'rgb(200,40,40)' : item.past ? '#fff' : 'rgba(255,255,255,0.15)',
-              position: 'absolute', top: item.current ? -8 : -6, left: '50%',
+              position: 'absolute', top: item.current ? 2 : 5, left: '50%',
               transform: 'translateX(-50%)', zIndex: 1,
-              boxShadow: item.current ? '0 0 10px rgba(200,40,40,0.5)' : 'none',
+              boxShadow: item.current ? '0 0 12px rgba(200,40,40,0.5)' : 'none',
             }} />
             <div style={{
-              color: item.current ? 'rgb(200,40,40)' : item.past ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)',
-              fontSize: 10, fontWeight: 800, letterSpacing: '0.5px', marginBottom: 2,
+              color: item.current ? 'rgb(200,40,40)' : item.past ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.25)',
+              fontSize: 12, fontWeight: 800, letterSpacing: '0.5px', marginBottom: 4,
             }}>{item.year}</div>
             <div style={{
-              color: item.current ? '#fff' : item.past ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.25)',
-              fontSize: 9, lineHeight: 1.3, maxWidth: 80,
+              color: item.current ? '#fff' : item.past ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.2)',
+              fontSize: 10, lineHeight: 1.4,
             }}>{item.main}</div>
           </div>
         ))}
