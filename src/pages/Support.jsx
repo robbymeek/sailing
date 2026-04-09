@@ -248,7 +248,7 @@ export default function Support({ onNavigate }) {
                 textDecoration: 'underline', textUnderlineOffset: '3px',
               }}
             >
-              or Venmo
+              Venmo
             </a>
           </div>
 
