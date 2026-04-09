@@ -129,6 +129,14 @@ export default function App() {
   const navPath = isExiting ? displayLocation.pathname : location.pathname
   const navMode = getNavMode(navPath)
 
+  // Preload Biography + Event Calendar on mobile for instant transitions
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 900)
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 900)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
   const [hoverNav, setHoverNav] = useState(false)
 
   let navVisible
@@ -201,6 +209,19 @@ export default function App() {
           <Route path="/support" element={<Support onNavigate={go} />} />
         </Routes>
       </div>
+
+      {/* Preload Biography + Event Calendar off-screen on mobile for instant transitions */}
+      {isMobile && (
+        <div aria-hidden="true" style={{
+          position: 'fixed', top: '-200vh', left: '-200vw',
+          width: '100vw', height: '100vh',
+          visibility: 'hidden', pointerEvents: 'none', overflow: 'hidden',
+          zIndex: -1,
+        }}>
+          {displayLocation.pathname !== '/biography' && <Biography onNavigate={() => {}} />}
+          {displayLocation.pathname !== '/event-calendar' && <EventCalendar onNavigate={() => {}} />}
+        </div>
+      )}
     </div>
   )
 }
