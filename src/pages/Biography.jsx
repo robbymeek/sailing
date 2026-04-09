@@ -161,12 +161,15 @@ export default function Biography({ onNavigate }) {
           </div>
         </div>
 
-        {/* Right side: Regatta cards — horizontal row on desktop, portrait orientation */}
-        <div style={{
+        {/* Right side: Regatta cards + logos wrapper */}
+        <div className="bio-events-wrapper" style={{
           position: 'absolute', right: '3%', top: '8%',
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          zIndex: 2,
+        }}>
+        <div style={{
           display: 'flex', flexDirection: 'row', gap: 14,
           alignItems: 'center',
-          zIndex: 2,
         }}
           className="bio-regatta-cards"
         >
@@ -222,19 +225,18 @@ export default function Biography({ onNavigate }) {
           })}
         </div>
 
-        {/* Logos — desktop: below events on right; mobile: between image and events */}
+        {/* Logos — centered under event cards */}
         <div className="bio-logos" style={{
-          position: 'absolute', right: '3%', bottom: '5%',
           display: 'flex', gap: 32, alignItems: 'center', justifyContent: 'center',
-          zIndex: 2,
+          marginTop: 24,
         }}>
           <div style={{
             width: 90, height: 90,
             perspective: '600px',
           }}>
             <img
-              src={`${BASE}harvard-crest.png`}
-              alt="Harvard Crest"
+              src={`${BASE}Harvard-Crimson-Logo-2002.png`}
+              alt="Harvard Crimson"
               style={{
                 width: '100%', height: '100%', objectFit: 'contain',
                 transform: 'rotateY(-8deg) rotateX(4deg)',
@@ -258,6 +260,7 @@ export default function Biography({ onNavigate }) {
               }}
             />
           </div>
+        </div>
         </div>
 
       </div>

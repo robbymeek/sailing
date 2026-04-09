@@ -78,11 +78,17 @@ button {
     top: 12% !important;
   }
 
-  /* Regatta cards: horizontal row below the image */
-  .bio-regatta-cards {
+  /* Events wrapper: below image, centered */
+  .bio-events-wrapper {
     position: relative !important;
     right: auto !important;
     top: auto !important;
+    width: 100% !important;
+    align-items: center !important;
+  }
+
+  /* Regatta cards: horizontal row below the image */
+  .bio-regatta-cards {
     width: 100% !important;
     flex-direction: row !important;
     align-items: center !important;
@@ -125,14 +131,9 @@ button {
     font-size: 10px !important;
   }
 
-  /* Logos: between image/text and events */
+  /* Logos */
   .bio-logos {
-    position: relative !important;
-    right: auto !important;
-    bottom: auto !important;
-    width: 100% !important;
-    justify-content: center !important;
-    padding: 40px 16px 24px !important;
+    padding: 16px 16px 24px !important;
   }
 }
 
