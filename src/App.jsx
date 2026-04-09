@@ -210,18 +210,18 @@ export default function App() {
         </Routes>
       </div>
 
-      {/* Preload Biography + Event Calendar off-screen on mobile for instant transitions */}
-      {isMobile && (
-        <div aria-hidden="true" style={{
-          position: 'fixed', top: '-200vh', left: '-200vw',
-          width: '100vw', height: '100vh',
-          visibility: 'hidden', pointerEvents: 'none', overflow: 'hidden',
-          zIndex: -1,
-        }}>
-          {displayLocation.pathname !== '/biography' && <Biography onNavigate={() => {}} />}
-          {displayLocation.pathname !== '/event-calendar' && <EventCalendar onNavigate={() => {}} />}
-        </div>
-      )}
+      {/* Preload adjacent pages off-screen for instant scroll-based transitions */}
+      <div aria-hidden="true" style={{
+        position: 'fixed', top: '-200vh', left: '-200vw',
+        width: '100vw', height: '100vh',
+        visibility: 'hidden', pointerEvents: 'none', overflow: 'hidden',
+        zIndex: -1,
+      }}>
+        {displayLocation.pathname !== '/biography' && <Biography onNavigate={() => {}} />}
+        {displayLocation.pathname !== '/event-calendar' && <EventCalendar onNavigate={() => {}} />}
+        {!isMobile && displayLocation.pathname !== '/contact' && <Contact onNavigate={() => {}} />}
+        {!isMobile && displayLocation.pathname !== '/landing' && <MainView onNavigate={() => {}} />}
+      </div>
     </div>
   )
 }

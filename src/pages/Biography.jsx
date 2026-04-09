@@ -71,38 +71,67 @@ export default function Biography({ onNavigate }) {
     return () => cancelAnimationFrame(rafId)
   }, [])
 
-  // Scroll-based page navigation at top of page
-  // Desktop: scroll up → Contact | Mobile: scroll up → Event Calendar
+  // Scroll-based page navigation
+  // Desktop: scroll up at top → Contact, scroll down at bottom → Home
+  // Mobile: scroll up at top → Event Calendar, scroll down → bio content (normal scroll)
   useEffect(() => {
-    let accumulated = 0
-    const threshold = 150
+    let accUp = 0
+    let accDown = 0
+    const threshold = 200
     let cooldown = false
 
-    const getTarget = () => window.innerWidth <= 900 ? 'Event Calendar' : 'Contact'
+    const isDesktop = () => window.innerWidth > 900
+    const atTop = () => window.scrollY < 10
+    const atBottom = () =>
+      window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 10
 
     const handleWheel = (e) => {
       if (cooldown) return
-      if (window.scrollY > 10) { accumulated = 0; return }
-      if (e.deltaY < 0) {
-        accumulated += Math.abs(e.deltaY)
-        if (accumulated > threshold) {
+
+      // Scroll up at top of page
+      if (e.deltaY < 0 && atTop()) {
+        accDown = 0
+        accUp += Math.abs(e.deltaY)
+        if (accUp > threshold) {
           cooldown = true
-          onNavigate(getTarget())
+          onNavigate(isDesktop() ? 'Contact' : 'Event Calendar')
         }
-      } else {
-        accumulated = 0
+        return
       }
+
+      // Scroll down at bottom — desktop only → Home
+      if (e.deltaY > 0 && atBottom() && isDesktop()) {
+        accUp = 0
+        accDown += Math.abs(e.deltaY)
+        if (accDown > threshold) {
+          cooldown = true
+          onNavigate('Home')
+        }
+        return
+      }
+
+      // Reset accumulators when scrolling normally in middle of page
+      accUp = 0
+      accDown = 0
     }
 
     let touchStartY = 0
     const handleTouchStart = (e) => { touchStartY = e.touches[0].clientY }
     const handleTouchEnd = (e) => {
       if (cooldown) return
-      if (window.scrollY > 10) return
       const delta = e.changedTouches[0].clientY - touchStartY
-      if (delta > 80) {
+
+      // Swipe down at top → navigate up
+      if (delta > 80 && atTop()) {
         cooldown = true
-        onNavigate(getTarget())
+        onNavigate(isDesktop() ? 'Contact' : 'Event Calendar')
+        return
+      }
+
+      // Swipe up at bottom — desktop only → Home
+      if (delta < -80 && atBottom() && isDesktop()) {
+        cooldown = true
+        onNavigate('Home')
       }
     }
 
