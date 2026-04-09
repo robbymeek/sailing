@@ -4,19 +4,18 @@ import Footer from '../components/Footer'
 const BASE = import.meta.env.BASE_URL
 
 const TIMELINE_DATA = [
-  { year: 'Pre', label: "Opti's", past: true, era: true },
-  { year: '2017', label: 'Started racing', past: true },
-  { year: '2018', label: 'First Youth Champs', past: true },
-  { year: '2019', label: '5th at HS Nationals, freshman', past: true },
-  { year: '2020', label: 'Covid', past: true },
-  { year: '2021', label: 'HS National Champion, Orange Bowl Champion, 9th at Youth Worlds, North American Champion', past: true },
-  { year: '2022', label: 'HS National Champion, 5th at Youth Worlds', past: true },
-  { year: '2023', label: 'Harvard Sailing, North American Champion', past: true },
-  { year: '2024', label: 'Train, work at CrossnoKaye', past: true },
-  { year: '2025', label: 'North American Champion, Top American at Europeans', past: true },
-  { year: '2026', label: 'Full-time Olympic training', current: true },
-  { year: '2027', label: 'World Championship contender' },
-  { year: '2028', label: 'LA Olympics' },
+  { year: '2017', main: 'Started racing', past: true },
+  { year: '2018', main: 'First Youth Champs', past: true },
+  { year: '2019', main: '5th at HS Nationals', sub: ['Freshman year'], past: true },
+  { year: '2020', main: 'Covid', past: true },
+  { year: '2021', main: 'HS National Champion', sub: ['Orange Bowl Champion', '9th at Youth Worlds', 'North American Champion'], past: true },
+  { year: '2022', main: 'HS National Champion', sub: ['5th at Youth Worlds'], past: true },
+  { year: '2023', main: 'Harvard Sailing', sub: ['North American Champion'], past: true },
+  { year: '2024', main: 'CrossnoKaye', sub: ['Train and work'], past: true },
+  { year: '2025', main: 'North American Champion', sub: ['Top American at Europeans'], past: true },
+  { year: '2026', main: 'Olympic training', current: true },
+  { year: '2027', main: 'World Champs contender' },
+  { year: '2028', main: 'LA Olympics' },
 ]
 
 const COSTS = [
@@ -30,35 +29,79 @@ const COSTS = [
 function Timeline() {
   return (
     <div style={{ position: 'relative', paddingRight: 14 }}>
-      {/* Vertical line on the right edge — acts as divider */}
+      {/* Vertical line on the right edge — strikes through dots */}
       <div style={{
-        position: 'absolute', right: 0, top: 0, bottom: 0, width: 2,
-        background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.1) 30%, rgb(200,40,40) 75%, rgba(255,255,255,0.15) 100%)',
+        position: 'absolute', right: 4, top: 0, bottom: 0, width: 2,
+        background: 'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.12) 20%, rgb(200,40,40) 75%, rgba(255,255,255,0.15) 100%)',
       }} />
-      {TIMELINE_DATA.map((item, i) => (
-        <div key={i} style={{
-          marginBottom: 16, position: 'relative',
-          textAlign: 'right', paddingRight: 18,
-        }}>
-          {/* Dot on the line */}
-          <div style={{
-            width: item.current ? 12 : 8, height: item.current ? 12 : 8, borderRadius: '50%',
-            background: item.current ? 'rgb(200,40,40)' : item.past ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.15)',
-            position: 'absolute', right: item.current ? -5 : -3, top: 2,
-            boxShadow: item.current ? '0 0 10px rgba(200,40,40,0.5)' : 'none',
-          }} />
-          <div style={{
-            color: item.current ? 'rgb(200,40,40)' : item.past ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.2)',
-            fontSize: 10, fontWeight: 700, letterSpacing: '1px', marginBottom: 1,
-            fontStyle: item.era ? 'italic' : 'normal',
-          }}>{item.year}</div>
-          <div style={{
-            color: item.current ? '#fff' : item.past ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.25)',
-            fontSize: 10, lineHeight: 1.5,
-            fontStyle: item.era ? 'italic' : 'normal',
-          }}>{item.label}</div>
+
+      {/* Pre-ILCA label */}
+      <div style={{ textAlign: 'right', paddingRight: 20, marginBottom: 6, position: 'relative' }}>
+        <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: 9, fontStyle: 'italic', letterSpacing: '1px' }}>
+          B.I. (Before ILCA)
         </div>
-      ))}
+        <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, fontStyle: 'italic' }}>
+          Opti's
+        </div>
+      </div>
+      {/* Horizontal divider — era break */}
+      <div style={{
+        height: 1, background: 'rgba(255,255,255,0.1)',
+        marginBottom: 12, marginRight: -2,
+      }} />
+      <div style={{ textAlign: 'right', paddingRight: 20, marginBottom: 12 }}>
+        <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: 9, fontStyle: 'italic', letterSpacing: '1px' }}>
+          A.I. (After ILCA)
+        </div>
+      </div>
+
+      {/* Timeline entries */}
+      {TIMELINE_DATA.map((item, i) => {
+        const dotSize = item.current ? 12 : 8
+        const mainColor = item.current ? '#fff' : item.past ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.3)'
+        const yearColor = item.current ? 'rgb(200,40,40)' : item.past ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.2)'
+
+        return (
+          <div key={i} style={{ position: 'relative', marginBottom: item.sub ? 4 : 14 }}>
+            {/* Main dot — line strikes through it */}
+            <div style={{
+              width: dotSize, height: dotSize, borderRadius: '50%',
+              background: item.current ? 'rgb(200,40,40)' : item.past ? '#fff' : 'rgba(255,255,255,0.15)',
+              position: 'absolute', right: 4 - dotSize / 2 + 1, top: 1,
+              zIndex: 1,
+              boxShadow: item.current ? '0 0 10px rgba(200,40,40,0.5)' : 'none',
+            }} />
+            {/* Main event + year */}
+            <div style={{ textAlign: 'right', paddingRight: 20 }}>
+              <span style={{ color: mainColor, fontSize: 10, fontWeight: 600 }}>
+                {item.main}
+              </span>
+              <span style={{ color: yearColor, fontSize: 10, fontWeight: 700, marginLeft: 6, letterSpacing: '0.5px' }}>
+                {item.year}
+              </span>
+            </div>
+            {/* Sub-items — smaller dots on the line */}
+            {item.sub && item.sub.map((s, si) => (
+              <div key={si} style={{ position: 'relative', marginTop: 3 }}>
+                <div style={{
+                  width: 4, height: 4, borderRadius: '50%',
+                  background: item.current ? 'rgba(200,40,40,0.5)' : 'rgba(255,255,255,0.2)',
+                  position: 'absolute', right: 3, top: 4, zIndex: 1,
+                }} />
+                <div style={{
+                  textAlign: 'right', paddingRight: 20,
+                  color: item.past ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.18)',
+                  fontSize: 9,
+                }}>
+                  {s}
+                </div>
+              </div>
+            ))}
+            {/* Spacer after sub-items */}
+            {item.sub && <div style={{ height: 10 }} />}
+          </div>
+        )
+      })}
     </div>
   )
 }
