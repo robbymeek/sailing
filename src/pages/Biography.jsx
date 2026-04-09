@@ -181,36 +181,36 @@ export default function Biography({ onNavigate }) {
               overflow: 'hidden',
             }}>
               {/* Date badge */}
-              <div style={{
+              <div className="card-date-badge" style={{
                 background: r.current ? 'rgb(0,80,255)' : 'rgba(255,255,255,0.1)',
                 padding: '12px 16px',
                 textAlign: 'center',
               }}>
-                <div style={{
+                <div className="card-date-num" style={{
                   color: '#fff', fontSize: r.current ? 36 : 28, fontWeight: 800,
                   lineHeight: 1,
                 }}>{r.date.split(' ')[0]}</div>
-                <div style={{
+                <div className="card-date-month" style={{
                   color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: 600,
                   letterSpacing: '1px',
                 }}>{r.month}</div>
               </div>
               {/* Content */}
-              <div style={{ padding: '16px' }}>
-                <div style={{
+              <div className="card-body" style={{ padding: '16px' }}>
+                <div className="card-status" style={{
                   color: r.current ? 'rgb(0,180,255)' : r.past ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.5)',
                   fontSize: 10, fontWeight: 700, letterSpacing: '1px',
                   marginBottom: 8, textTransform: 'uppercase',
                 }}>{r.status}</div>
-                <div style={{
+                <div className="card-name" style={{
                   color: '#fff', fontSize: r.current ? 20 : 15, fontWeight: 700,
                   marginBottom: 6, lineHeight: 1.3,
                 }}>{r.name}</div>
-                <div style={{
+                <div className="card-league" style={{
                   color: 'rgba(255,255,255,0.5)', fontSize: 12,
                   marginBottom: 4,
                 }}>{r.league}</div>
-                <div style={{
+                <div className="card-location" style={{
                   color: 'rgba(255,255,255,0.35)', fontSize: 11,
                 }}>{r.location}</div>
               </div>

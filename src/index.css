@@ -96,6 +96,33 @@ button {
     max-width: 240px !important;
   }
 
+  /* Shrink card innards on medium */
+  .bio-regatta-cards .card-date-num {
+    font-size: 24px !important;
+  }
+  .bio-regatta-cards .card-date-month {
+    font-size: 10px !important;
+  }
+  .bio-regatta-cards .card-date-badge {
+    padding: 8px 12px !important;
+  }
+  .bio-regatta-cards .card-body {
+    padding: 12px !important;
+  }
+  .bio-regatta-cards .card-status {
+    font-size: 9px !important;
+    margin-bottom: 4px !important;
+  }
+  .bio-regatta-cards .card-name {
+    font-size: 14px !important;
+  }
+  .bio-regatta-cards .card-league {
+    font-size: 11px !important;
+  }
+  .bio-regatta-cards .card-location {
+    font-size: 10px !important;
+  }
+
   /* Logos: between image/text and events */
   .bio-logos {
     position: relative !important;
