@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Footer from '../components/Footer'
 
 const BASE = import.meta.env.BASE_URL
@@ -86,6 +87,7 @@ function Timeline() {
 }
 
 export default function Support({ onNavigate }) {
+  const routerNavigate = useNavigate()
   const [visible, setVisible] = useState(false)
   const [showBio, setShowBio] = useState(false)
   useEffect(() => {
@@ -129,7 +131,7 @@ export default function Support({ onNavigate }) {
             Olympic sailing demands competing against the best in the world. Your support makes that possible.
           </p>
           <button
-            onClick={() => onNavigate('Team')}
+            onClick={() => routerNavigate(-1)}
             style={{
               ...fade(0.2),
               display: 'inline-block',
@@ -140,7 +142,7 @@ export default function Support({ onNavigate }) {
               background: 'none', cursor: 'pointer',
             }}
           >
-            Back to Team
+            Back
           </button>
         </div>
       </div>
@@ -237,18 +239,6 @@ export default function Support({ onNavigate }) {
               }}
             >
               Email to Support
-            </a>
-            <br />
-            <a
-              href="https://venmo.com/robbymeek"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                color: 'rgba(255,255,255,0.5)', fontSize: 13,
-                textDecoration: 'underline', textUnderlineOffset: '3px',
-              }}
-            >
-              Venmo
             </a>
           </div>
 
