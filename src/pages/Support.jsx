@@ -8,18 +8,18 @@ const PRE_ILCA = [
 ]
 
 const POST_ILCA = [
-  { year: '2017', label: 'Started racing in the ILCA', past: true },
-  { year: '2018', label: 'First Youth Champs, ILCA 6', past: true },
-  { year: '2019', label: '5th at High School Nationals as a freshman, ILCA 6', past: true },
-  { year: '2020', label: 'Covid', past: true },
-  { year: '2021', label: 'High School National Champion ILCA 6, Orange Bowl Champion, 9th at ILCA 6 Youth Worlds, North American Champion ILCA 6', past: true },
-  { year: '2022', label: 'High School National Champion ILCA 7, 5th at ILCA 6 Youth Worlds', past: true },
-  { year: '2023', label: 'Harvard Sailing, ILCA 7 North American Champion', past: true },
-  { year: '2024', label: 'Train and work at CrossnoKaye', past: true },
-  { year: '2025', label: 'Train, ILCA 7 North American Champion, Top American at Europeans', past: true },
-  { year: '2026', label: 'School and full-time Olympic training', current: true },
-  { year: '2027', label: 'World Championship contender' },
-  { year: '2028', label: 'LA Olympics' },
+  { year: '2017', items: ['Started racing in the ILCA'], past: true },
+  { year: '2018', items: ['First Youth Champs, ILCA 6'], past: true },
+  { year: '2019', items: ['5th at High School Nationals as a freshman, ILCA 6'], past: true },
+  { year: '2020', items: ['Covid'], past: true },
+  { year: '2021', items: ['High School National Champion ILCA 6', 'Orange Bowl Champion', '9th at ILCA 6 Youth Worlds', 'North American Champion ILCA 6'], past: true },
+  { year: '2022', items: ['High School National Champion ILCA 7', '5th at ILCA 6 Youth Worlds'], past: true },
+  { year: '2023', items: ['Harvard Sailing', 'ILCA 7 North American Champion'], past: true },
+  { year: '2024', items: ['Train and work at CrossnoKaye'], past: true },
+  { year: '2025', items: ['Train', 'ILCA 7 North American Champion', 'Top American at Europeans'], past: true },
+  { year: '2026', items: ['School and full-time Olympic training'], current: true },
+  { year: '2027', items: ['World Championship contender'] },
+  { year: '2028', items: ['LA Olympics'] },
 ]
 
 const COSTS = [
@@ -280,13 +280,31 @@ export default function Support({ onNavigate }) {
                   fontSize: 12, fontWeight: 700, letterSpacing: '1px',
                   marginRight: 10,
                 }}>{item.year}</span>
-                <span style={{
-                  color: item.current ? '#fff' : item.past ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)',
-                  fontSize: 13, fontWeight: item.current ? 600 : 400,
-                  lineHeight: 1.5,
-                }}>
-                  {item.label}
-                </span>
+                {item.items.length === 1 ? (
+                  <span style={{
+                    color: item.current ? '#fff' : item.past ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)',
+                    fontSize: 13, fontWeight: item.current ? 600 : 400,
+                  }}>
+                    {item.items[0]}
+                  </span>
+                ) : (
+                  <div style={{ display: 'inline-block' }}>
+                    {item.items.map((bullet, bi) => (
+                      <div key={bi} style={{
+                        color: item.current ? '#fff' : item.past ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)',
+                        fontSize: 13, fontWeight: item.current ? 600 : 400,
+                        lineHeight: 1.6,
+                        display: 'flex', alignItems: 'baseline', gap: 8,
+                      }}>
+                        <span style={{
+                          color: item.current ? 'rgb(200,40,40)' : 'rgba(255,255,255,0.25)',
+                          fontSize: 6, lineHeight: 1,
+                        }}>●</span>
+                        {bullet}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ))}
