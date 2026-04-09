@@ -42,6 +42,13 @@ button {
   animation: chromeShimmer 6s ease infinite;
 }
 
+/* Timeline sidebar - hide on mobile, fade on tablet */
+@media (max-width: 700px) {
+  .timeline-sidebar {
+    display: none !important;
+  }
+}
+
 /* Marquee animation */
 @keyframes marquee {
   0% { transform: translateX(0); }
