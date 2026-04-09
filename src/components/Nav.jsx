@@ -10,8 +10,8 @@ export default function Nav({ current, onNavigate, variant }) {
 
   let dim, active
   if (variant === 'red') {
-    dim = 'rgba(80,0,0,0.7)'
-    active = 'rgba(120,0,0,0.9)'
+    dim = 'rgba(255,255,255,0.4)'
+    active = 'rgba(255,255,255,0.6)'
   } else if (variant === 'light') {
     dim = 'rgba(0,0,0,0.4)'
     active = 'rgba(0,0,0,0.6)'

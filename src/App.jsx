@@ -151,7 +151,7 @@ export default function App() {
   } else if (targetMode === 'fixed') {
     navBg = landingBg
   } else if (targetMode === 'sticky') {
-    navBg = 'rgba(180,30,30,0.85)'
+    navBg = 'rgba(40,5,5,0.92)'
   } else {
     navBg = getBg(location.pathname)
   }
