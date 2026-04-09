@@ -8,7 +8,7 @@ const SPONSORS = [
   {
     name: 'AA ENT & Facial Plastic Surgery',
     img: 'AAENT-Logo.png',
-    url: 'https://aaentandallergy.com/',
+    url: 'https://aaentmd.com/',
     bg: '#000',
     hoverBg: 'rgb(0,80,255)',
     desc: 'Leading ENT and facial plastic surgery practice providing world-class care.',
@@ -31,7 +31,7 @@ const SPONSORS = [
   },
 ]
 
-function SponsorCard({ sponsor, borderRight }) {
+function SponsorCard({ sponsor }) {
   const [hovered, setHovered] = useState(false)
 
   return (
@@ -42,42 +42,40 @@ function SponsorCard({ sponsor, borderRight }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: hovered ? sponsor.hoverBg : sponsor.bg,
-        padding: '50px 24px',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        borderRight: borderRight ? '3px solid rgb(0,120,255)' : 'none',
+        background: sponsor.bg,
+        padding: '40px 24px',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
         position: 'relative', overflow: 'hidden',
         textDecoration: 'none',
-        transition: 'background 0.35s ease',
-        minHeight: 160,
+        transition: 'transform 0.4s ease, box-shadow 0.4s ease',
+        transform: hovered ? 'scale(1.05)' : 'scale(1)',
+        boxShadow: hovered ? '0 12px 40px rgba(0,0,0,0.4)' : '0 0 0 rgba(0,0,0,0)',
+        minHeight: 180,
+        zIndex: hovered ? 2 : 1,
       }}
     >
       <img
         src={`${BASE}${sponsor.img}`}
         alt={sponsor.name}
         style={{
-          maxWidth: '75%', maxHeight: 70, objectFit: 'contain',
-          opacity: hovered ? 0.15 : 1,
-          transition: 'opacity 0.35s ease',
-          filter: hovered && sponsor.bg === '#fff' ? 'invert(1)' : 'none',
+          maxWidth: '70%', maxHeight: 70, objectFit: 'contain',
+          transition: 'filter 0.4s ease, transform 0.4s ease',
+          filter: hovered ? 'brightness(1.3)' : 'brightness(1)',
+          transform: hovered ? 'scale(1.08)' : 'scale(1)',
         }}
       />
-      {/* Hover overlay text */}
+      {/* Description on hover */}
       <div style={{
-        position: 'absolute', inset: 0,
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        padding: '20px 16px',
+        maxHeight: hovered ? 60 : 0,
         opacity: hovered ? 1 : 0,
-        transition: 'opacity 0.35s ease',
+        overflow: 'hidden',
+        transition: 'max-height 0.4s ease, opacity 0.3s ease 0.1s',
+        marginTop: hovered ? 16 : 0,
       }}>
         <p style={{
-          color: '#fff', fontSize: 14, fontWeight: 700,
-          margin: '0 0 8px', textAlign: 'center',
-        }}>{sponsor.name}</p>
-        <p style={{
-          color: 'rgba(255,255,255,0.7)', fontSize: 11,
-          textAlign: 'center', lineHeight: 1.5, margin: 0,
+          color: sponsor.bg === '#fff' ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.6)',
+          fontSize: 11, textAlign: 'center', lineHeight: 1.5, margin: 0,
         }}>{sponsor.desc}</p>
       </div>
     </a>
@@ -146,14 +144,15 @@ export default function Team({ onNavigate }) {
         </div>
 
         {/* Sponsors — bold full-width blocks with harsh lines */}
-        <div style={{ ...entrance.style(1) }}>
-          <div style={{ height: 4, background: 'rgb(0,120,255)' }} />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }}>
-            {SPONSORS.map((s, i) => (
-              <SponsorCard key={s.name} sponsor={s} borderRight={i < SPONSORS.length - 1} />
+        <div style={{ ...entrance.style(1), maxWidth: 1000, margin: '0 auto', padding: '0 40px' }}>
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: 16,
+          }}>
+            {SPONSORS.map((s) => (
+              <SponsorCard key={s.name} sponsor={s} />
             ))}
           </div>
-          <div style={{ height: 4, background: 'rgb(0,120,255)' }} />
         </div>
 
         {/* Action photo strip between sponsors and supporters */}
