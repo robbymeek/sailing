@@ -96,7 +96,7 @@ button {
   .bio-regatta-cards {
     width: 100% !important;
     flex-direction: row !important;
-    align-items: stretch !important;
+    align-items: center !important;
     justify-content: center !important;
     padding: clamp(10px, 2vh, 24px) 8px !important;
     gap: 10px !important;
@@ -105,11 +105,13 @@ button {
   .bio-regatta-cards > div {
     width: auto !important;
     transform: none !important;
-    min-height: clamp(190px, 38vw, 320px) !important;
+    height: clamp(190px, 38vw, 320px) !important;
+    min-height: 0 !important;
+    align-self: center !important;
   }
 
   .bio-regatta-cards > div:nth-child(2) {
-    min-height: clamp(285px, 57vw, 480px) !important;
+    height: clamp(285px, 57vw, 480px) !important;
   }
 
   /* Scale card text with viewport so ratios stay constant */
