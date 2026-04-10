@@ -179,14 +179,16 @@ export default function Biography({ onNavigate }) {
           {REGATTAS.map((r, i) => {
             const isMid = r.current
             return (
-            <div key={i} style={{
+            <div key={i} className="bio-regatta-card" style={{
               background: r.current ? 'rgb(18,0,120)' : 'rgb(50,55,65)',
               padding: '0',
               flex: isMid ? '1.2 1 0' : '1 1 0',
               minWidth: 0,
+              minHeight: isMid ? 480 : 320,
+              display: 'flex',
+              flexDirection: 'column',
               position: 'relative',
               overflow: 'hidden',
-              transform: isMid ? 'scale(1)' : 'scale(0.95)',
             }}>
               {/* Date badge */}
               <div className="card-date-badge" style={{
@@ -204,7 +206,12 @@ export default function Biography({ onNavigate }) {
                 }}>{r.month}</div>
               </div>
               {/* Content */}
-              <div className="card-body" style={{ padding: isMid ? '20px 16px 28px' : '16px 14px 22px' }}>
+              <div className="card-body" style={{
+                padding: isMid ? '20px 16px 28px' : '16px 14px 22px',
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+              }}>
                 <div className="card-status" style={{
                   color: r.current ? 'rgb(0,180,255)' : r.past ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.5)',
                   fontSize: 10, fontWeight: 700, letterSpacing: '1px',
