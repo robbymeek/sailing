@@ -209,8 +209,31 @@ export default function App() {
           current={CURRENT_MAP[location.pathname] || 'Home'}
           onNavigate={go}
           variant={navVariant}
+          excludeItems={navMode === 'hover' ? ['Support'] : undefined}
         />
       </div>
+
+      {/* Always-visible Support CTA on hover-mode routes. Lives outside the hover nav
+          wrapper so it ignores the hover opacity gate and is always reachable. */}
+      {navMode === 'hover' && (
+        <button
+          onClick={() => go('Support')}
+          className="chrome-text"
+          style={{
+            position: 'fixed',
+            top: 20, right: 24,
+            zIndex: 60,
+            border: 'none',
+            padding: '4px 8px',
+            fontSize: 14,
+            fontWeight: 500,
+            letterSpacing: '-0.3px',
+            cursor: 'pointer',
+          }}
+        >
+          Support
+        </button>
+      )}
 
       <div
         style={{

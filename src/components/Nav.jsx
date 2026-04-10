@@ -5,7 +5,7 @@ const SHORT_LABELS = {
   'Event Calendar': 'Events',
 }
 
-export default function Nav({ current, onNavigate, variant }) {
+export default function Nav({ current, onNavigate, variant, excludeItems }) {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 600
 
   let dim, active
@@ -20,15 +20,19 @@ export default function Nav({ current, onNavigate, variant }) {
     active = 'rgba(255,255,255,0.6)'
   }
 
-  // On the dark home variant, emphasize Support with chrome-shimmer as the single CTA accent.
+  // On the dark variant, emphasize Support with chrome-shimmer as the single CTA accent.
   const homeSupportCTA = variant === 'dark'
+
+  const visiblePages = excludeItems
+    ? PAGES.filter((p) => !excludeItems.includes(p))
+    : PAGES
 
   return (
     <div style={{
       display: 'flex', justifyContent: 'center', alignItems: 'center',
       gap: 8, padding: '20px 0',
     }}>
-      {PAGES.map((item, i) => {
+      {visiblePages.map((item, i) => {
         const isSupport = item === 'Support'
         const shimmerCTA = isSupport && homeSupportCTA
         return (
@@ -37,7 +41,12 @@ export default function Nav({ current, onNavigate, variant }) {
               onClick={() => onNavigate(item)}
               className={shimmerCTA ? 'chrome-text' : undefined}
               style={{
-                background: 'none', border: 'none', cursor: 'pointer',
+                // NOTE: leave background unset for shimmerCTA so the chrome-text class's
+                // linear-gradient can paint — background-clip: text needs that gradient as
+                // the background source. Setting `background: 'none'` inline here would
+                // make the text fill transparent with no gradient to clip, rendering it invisible.
+                background: shimmerCTA ? undefined : 'none',
+                border: 'none', cursor: 'pointer',
                 color: shimmerCTA ? undefined : (item === current ? active : dim),
                 fontSize: 14,
                 fontWeight: shimmerCTA ? 500 : (item === current ? 500 : 400),
@@ -47,7 +56,7 @@ export default function Nav({ current, onNavigate, variant }) {
             >
               {isMobile && SHORT_LABELS[item] ? SHORT_LABELS[item] : item}
             </button>
-            {i < PAGES.length - 1 && (
+            {i < visiblePages.length - 1 && (
               <span style={{ color: dim, fontSize: 14, transition: 'color 0.4s ease' }}>|</span>
             )}
           </div>
