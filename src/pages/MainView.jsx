@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
 import useCountdown from '../hooks/useCountdown'
 import { introPhotos } from '../assets/home-intro'
 
@@ -12,183 +11,13 @@ const BOAT_SIZE = 200
 let introHasPlayed = false
 
 export default function MainView({ onNavigate }) {
-  const location = useLocation()
-  const routerNavigate = useNavigate()
-  const isLanding = location.pathname.includes('landing')
-
-  // System dark mode
-  const [sysDark, setSysDark] = useState(
-    window.matchMedia('(prefers-color-scheme: dark)').matches
-  )
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    const h = (e) => setSysDark(e.matches)
-    mq.addEventListener('change', h)
-    return () => mq.removeEventListener('change', h)
-  }, [])
-
-  // Mode: 'home' or 'landing'
-  const [mode, setMode] = useState(isLanding ? 'landing' : 'home')
-  const [transitioning, setTransitioning] = useState(false)
-  const [textVisible, setTextVisible] = useState(true)
-
-  // Sync mode with route on initial load
-  useEffect(() => {
-    setMode(isLanding ? 'landing' : 'home')
-  }, [isLanding])
-
-  // Landing-only: click the boat to toggle between /landing and /. The /
-  // route no longer uses this — the home boat is static after the intro.
-  const handleToggle = useCallback(() => {
-    if (mode !== 'landing') return
-    if (transitioning) return
-    setTransitioning(true)
-    setTextVisible(false)
-
-    setTimeout(() => {
-      setMode('home')
-      routerNavigate('/', { replace: true })
-    }, 500)
-
-    setTimeout(() => {
-      setTextVisible(true)
-      setTransitioning(false)
-    }, 1200)
-  }, [mode, transitioning, routerNavigate])
-
-  // Countdown target — used by both the rest-state corner and /landing
   const target = new Date('2028-07-14T00:00:00')
   const { days, hrs, mins, secs } = useCountdown(target)
 
-  // Responsive
-  const [portrait, setPortrait] = useState(window.innerHeight > window.innerWidth)
-  useEffect(() => {
-    const h = () => setPortrait(window.innerHeight > window.innerWidth)
-    window.addEventListener('resize', h)
-    return () => window.removeEventListener('resize', h)
-  }, [])
-
-
-  // Colors
-  const inHome = mode === 'home'
-  const landingDark = sysDark
-  const homeBg = 'rgb(0,0,0)' // pure black for the cinematic home rest state
-  const landingBg = landingDark ? 'rgb(19,23,31)' : 'rgb(245,245,245)'
-  const bg = inHome ? homeBg : landingBg
-
-  useEffect(() => {
-    document.body.style.background = bg
-    document.body.style.transition = 'background 0.7s ease'
-  }, [bg])
-
-  // Landing colors
-  const textDim = landingDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)'
-  const divider = landingDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'
-
-  const textFade = {
-    opacity: textVisible ? 1 : 0,
-    transform: textVisible ? 'translateY(0)' : 'translateY(8px)',
-    transition: 'opacity 0.5s ease, transform 0.5s ease',
-  }
-
-  // The boat: both GIFs stacked, cross-fade between them
-  const darkGif = `${BASE}[0001-0250].gif`
-  const lightGif = `${BASE}[0001-0240].gif`
-
-  // Which GIF is on top depends on mode
-  const showDarkGif = inHome || (mode === 'landing' && landingDark)
-
-  const boatEl = (
-    <div
-      onClick={handleToggle}
-      style={{
-        width: BOAT_SIZE, height: BOAT_SIZE,
-        position: 'relative', cursor: 'pointer', flexShrink: 0,
-        marginLeft: BOAT_SIZE * 0.1 - 20,
-      }}
-    >
-      {/* Dark boat: scaled up slightly to match light boat size */}
-      <img
-        src={darkGif}
-        alt="Sailboat dark"
-        style={{
-          position: 'absolute', inset: 0,
-          width: '100%', height: '100%',
-          opacity: showDarkGif ? 1 : 0,
-          transition: 'opacity 0.7s ease',
-          transform: 'scale(1.0) translate(0%, 0%)',
-          transformOrigin: 'center center',
-        }}
-      />
-      {/* Light boat: slight offset to align hull */}
-      <img
-        src={lightGif}
-        alt="Sailboat light"
-        style={{
-          position: 'absolute',
-          top: 0, left: 0,
-          width: '100%', height: '100%',
-          opacity: showDarkGif ? 0 : 1,
-          transition: 'opacity 0.7s ease',
-          transform: 'scale(0.92) translate(4%, 5%)',
-          transformOrigin: 'center center',
-        }}
-      />
-    </div>
-  )
-
-  const landingScrollStyle = textFade
-
-  // ========== LANDING MODE ==========
-  if (!inHome) {
-    return (
-      <div style={{
-        background: bg,
-        height: '100dvh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        overflow: 'hidden',
-        transition: 'background 0.7s ease',
-      }}>
-        <div style={{
-          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          position: 'relative',
-        }}>
-          {boatEl}
-          <button
-            onClick={() => onNavigate('Team')}
-            style={{
-              ...landingScrollStyle,
-              position: 'absolute',
-              top: `calc(50% + ${BOAT_SIZE / 2 + 28}px)`,
-              background: 'none',
-              border: `1px solid ${divider}`,
-              color: textDim,
-              fontSize: 13, fontWeight: 400, letterSpacing: '-0.2px',
-              padding: '10px 28px', cursor: 'pointer',
-            }}
-          >
-            Join the Team
-          </button>
-        </div>
-
-        <div style={{ padding: '20px 32px', width: '100%', textAlign: 'center', ...landingScrollStyle }}>
-          <p style={{ color: textDim, fontSize: 10, transition: 'color 0.5s ease' }}>
-            Website designed and made by Robby Meek
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  // ========== HOME MODE: cinematic intro → rest state ==========
   return (
     <HomeIntro
       onNavigate={onNavigate}
-      boatSrc={darkGif}
-      portrait={portrait}
+      boatSrc={`${BASE}[0001-0250].gif`}
       days={days}
       hrs={hrs}
       mins={mins}
@@ -198,9 +27,9 @@ export default function MainView({ onNavigate }) {
 }
 
 // ---------- Home intro + rest-state component ----------
-// Split out so the intro's useEffect/state are fully scoped to the home
-// route and don't run for /landing. Kept in the same file per the brief.
-function HomeIntro({ onNavigate, boatSrc, portrait, days, hrs, mins, secs }) {
+// All cinematic state and timers live here so MainView stays a thin
+// shell. Kept in the same file per the original brief.
+function HomeIntro({ onNavigate, boatSrc, days, hrs, mins, secs }) {
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -208,14 +37,21 @@ function HomeIntro({ onNavigate, boatSrc, portrait, days, hrs, mins, secs }) {
   const [viewportWidth, setViewportWidth] = useState(
     typeof window !== 'undefined' ? window.innerWidth : 1024
   )
+  const [portrait, setPortrait] = useState(
+    typeof window !== 'undefined' ? window.innerHeight > window.innerWidth : false
+  )
   useEffect(() => {
-    const h = () => setViewportWidth(window.innerWidth)
+    const h = () => {
+      setViewportWidth(window.innerWidth)
+      setPortrait(window.innerHeight > window.innerWidth)
+    }
     window.addEventListener('resize', h)
     return () => window.removeEventListener('resize', h)
   }, [])
 
-  // If the intro has already played in this JS bundle lifetime, or the user
-  // prefers reduced motion, skip straight to the rest state.
+  // Initial skip check: on the very first mount, respect the module-level
+  // played flag + reduced-motion. On explicit replay (boat click) we bypass
+  // this via replayNonce > 0 so the intro runs regardless.
   const skipIntro = introHasPlayed || prefersReducedMotion
 
   // phase drives the blue→black overlay; separate booleans drive boat/UI fades
@@ -226,11 +62,30 @@ function HomeIntro({ onNavigate, boatSrc, portrait, days, hrs, mins, secs }) {
   const [photoAnimDuration, setPhotoAnimDuration] = useState(80)
   const [boatVisible, setBoatVisible] = useState(skipIntro)
   const [uiVisible, setUiVisible] = useState(skipIntro)
+  // replayNonce increments on boat click to force the intro effect to re-run.
+  const [replayNonce, setReplayNonce] = useState(0)
   const photoTimerRef = useRef(null)
   const phaseTimersRef = useRef([])
 
+  // Reset state back to intro-start and bump the nonce. The intro useEffect
+  // depends on replayNonce, so this triggers a fresh run (cleanup clears
+  // any in-flight timers from a previous run first).
+  const replayIntro = () => {
+    if (introPhotos.length === 0) return
+    setPhase('ignition')
+    setPhotoIndex(0)
+    setPhotoLayerVisible(true)
+    setPhotoAnimDuration(80)
+    setBoatVisible(false)
+    setUiVisible(false)
+    setReplayNonce((n) => n + 1)
+  }
+
   useEffect(() => {
-    if (skipIntro) {
+    // Only honor the skip check on the initial mount (nonce === 0). An
+    // explicit replay always runs the intro.
+    const isInitialMount = replayNonce === 0
+    if (isInitialMount && skipIntro) {
       introHasPlayed = true
       return
     }
@@ -314,7 +169,7 @@ function HomeIntro({ onNavigate, boatSrc, portrait, days, hrs, mins, secs }) {
       phaseTimersRef.current = []
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [replayNonce])
 
   // Overlay color per phase. The blue→black transition is a hue shift on a
   // single solid layer — no linear-gradient involved.
@@ -397,22 +252,33 @@ function HomeIntro({ onNavigate, boatSrc, portrait, days, hrs, mins, secs }) {
         }}
       />
 
-      {/* Spinning boat — centered, fades in during the reveal phase */}
-      <div style={{
-        position: 'absolute',
-        top: '50%', left: '50%',
-        width: BOAT_SIZE, height: BOAT_SIZE,
-        transform: 'translate(-50%, -50%)',
-        opacity: boatVisible ? 1 : 0,
-        transition: 'opacity 0.8s ease',
-        pointerEvents: 'none',
-      }}>
+      {/* Spinning boat — centered, fades in during the reveal phase.
+          Clickable once the rest state is reached (uiVisible) to replay the intro. */}
+      <button
+        onClick={replayIntro}
+        aria-label="Replay home intro"
+        disabled={!uiVisible}
+        style={{
+          position: 'absolute',
+          top: '50%', left: '50%',
+          width: BOAT_SIZE, height: BOAT_SIZE,
+          transform: 'translate(-50%, -50%)',
+          opacity: boatVisible ? 1 : 0,
+          transition: 'opacity 0.8s ease',
+          pointerEvents: uiVisible ? 'auto' : 'none',
+          cursor: uiVisible ? 'pointer' : 'default',
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          zIndex: 10,
+        }}
+      >
         <img
           src={boatSrc}
           alt="Spinning sailboat"
           style={{ width: '100%', height: '100%', display: 'block' }}
         />
-      </div>
+      </button>
 
       {/* Bottom-left persistent nav — always visible after intro */}
       <nav

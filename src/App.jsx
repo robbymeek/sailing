@@ -22,7 +22,6 @@ const INNER_BG = {
 
 const VARIANT_MAP = {
   '/': 'dark',
-  '/landing': 'light',
   '/biography': 'light',
   '/event-calendar': 'dark',
   '/team': 'blue',
@@ -32,7 +31,6 @@ const VARIANT_MAP = {
 
 const CURRENT_MAP = {
   '/': 'Home',
-  '/landing': 'Home',
   '/biography': 'Biography',
   '/event-calendar': 'Event Calendar',
   '/team': 'Team',
@@ -44,7 +42,6 @@ function getNavMode(pathname) {
   // Home has its own cinematic layout + persistent bottom-left nav baked
   // into MainView — App.jsx should render no nav chrome at all for /.
   if (pathname === '/') return 'none'
-  if (pathname === '/landing') return 'fixed'
   if (pathname === '/support') return 'sticky'
   return 'static'
 }
@@ -53,42 +50,25 @@ export default function App() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // System dark mode
-  const [sysDark, setSysDark] = useState(
-    window.matchMedia('(prefers-color-scheme: dark)').matches
-  )
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    const h = (e) => setSysDark(e.matches)
-    mq.addEventListener('change', h)
-    return () => mq.removeEventListener('change', h)
-  }, [])
-
-  // Dynamic backgrounds for home pages based on system dark mode
-  const landingBg = sysDark ? 'rgb(19,23,31)' : 'rgb(245,245,245)'
-
   function getBg(pathname) {
     if (pathname === '/') return 'rgb(0,0,0)' // pure black for the cinematic home
-    if (pathname === '/landing') return landingBg
     return INNER_BG[pathname] || 'rgb(19,23,31)'
   }
 
   function getVariant(pathname) {
-    if (pathname === '/landing') return sysDark ? 'dark' : 'light'
     return VARIANT_MAP[pathname] || 'dark'
   }
 
   const go = (page) => {
     const routes = {
-      'Home': '/landing',
-      'Landing': '/landing',
+      'Home': '/',
       'Biography': '/biography',
       'Event Calendar': '/event-calendar',
       'Team': '/team',
       'Contact': '/contact',
       'Support': '/support',
     }
-    navigate(routes[page] || '/landing')
+    navigate(routes[page] || '/')
   }
 
   // Exit/enter animation state
@@ -97,14 +77,6 @@ export default function App() {
 
   useEffect(() => {
     if (location.pathname !== displayLocation.pathname) {
-      const homePages = ['/', '/landing']
-      const isHomeSwap = homePages.includes(location.pathname) && homePages.includes(displayLocation.pathname)
-
-      if (isHomeSwap) {
-        setDisplayLocation(location)
-        return
-      }
-
       setTransitionStage('exiting')
       const t = setTimeout(() => {
         setDisplayLocation(location)
@@ -128,7 +100,7 @@ export default function App() {
   useEffect(() => {
     document.body.style.background = getBg(location.pathname)
     document.body.style.transition = 'background 0.4s ease'
-  }, [location.pathname, sysDark])
+  }, [location.pathname])
 
   const isExiting = transitionStage === 'exiting'
   const navPath = isExiting ? displayLocation.pathname : location.pathname
@@ -218,8 +190,6 @@ export default function App() {
   let navBg
   if (targetMode === 'hover') {
     navBg = 'transparent'
-  } else if (targetMode === 'fixed') {
-    navBg = landingBg
   } else if (targetMode === 'sticky') {
     navBg = 'rgba(200,40,40,0.85)'
   } else {
@@ -415,7 +385,6 @@ export default function App() {
       >
         <Routes location={displayLocation}>
           <Route path="/" element={<MainView onNavigate={go} />} />
-          <Route path="/landing" element={<MainView onNavigate={go} />} />
           <Route path="/biography" element={<Biography onNavigate={go} />} />
           <Route path="/event-calendar" element={<EventCalendar onNavigate={go} />} />
           <Route path="/team" element={<Team onNavigate={go} />} />
