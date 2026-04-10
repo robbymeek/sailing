@@ -124,9 +124,6 @@ export default function MainView({ onNavigate }) {
     transition: 'opacity 0.5s ease, transform 0.5s ease',
   }
 
-  const leftScrollStyle = textFade
-  const rightScrollStyle = textFade
-
   // The boat: both GIFs stacked, cross-fade between them
   const darkGif = `${BASE}[0001-0250].gif`
   const lightGif = `${BASE}[0001-0240].gif`
@@ -219,8 +216,26 @@ export default function MainView({ onNavigate }) {
     )
   }
 
+  // Typographic anchor — shared label/value/meta treatment
+  const anchorLabel = {
+    color: 'rgb(117,117,117)', fontSize: 12, fontWeight: 400,
+    letterSpacing: '-0.48px', textTransform: 'uppercase', margin: '0 0 6px',
+  }
+  const anchorValue = {
+    color: 'rgb(157,174,194)', fontSize: 20, fontWeight: 400,
+    letterSpacing: '-0.8px', margin: '0 0 8px',
+  }
+  const anchorMeta = {
+    color: 'rgb(153,153,153)', fontSize: 16, fontWeight: 500, margin: 0,
+  }
+  const anchorButton = {
+    background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center', padding: 0,
+  }
+  const countdownText = `${days} : ${String(hrs).padStart(2, '0')} : ${String(mins).padStart(2, '0')} : ${String(secs).padStart(2, '0')}`
+
   // ========== HOME MODE ==========
   if (portrait) {
+    // TODO mobile pass — tightened three-anchor stack; deeper mobile nav/layout overhaul lives in a separate prompt
     return (
       <div
         style={{
@@ -235,50 +250,35 @@ export default function MainView({ onNavigate }) {
           transition: 'background 0.7s ease',
         }}
       >
-        <div style={{ textAlign: 'center', position: 'absolute', top: '15%', ...leftScrollStyle }}>
-          <button
-            onClick={() => onNavigate('Event Calendar')}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center' }}
-          >
-            <p style={{
-              color: 'rgb(117,117,117)', fontSize: 12, fontWeight: 400,
-              letterSpacing: '-0.48px', textTransform: 'uppercase', margin: '0 0 6px',
-            }}>EVENT CALENDAR</p>
-            <h1 style={{
-              color: 'rgb(157,174,194)', fontSize: 20, fontWeight: 400,
-              letterSpacing: '-0.8px', margin: '0 0 8px',
-            }}>LA 2028</h1>
+        <div style={{ textAlign: 'center', position: 'absolute', top: '10%', ...textFade }}>
+          <button onClick={() => onNavigate('Event Calendar')} style={anchorButton}>
+            <p style={anchorLabel}>EVENT CALENDAR</p>
+            <h1 style={anchorValue}>LA 2028</h1>
           </button>
-          <p style={{ color: 'rgb(153,153,153)', fontSize: 16, fontWeight: 500, margin: 0 }}>
-            {days} : {String(hrs).padStart(2, '0')} : {String(mins).padStart(2, '0')} : {String(secs).padStart(2, '0')}
-          </p>
+          <p style={anchorMeta}>{countdownText}</p>
         </div>
 
         {boatEl}
 
-        <div style={{ textAlign: 'center', position: 'absolute', bottom: '15%', ...rightScrollStyle }}>
-          <button
-            onClick={() => onNavigate('Biography')}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center' }}
-          >
-            <p style={{
-              color: 'rgb(117,117,117)', fontSize: 12, fontWeight: 400,
-              letterSpacing: '-0.48px', textTransform: 'uppercase', margin: '0 0 6px',
-            }}>BIOGRAPHY</p>
-            <h1 style={{
-              color: 'rgb(157,174,194)', fontSize: 20, fontWeight: 400,
-              letterSpacing: '-0.8px', margin: '0 0 8px',
-            }}>ROBBY MEEK</h1>
+        <div style={{ textAlign: 'center', position: 'absolute', bottom: '26%', ...textFade }}>
+          <button onClick={() => onNavigate('Biography')} style={anchorButton}>
+            <p style={anchorLabel}>BIOGRAPHY</p>
+            <h1 style={anchorValue}>ROBBY MEEK</h1>
           </button>
-          <p style={{ color: 'rgb(153,153,153)', fontSize: 16, fontWeight: 500, margin: 0 }}>
-            {clock}
-          </p>
+          <p style={anchorMeta}>{clock}</p>
+        </div>
+
+        <div style={{ textAlign: 'center', position: 'absolute', bottom: '6%', ...textFade }}>
+          <button onClick={() => onNavigate('Support')} style={anchorButton}>
+            <p style={{ ...anchorLabel, fontSize: 11 }}>SUPPORT THE CAMPAIGN</p>
+            <h1 style={{ ...anchorValue, fontSize: 16, margin: 0 }} className="chrome-text">LA 2028</h1>
+          </button>
         </div>
       </div>
     )
   }
 
-  // Home landscape
+  // Home landscape — triangular: top-left / top-right / bottom-center, boat dominant in middle
   return (
     <div
       style={{
@@ -286,51 +286,51 @@ export default function MainView({ onNavigate }) {
         height: '100dvh',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         overflow: 'hidden',
         position: 'relative',
-        padding: '0 clamp(20px, 5vw, 80px)',
         transition: 'background 0.7s ease',
       }}
     >
-      <div style={{ textAlign: 'center', flexShrink: 0, ...leftScrollStyle }}>
-        <button
-          onClick={() => onNavigate('Event Calendar')}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center' }}
-        >
-          <p style={{
-            color: 'rgb(117,117,117)', fontSize: 12, fontWeight: 400,
-            letterSpacing: '-0.48px', textTransform: 'uppercase', margin: '0 0 6px',
-          }}>EVENT CALENDAR</p>
-          <h1 style={{
-            color: 'rgb(157,174,194)', fontSize: 20, fontWeight: 400,
-            letterSpacing: '-0.8px', margin: '0 0 8px',
-          }}>LA 2028</h1>
+      <div style={{
+        textAlign: 'center', position: 'absolute',
+        top: '18%', left: 'clamp(20px, 5vw, 80px)',
+        ...textFade,
+      }}>
+        <button onClick={() => onNavigate('Event Calendar')} style={anchorButton}>
+          <p style={anchorLabel}>EVENT CALENDAR</p>
+          <h1 style={anchorValue}>LA 2028</h1>
         </button>
-        <p style={{ color: 'rgb(153,153,153)', fontSize: 16, fontWeight: 500, margin: 0 }}>
-          {days} : {String(hrs).padStart(2, '0')} : {String(mins).padStart(2, '0')} : {String(secs).padStart(2, '0')}
-        </p>
+        <p style={anchorMeta}>{countdownText}</p>
       </div>
 
       {boatEl}
 
-      <div style={{ textAlign: 'center', flexShrink: 0, ...rightScrollStyle }}>
-        <button
-          onClick={() => onNavigate('Biography')}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center' }}
-        >
-          <p style={{
-            color: 'rgb(117,117,117)', fontSize: 12, fontWeight: 400,
-            letterSpacing: '-0.48px', textTransform: 'uppercase', margin: '0 0 6px',
-          }}>BIOGRAPHY</p>
-          <h1 style={{
-            color: 'rgb(157,174,194)', fontSize: 20, fontWeight: 400,
-            letterSpacing: '-0.8px', margin: '0 0 8px',
-          }}>ROBBY MEEK</h1>
+      <div style={{
+        textAlign: 'center', position: 'absolute',
+        top: '18%', right: 'clamp(20px, 5vw, 80px)',
+        ...textFade,
+      }}>
+        <button onClick={() => onNavigate('Biography')} style={anchorButton}>
+          <p style={anchorLabel}>BIOGRAPHY</p>
+          <h1 style={anchorValue}>ROBBY MEEK</h1>
         </button>
-        <p style={{ color: 'rgb(153,153,153)', fontSize: 16, fontWeight: 500, margin: 0 }}>
-          {clock}
-        </p>
+        <p style={anchorMeta}>{clock}</p>
+      </div>
+
+      <div style={{
+        textAlign: 'center', position: 'absolute',
+        bottom: '15%', left: '50%',
+        opacity: textVisible ? 1 : 0,
+        transform: textVisible
+          ? 'translate(-50%, 0)'
+          : 'translate(-50%, 8px)',
+        transition: 'opacity 0.5s ease, transform 0.5s ease',
+      }}>
+        <button onClick={() => onNavigate('Support')} style={anchorButton}>
+          <p style={anchorLabel}>SUPPORT THE CAMPAIGN</p>
+          <h1 style={anchorValue} className="chrome-text">LA 2028</h1>
+        </button>
       </div>
     </div>
   )

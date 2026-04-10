@@ -139,11 +139,31 @@ export default function App() {
 
   const [hoverNav, setHoverNav] = useState(false)
 
+  // Discovery affordance: on hover-mode routes, briefly fade the nav in at low opacity
+  // after the boat entrance completes so first-time visitors notice nav exists.
+  // Runs once per mount of a hover route, does not use any storage APIs.
+  const [navHint, setNavHint] = useState(false)
+  useEffect(() => {
+    if (navMode !== 'hover') {
+      setNavHint(false)
+      return
+    }
+    const showT = setTimeout(() => setNavHint(true), 1300)
+    const hideT = setTimeout(() => setNavHint(false), 3500)
+    return () => {
+      clearTimeout(showT)
+      clearTimeout(hideT)
+    }
+  }, [navMode, location.pathname])
+
   let navVisible
+  let navOpacity
   if (navMode === 'hover') {
-    navVisible = hoverNav
+    navVisible = hoverNav || navHint
+    navOpacity = hoverNav ? 1 : (navHint ? 0.15 : 0)
   } else {
     navVisible = true
+    navOpacity = 1
   }
 
   let navPosition
@@ -180,10 +200,10 @@ export default function App() {
         top: 0, left: 0, right: 0,
         zIndex: 50,
         background: navBg,
-        opacity: navVisible ? 1 : 0,
+        opacity: navOpacity,
         transform: navVisible ? 'translateY(0)' : 'translateY(-10px)',
-        transition: 'opacity 0.3s ease, transform 0.3s ease, background 0.3s ease',
-        pointerEvents: navVisible ? 'auto' : 'none',
+        transition: 'opacity 0.6s ease, transform 0.3s ease, background 0.3s ease',
+        pointerEvents: (navMode === 'hover' ? hoverNav : navVisible) ? 'auto' : 'none',
       }}>
         <Nav
           current={CURRENT_MAP[location.pathname] || 'Home'}
