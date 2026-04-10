@@ -1,6 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import Nav from './components/Nav'
+
+// Pages shown in the compact (narrow-viewport) overlay nav.
+// Contact is intentionally dropped at narrow widths — desktop nav still includes it.
+const COMPACT_PAGES = ['Home', 'Biography', 'Event Calendar', 'Team', 'Support']
 import MainView from './pages/MainView'
 import Biography from './pages/Biography'
 import EventCalendar from './pages/EventCalendar'
@@ -139,6 +143,40 @@ export default function App() {
 
   const [hoverNav, setHoverNav] = useState(false)
 
+  // Compact-mode nav state: when the full horizontal nav doesn't fit (narrow
+  // desktop window or mobile), switch to a hamburger + overlay. Detection uses
+  // a hidden measurement Nav so we compare real content width to viewport,
+  // no hardcoded breakpoints.
+  const navMeasureRef = useRef(null)
+  const [navOverflowing, setNavOverflowing] = useState(false)
+  const [navMenuOpen, setNavMenuOpen] = useState(false)
+
+  useLayoutEffect(() => {
+    const el = navMeasureRef.current
+    if (!el) return
+    const check = () => {
+      const measured = el.getBoundingClientRect().width
+      // 140px slack accounts for the pinned top-left hamburger + top-right Support
+      // CTA that sit outside the centered nav in compact mode, plus safe margin.
+      setNavOverflowing(measured + 140 > window.innerWidth)
+    }
+    check()
+    const ro = new ResizeObserver(check)
+    ro.observe(document.body)
+    return () => ro.disconnect()
+  }, [])
+
+  // Close the overlay on route change and on Escape.
+  useEffect(() => {
+    setNavMenuOpen(false)
+  }, [location.pathname])
+  useEffect(() => {
+    if (!navMenuOpen) return
+    const onKey = (e) => { if (e.key === 'Escape') setNavMenuOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [navMenuOpen])
+
   // Discovery affordance: on hover-mode routes, briefly fade the nav in at low opacity
   // after the boat entrance completes so first-time visitors notice nav exists.
   // Runs once per mount of a hover route, does not use any storage APIs.
@@ -186,6 +224,28 @@ export default function App() {
 
   const navVariant = getVariant(location.pathname)
 
+  // Variant-aware colors for the fixed hamburger + Support CTA that live
+  // outside the regular Nav wrapper (so they need their own color logic).
+  let triggerColor, supportFallbackColor, supportUseShimmer
+  if (navVariant === 'light') {
+    triggerColor = 'rgba(0,0,0,0.6)'
+    supportFallbackColor = 'rgba(0,0,0,0.75)'
+    supportUseShimmer = false
+  } else if (navVariant === 'red') {
+    triggerColor = 'rgba(40,5,5,0.7)'
+    supportFallbackColor = 'rgba(40,5,5,0.85)'
+    supportUseShimmer = false
+  } else {
+    // dark + blue — both sit on dark backgrounds, chrome-text reads fine
+    triggerColor = 'rgba(255,255,255,0.7)'
+    supportFallbackColor = 'rgba(255,255,255,0.75)'
+    supportUseShimmer = true
+  }
+
+  // Show the standalone pinned Support CTA on hover routes OR whenever the
+  // centered nav has collapsed into compact mode (it's been removed from both).
+  const showFixedSupport = navMode === 'hover' || navOverflowing
+
   return (
     <div
       onMouseMove={(e) => {
@@ -195,38 +255,137 @@ export default function App() {
         if (getNavMode(location.pathname) === 'hover') setHoverNav(false)
       }}
     >
-      <div style={{
-        position: navPosition,
-        top: 0, left: 0, right: 0,
-        zIndex: 50,
-        background: navBg,
-        opacity: navOpacity,
-        transform: navVisible ? 'translateY(0)' : 'translateY(-10px)',
-        transition: 'opacity 0.6s ease, transform 0.3s ease, background 0.3s ease',
-        pointerEvents: (navMode === 'hover' ? hoverNav : navVisible) ? 'auto' : 'none',
+      {/* Hidden measurement nav: renders the full horizontal nav off-screen so
+          ResizeObserver can compare its natural content width to the viewport
+          and decide when to collapse into compact mode. */}
+      <div ref={navMeasureRef} aria-hidden="true" style={{
+        position: 'fixed', top: -9999, left: -9999,
+        visibility: 'hidden', pointerEvents: 'none',
+        whiteSpace: 'nowrap',
       }}>
-        <Nav
-          current={CURRENT_MAP[location.pathname] || 'Home'}
-          onNavigate={go}
-          variant={navVariant}
-          excludeItems={navMode === 'hover' ? ['Support'] : undefined}
-        />
+        <Nav current="Home" onNavigate={() => {}} variant="dark" />
       </div>
 
-      {/* Always-visible Support CTA on hover-mode routes. Lives outside the hover nav
-          wrapper so it ignores the hover opacity gate and is always reachable. */}
-      {navMode === 'hover' && (
+      {/* Regular centered Nav — hidden when compact mode is active. */}
+      {!navOverflowing && (
+        <div style={{
+          position: navPosition,
+          top: 0, left: 0, right: 0,
+          zIndex: 50,
+          background: navBg,
+          opacity: navOpacity,
+          transform: navVisible ? 'translateY(0)' : 'translateY(-10px)',
+          transition: 'opacity 0.6s ease, transform 0.3s ease, background 0.3s ease',
+          pointerEvents: (navMode === 'hover' ? hoverNav : navVisible) ? 'auto' : 'none',
+        }}>
+          <Nav
+            current={CURRENT_MAP[location.pathname] || 'Home'}
+            onNavigate={go}
+            variant={navVariant}
+            excludeItems={navMode === 'hover' ? ['Support'] : undefined}
+          />
+        </div>
+      )}
+
+      {/* Compact-mode hamburger trigger: fixed top-left, two horizontal lines,
+          animates to an X when the overlay is open. Lives outside any transform
+          or opacity wrapper so it stays put on scroll. */}
+      {navOverflowing && (
+        <button
+          onClick={() => setNavMenuOpen((o) => !o)}
+          aria-label={navMenuOpen ? 'Close menu' : 'Open menu'}
+          style={{
+            position: 'fixed',
+            top: 20, left: 24,
+            zIndex: 80,
+            background: 'none', border: 'none', cursor: 'pointer',
+            padding: 6,
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            width: 34, height: 28,
+          }}
+        >
+          <span style={{
+            display: 'block', width: 22, height: 1,
+            background: triggerColor,
+            transition: 'transform 0.3s ease, background 0.3s ease',
+            transform: navMenuOpen ? 'translateY(3px) rotate(45deg)' : 'translateY(-3px)',
+            transformOrigin: 'center',
+          }} />
+          <span style={{
+            display: 'block', width: 22, height: 1,
+            background: triggerColor,
+            transition: 'transform 0.3s ease, background 0.3s ease',
+            transform: navMenuOpen ? 'translateY(-4px) rotate(-45deg)' : 'translateY(3px)',
+            transformOrigin: 'center',
+          }} />
+        </button>
+      )}
+
+      {/* Compact-mode overlay: full-viewport backdrop + vertical stack. */}
+      {navOverflowing && (
+        <div
+          onClick={() => setNavMenuOpen(false)}
+          role="dialog"
+          aria-hidden={!navMenuOpen}
+          style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(12,14,20,0.94)',
+            zIndex: 70,
+            opacity: navMenuOpen ? 1 : 0,
+            pointerEvents: navMenuOpen ? 'auto' : 'none',
+            transition: 'opacity 0.3s ease',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <div style={{
+            display: 'flex', flexDirection: 'column',
+            gap: 28, alignItems: 'center',
+          }}>
+            {COMPACT_PAGES.map((item) => {
+              const isSupport = item === 'Support'
+              return (
+                <button
+                  key={item}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    go(item)
+                    setNavMenuOpen(false)
+                  }}
+                  className={isSupport ? 'chrome-text' : undefined}
+                  style={{
+                    background: isSupport ? undefined : 'none',
+                    border: 'none', cursor: 'pointer',
+                    color: isSupport ? undefined : 'rgba(255,255,255,0.75)',
+                    fontSize: 24, fontWeight: isSupport ? 500 : 400,
+                    letterSpacing: '-0.6px', padding: '8px 14px',
+                  }}
+                >
+                  {item}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Always-visible Support CTA: on hover-mode routes, or whenever the centered
+          nav has collapsed into compact mode. Lives outside the nav wrapper so it
+          ignores any opacity gate and is always reachable. */}
+      {showFixedSupport && (
         <button
           onClick={() => go('Support')}
-          className="chrome-text"
+          className={supportUseShimmer ? 'chrome-text' : undefined}
           style={{
             position: 'fixed',
             top: 20, right: 24,
             zIndex: 60,
+            background: supportUseShimmer ? undefined : 'none',
             border: 'none',
             padding: '4px 8px',
             fontSize: 14,
             fontWeight: 500,
+            color: supportUseShimmer ? undefined : supportFallbackColor,
             letterSpacing: '-0.3px',
             cursor: 'pointer',
           }}
