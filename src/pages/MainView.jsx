@@ -1,9 +1,15 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import useCountdown from '../hooks/useCountdown'
+import { introPhotos } from '../assets/home-intro'
 
 const BASE = import.meta.env.BASE_URL
 const BOAT_SIZE = 200
+
+// Module-level flag: the cinematic intro plays once per JS bundle
+// initialization (hard refresh) and is skipped on SPA navigation back
+// to /. No storage APIs — this lives for the tab's lifetime only.
+let introHasPlayed = false
 
 export default function MainView({ onNavigate }) {
   const location = useLocation()
@@ -31,17 +37,17 @@ export default function MainView({ onNavigate }) {
     setMode(isLanding ? 'landing' : 'home')
   }, [isLanding])
 
+  // Landing-only: click the boat to toggle between /landing and /. The /
+  // route no longer uses this — the home boat is static after the intro.
   const handleToggle = useCallback(() => {
+    if (mode !== 'landing') return
     if (transitioning) return
     setTransitioning(true)
     setTextVisible(false)
 
     setTimeout(() => {
-      const newMode = mode === 'home' ? 'landing' : 'home'
-      setMode(newMode)
-      // Use React Router navigate so App.jsx location stays in sync
-      const newPath = newMode === 'home' ? '/' : '/landing'
-      routerNavigate(newPath, { replace: true })
+      setMode('home')
+      routerNavigate('/', { replace: true })
     }, 500)
 
     setTimeout(() => {
@@ -50,47 +56,9 @@ export default function MainView({ onNavigate }) {
     }, 1200)
   }, [mode, transitioning, routerNavigate])
 
-  // Auto-transition on inactivity — ONLY from dark home → Team, and only once per session
-  useEffect(() => {
-    if (mode !== 'home' || transitioning) return
-    if (sessionStorage.getItem('autoTeamFired') === '1') return
-
-    let timer = null
-    const delay = 10000
-
-    const resetTimer = () => {
-      if (timer) clearTimeout(timer)
-      timer = setTimeout(() => {
-        sessionStorage.setItem('autoTeamFired', '1')
-        onNavigate('Team')
-      }, delay)
-    }
-
-    const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'wheel', 'scroll']
-    events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }))
-    resetTimer()
-
-    return () => {
-      if (timer) clearTimeout(timer)
-      events.forEach(e => window.removeEventListener(e, resetTimer))
-    }
-  }, [mode, transitioning, onNavigate])
-
-  // Countdown + clock
+  // Countdown target — used by both the rest-state corner and /landing
   const target = new Date('2028-07-14T00:00:00')
   const { days, hrs, mins, secs } = useCountdown(target)
-  const [clock, setClock] = useState('')
-  useEffect(() => {
-    const update = () => {
-      const n = new Date()
-      setClock(
-        `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}:${String(n.getSeconds()).padStart(2, '0')}`
-      )
-    }
-    update()
-    const iv = setInterval(update, 1000)
-    return () => clearInterval(iv)
-  }, [])
 
   // Responsive
   const [portrait, setPortrait] = useState(window.innerHeight > window.innerWidth)
@@ -104,7 +72,7 @@ export default function MainView({ onNavigate }) {
   // Colors
   const inHome = mode === 'home'
   const landingDark = sysDark
-  const homeBg = 'rgb(19,23,31)'
+  const homeBg = 'rgb(0,0,0)' // pure black for the cinematic home rest state
   const landingBg = landingDark ? 'rgb(19,23,31)' : 'rgb(245,245,245)'
   const bg = inHome ? homeBg : landingBg
 
@@ -115,7 +83,6 @@ export default function MainView({ onNavigate }) {
 
   // Landing colors
   const textDim = landingDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)'
-  const textNav = landingDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)'
   const divider = landingDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'
 
   const textFade = {
@@ -216,7 +183,161 @@ export default function MainView({ onNavigate }) {
     )
   }
 
-  // Typographic anchor — shared label/value/meta treatment
+  // ========== HOME MODE: cinematic intro → rest state ==========
+  return (
+    <HomeIntro
+      onNavigate={onNavigate}
+      boatSrc={darkGif}
+      portrait={portrait}
+      days={days}
+      hrs={hrs}
+      mins={mins}
+      secs={secs}
+    />
+  )
+}
+
+// ---------- Home intro + rest-state component ----------
+// Split out so the intro's useEffect/state are fully scoped to the home
+// route and don't run for /landing. Kept in the same file per the brief.
+function HomeIntro({ onNavigate, boatSrc, portrait, days, hrs, mins, secs }) {
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  const [viewportWidth, setViewportWidth] = useState(
+    typeof window !== 'undefined' ? window.innerWidth : 1024
+  )
+  useEffect(() => {
+    const h = () => setViewportWidth(window.innerWidth)
+    window.addEventListener('resize', h)
+    return () => window.removeEventListener('resize', h)
+  }, [])
+
+  // If the intro has already played in this JS bundle lifetime, or the user
+  // prefers reduced motion, skip straight to the rest state.
+  const skipIntro = introHasPlayed || prefersReducedMotion
+
+  // phase drives the blue→black overlay; separate booleans drive boat/UI fades
+  // so their timing isn't locked to the overlay transition.
+  const [phase, setPhase] = useState(skipIntro ? 'rest' : 'ignition')
+  const [photoIndex, setPhotoIndex] = useState(0)
+  const [photoLayerVisible, setPhotoLayerVisible] = useState(!skipIntro && introPhotos.length > 0)
+  const [photoAnimDuration, setPhotoAnimDuration] = useState(80)
+  const [boatVisible, setBoatVisible] = useState(skipIntro)
+  const [uiVisible, setUiVisible] = useState(skipIntro)
+  const photoTimerRef = useRef(null)
+  const phaseTimersRef = useRef([])
+
+  useEffect(() => {
+    if (skipIntro) {
+      introHasPlayed = true
+      return
+    }
+    if (introPhotos.length === 0) {
+      // Degrade gracefully: skip the flash montage, run the boat/ui reveals only
+      // eslint-disable-next-line no-console
+      console.warn('[HomeIntro] No photos in src/assets/home-intro/, skipping flash montage')
+      setPhotoLayerVisible(false)
+      const t1 = setTimeout(() => setPhase('revealing'), 200)
+      const t2 = setTimeout(() => setBoatVisible(true), 400)
+      const t3 = setTimeout(() => { setPhase('rest'); setUiVisible(true); introHasPlayed = true }, 1400)
+      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
+    }
+
+    const startTime = performance.now()
+
+    // Photo cadence: 80ms during flash, ease-out to 350ms during slowing, stop at 3200ms.
+    const delayForElapsed = (elapsed) => {
+      if (elapsed < 2000) return 80
+      if (elapsed < 3200) {
+        const t = (elapsed - 2000) / 1200
+        const eased = 1 - Math.pow(1 - t, 2)
+        return 80 + (350 - 80) * eased
+      }
+      return Infinity
+    }
+
+    const cyclePhoto = () => {
+      const elapsed = performance.now() - startTime
+      const delay = delayForElapsed(elapsed)
+      if (delay === Infinity) return
+      photoTimerRef.current = setTimeout(() => {
+        setPhotoIndex((i) => i + 1)
+        setPhotoAnimDuration(delay)
+        cyclePhoto()
+      }, delay)
+    }
+
+    const schedule = (ms, fn) => {
+      phaseTimersRef.current.push(setTimeout(fn, ms))
+    }
+
+    // Best-effort pre-decode — hard 400ms ceiling so slow images can't stall the intro.
+    const preload = Promise.race([
+      Promise.all(
+        introPhotos.map(
+          (url) =>
+            new Promise((resolve) => {
+              const img = new Image()
+              img.onload = resolve
+              img.onerror = resolve
+              img.src = url
+            })
+        )
+      ),
+      new Promise((resolve) => setTimeout(resolve, 400)),
+    ])
+
+    preload.then(() => {
+      schedule(200, () => {
+        setPhase('flash')
+        setPhotoAnimDuration(80)
+        cyclePhoto()
+      })
+      schedule(2000, () => setPhase('slowing'))
+      schedule(3200, () => {
+        setPhase('revealing')
+        setPhotoLayerVisible(false)
+      })
+      schedule(3400, () => setBoatVisible(true))
+      schedule(4200, () => {
+        setPhase('rest')
+        setUiVisible(true)
+        introHasPlayed = true
+      })
+    })
+
+    return () => {
+      if (photoTimerRef.current) clearTimeout(photoTimerRef.current)
+      phaseTimersRef.current.forEach((t) => clearTimeout(t))
+      phaseTimersRef.current = []
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Overlay color per phase. The blue→black transition is a hue shift on a
+  // single solid layer — no linear-gradient involved.
+  const overlayStyle = (() => {
+    let background = 'rgba(30,64,255,0)'
+    let transition = 'background 1.8s linear'
+    if (phase === 'flash') {
+      background = 'rgba(30,64,255,0.35)'
+      transition = 'background 1.8s linear'
+    } else if (phase === 'slowing') {
+      background = 'rgba(30,64,255,0.75)'
+      transition = 'background 1.2s linear'
+    } else if (phase === 'revealing') {
+      background = 'rgba(0,0,0,0.85)'
+      transition = 'background 1s linear'
+    } else if (phase === 'rest') {
+      background = 'rgba(0,0,0,1)'
+      transition = 'background 0.6s linear'
+    }
+    return { background, transition }
+  })()
+
+  // Typographic anchor — countdown corner reuses the same label/value/meta treatment
   const anchorLabel = {
     color: 'rgb(117,117,117)', fontSize: 12, fontWeight: 400,
     letterSpacing: '-0.48px', textTransform: 'uppercase', margin: '0 0 6px',
@@ -229,109 +350,141 @@ export default function MainView({ onNavigate }) {
     color: 'rgb(153,153,153)', fontSize: 16, fontWeight: 500, margin: 0,
   }
   const anchorButton = {
-    background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center', padding: 0,
+    background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0,
   }
   const countdownText = `${days} : ${String(hrs).padStart(2, '0')} : ${String(mins).padStart(2, '0')} : ${String(secs).padStart(2, '0')}`
 
-  // ========== HOME MODE ==========
-  if (portrait) {
-    // TODO mobile pass — tightened three-anchor stack; deeper mobile nav/layout overhaul lives in a separate prompt
-    return (
+  // On very narrow viewports the countdown corner would collide with the nav;
+  // drop it there. TODO mobile pass — a future prompt will redesign mobile nav.
+  const showCountdown = viewportWidth >= 400
+
+  const currentPhotoUrl = introPhotos.length > 0
+    ? introPhotos[photoIndex % introPhotos.length]
+    : null
+
+  return (
+    <div style={{
+      background: 'rgb(0,0,0)',
+      height: '100dvh',
+      width: '100%',
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      {/* Full-bleed photo layer — only rendered while the flash montage runs */}
+      {currentPhotoUrl && photoLayerVisible && (
+        <img
+          key={photoIndex}
+          src={currentPhotoUrl}
+          alt=""
+          aria-hidden="true"
+          style={{
+            position: 'absolute', inset: 0,
+            width: '100%', height: '100%',
+            objectFit: 'cover',
+            animation: `photoFlash ${photoAnimDuration}ms linear forwards`,
+            transformOrigin: 'center center',
+          }}
+        />
+      )}
+
+      {/* Blue → black overlay (solid color, hue-shifts via CSS transition) */}
       <div
+        aria-hidden="true"
         style={{
-          background: bg,
-          height: '100dvh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
-          position: 'relative',
-          transition: 'background 0.7s ease',
+          position: 'absolute', inset: 0,
+          pointerEvents: 'none',
+          ...overlayStyle,
+        }}
+      />
+
+      {/* Spinning boat — centered, fades in during the reveal phase */}
+      <div style={{
+        position: 'absolute',
+        top: '50%', left: '50%',
+        width: BOAT_SIZE, height: BOAT_SIZE,
+        transform: 'translate(-50%, -50%)',
+        opacity: boatVisible ? 1 : 0,
+        transition: 'opacity 0.8s ease',
+        pointerEvents: 'none',
+      }}>
+        <img
+          src={boatSrc}
+          alt="Spinning sailboat"
+          style={{ width: '100%', height: '100%', display: 'block' }}
+        />
+      </div>
+
+      {/* Bottom-left persistent nav — always visible after intro */}
+      <nav
+        aria-label="Primary"
+        style={{
+          position: 'fixed',
+          bottom: 28, left: 32,
+          display: 'flex', flexDirection: 'column',
+          gap: 10, alignItems: 'flex-start',
+          opacity: uiVisible ? 1 : 0,
+          transition: 'opacity 0.6s ease',
+          pointerEvents: uiVisible ? 'auto' : 'none',
+          zIndex: 20,
         }}
       >
-        <div style={{ textAlign: 'center', position: 'absolute', top: '10%', ...textFade }}>
-          <button onClick={() => onNavigate('Event Calendar')} style={anchorButton}>
+        {[
+          ['Bio', 'Biography'],
+          ['Team', 'Team'],
+          ['Events', 'Event Calendar'],
+          ['Support', 'Support'],
+        ].map(([label, route]) => (
+          <HomeNavLink key={route} label={label} onClick={() => onNavigate(route)} portrait={portrait} />
+        ))}
+      </nav>
+
+      {/* Top-right countdown corner — clickable, fades in with the nav */}
+      {showCountdown && (
+        <div style={{
+          position: 'fixed',
+          top: 32, right: 32,
+          textAlign: 'right',
+          opacity: uiVisible ? 1 : 0,
+          transition: 'opacity 0.6s ease',
+          pointerEvents: uiVisible ? 'auto' : 'none',
+          zIndex: 20,
+        }}>
+          <button
+            onClick={() => onNavigate('Event Calendar')}
+            style={{ ...anchorButton, textAlign: 'right' }}
+          >
             <p style={anchorLabel}>EVENT CALENDAR</p>
             <h1 style={anchorValue}>LA 2028</h1>
           </button>
           <p style={anchorMeta}>{countdownText}</p>
         </div>
+      )}
+    </div>
+  )
+}
 
-        {boatEl}
-
-        <div style={{ textAlign: 'center', position: 'absolute', bottom: '26%', ...textFade }}>
-          <button onClick={() => onNavigate('Biography')} style={anchorButton}>
-            <p style={anchorLabel}>BIOGRAPHY</p>
-            <h1 style={anchorValue}>ROBBY MEEK</h1>
-          </button>
-          <p style={anchorMeta}>{clock}</p>
-        </div>
-
-        <div style={{ textAlign: 'center', position: 'absolute', bottom: '6%', ...textFade }}>
-          <button onClick={() => onNavigate('Support')} style={anchorButton}>
-            <p style={{ ...anchorLabel, fontSize: 11 }}>SUPPORT THE CAMPAIGN</p>
-            <h1 style={{ ...anchorValue, fontSize: 16, margin: 0 }} className="chrome-text">LA 2028</h1>
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  // Home landscape — triangular: top-left / top-right / bottom-center, boat dominant in middle
+// Small stateful nav link: color transitions to royal blue on hover.
+function HomeNavLink({ label, onClick, portrait }) {
+  const [hover, setHover] = useState(false)
   return (
-    <div
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onFocus={() => setHover(true)}
+      onBlur={() => setHover(false)}
       style={{
-        background: bg,
-        height: '100dvh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-        position: 'relative',
-        transition: 'background 0.7s ease',
+        background: 'none', border: 'none', padding: 0,
+        cursor: 'pointer',
+        color: hover ? '#1E40FF' : 'rgba(255,255,255,0.75)',
+        fontSize: portrait ? 12 : 13,
+        fontWeight: 400,
+        letterSpacing: '-0.2px',
+        fontFamily: 'inherit',
+        transition: 'color 0.25s ease',
       }}
     >
-      <div style={{
-        textAlign: 'center', position: 'absolute',
-        top: '18%', left: 'clamp(20px, 5vw, 80px)',
-        ...textFade,
-      }}>
-        <button onClick={() => onNavigate('Event Calendar')} style={anchorButton}>
-          <p style={anchorLabel}>EVENT CALENDAR</p>
-          <h1 style={anchorValue}>LA 2028</h1>
-        </button>
-        <p style={anchorMeta}>{countdownText}</p>
-      </div>
-
-      {boatEl}
-
-      <div style={{
-        textAlign: 'center', position: 'absolute',
-        top: '18%', right: 'clamp(20px, 5vw, 80px)',
-        ...textFade,
-      }}>
-        <button onClick={() => onNavigate('Biography')} style={anchorButton}>
-          <p style={anchorLabel}>BIOGRAPHY</p>
-          <h1 style={anchorValue}>ROBBY MEEK</h1>
-        </button>
-        <p style={anchorMeta}>{clock}</p>
-      </div>
-
-      <div style={{
-        textAlign: 'center', position: 'absolute',
-        bottom: '15%', left: '50%',
-        opacity: textVisible ? 1 : 0,
-        transform: textVisible
-          ? 'translate(-50%, 0)'
-          : 'translate(-50%, 8px)',
-        transition: 'opacity 0.5s ease, transform 0.5s ease',
-      }}>
-        <button onClick={() => onNavigate('Support')} style={anchorButton}>
-          <p style={anchorLabel}>SUPPORT THE CAMPAIGN</p>
-          <h1 style={anchorValue} className="chrome-text">LA 2028</h1>
-        </button>
-      </div>
-    </div>
+      {label}
+    </button>
   )
 }
