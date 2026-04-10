@@ -92,7 +92,7 @@ export default function Biography({ onNavigate }) {
           zIndex: 2,
         }}>
           {/* Cutout image — starts below text, scrolls up */}
-          <div ref={imageRef} className="bio-hiking-img" style={{
+          <div ref={imageRef} style={{
             position: 'absolute', top: '40%', left: '5%',
             width: '85%', maxWidth: 500,
             willChange: 'transform',
