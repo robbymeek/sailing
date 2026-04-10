@@ -50,121 +50,6 @@ export default function MainView({ onNavigate }) {
     }, 1200)
   }, [mode, transitioning, routerNavigate])
 
-  // Scroll-driven text movement on dark home page
-  const [scrollProgress, setScrollProgress] = useState(0) // -1 to 1, 0 = neutral
-
-  useEffect(() => {
-    if (mode !== 'home' || transitioning) return
-
-    let accumulated = 0
-    const maxScroll = 300 // pixels of scroll to fully move text off screen
-    let triggered = false
-
-    const onWheel = (e) => {
-      if (triggered || transitioning) return
-      accumulated += e.deltaY
-      accumulated = Math.max(-maxScroll, Math.min(maxScroll, accumulated))
-
-      const progress = accumulated / maxScroll // -1 to 1
-      setScrollProgress(progress)
-
-      // Trigger navigation when text fully exits
-      if (progress >= 1) {
-        triggered = true
-        handleToggle()
-      } else if (progress <= -1) {
-        triggered = true
-        onNavigate('Contact')
-      }
-    }
-
-    // Snap back if user stops scrolling partway
-    const snapBack = setInterval(() => {
-      if (triggered) return
-      if (Math.abs(accumulated) > 0 && Math.abs(accumulated) < maxScroll * 0.9) {
-        accumulated *= 0.92
-        if (Math.abs(accumulated) < 5) accumulated = 0
-        setScrollProgress(accumulated / maxScroll)
-      }
-    }, 50)
-
-    window.addEventListener('wheel', onWheel, { passive: true })
-    return () => {
-      window.removeEventListener('wheel', onWheel)
-      clearInterval(snapBack)
-    }
-  }, [mode, transitioning, handleToggle, onNavigate])
-
-  // Scroll-driven navigation on Landing page
-  // Desktop: scroll up → Contact, scroll down → Home (dark)
-  // Mobile: scroll up → Event Calendar, scroll down → Biography
-  useEffect(() => {
-    if (mode !== 'landing' || transitioning) return
-
-    let accumulated = 0
-    const maxScroll = 300
-    let triggered = false
-    const isDesktop = () => window.innerWidth > 900
-
-    const onWheel = (e) => {
-      if (triggered || transitioning) return
-      accumulated += e.deltaY
-      accumulated = Math.max(-maxScroll, Math.min(maxScroll, accumulated))
-
-      const progress = accumulated / maxScroll
-      setScrollProgress(progress)
-
-      if (progress >= 1) {
-        triggered = true
-        if (isDesktop()) {
-          handleToggle() // → Home
-        } else {
-          onNavigate('Biography')
-        }
-      } else if (progress <= -1) {
-        triggered = true
-        onNavigate(isDesktop() ? 'Contact' : 'Event Calendar')
-      }
-    }
-
-    let touchStartY = 0
-    const onTouchStart = (e) => { touchStartY = e.touches[0].clientY }
-    const onTouchEnd = (e) => {
-      if (triggered || transitioning) return
-      const delta = e.changedTouches[0].clientY - touchStartY
-      if (delta < -80) {
-        triggered = true
-        if (isDesktop()) {
-          handleToggle()
-        } else {
-          onNavigate('Biography')
-        }
-      } else if (delta > 80) {
-        triggered = true
-        onNavigate(isDesktop() ? 'Contact' : 'Event Calendar')
-      }
-    }
-
-    const snapBack = setInterval(() => {
-      if (triggered) return
-      if (Math.abs(accumulated) > 0 && Math.abs(accumulated) < maxScroll * 0.9) {
-        accumulated *= 0.92
-        if (Math.abs(accumulated) < 5) accumulated = 0
-        setScrollProgress(accumulated / maxScroll)
-      }
-    }, 50)
-
-    window.addEventListener('wheel', onWheel, { passive: true })
-    window.addEventListener('touchstart', onTouchStart, { passive: true })
-    window.addEventListener('touchend', onTouchEnd, { passive: true })
-    return () => {
-      window.removeEventListener('wheel', onWheel)
-      window.removeEventListener('touchstart', onTouchStart)
-      window.removeEventListener('touchend', onTouchEnd)
-      clearInterval(snapBack)
-    }
-  }, [mode, transitioning, handleToggle, onNavigate])
-
   // Auto-transition on inactivity
   // Dark home: 10s → toggle to landing
   // Landing: 10s → navigate to Team
@@ -246,26 +131,8 @@ export default function MainView({ onNavigate }) {
     transition: 'opacity 0.5s ease, transform 0.5s ease',
   }
 
-  // Scroll-driven text movement for dark home mode
-  // scrollProgress: -1 (scrolled up fully) to 1 (scrolled down fully)
-  const absProgress = Math.abs(scrollProgress)
-  const scrollDir = scrollProgress > 0 ? 1 : -1
-  const scrollTextOffset = scrollProgress * 150 // px to move text
-  const scrollTextOpacity = Math.max(0, 1 - absProgress * 1.5)
-
-  // Left text (or top in portrait) — moves with scroll direction
-  const leftScrollStyle = inHome && absProgress > 0.02 ? {
-    opacity: scrollTextOpacity,
-    transform: `translateY(${scrollTextOffset}px)`,
-    transition: 'none',
-  } : textFade
-
-  // Right text (or bottom in portrait) — moves with scroll direction
-  const rightScrollStyle = inHome && absProgress > 0.02 ? {
-    opacity: scrollTextOpacity,
-    transform: `translateY(${scrollTextOffset}px)`,
-    transition: 'none',
-  } : textFade
+  const leftScrollStyle = textFade
+  const rightScrollStyle = textFade
 
   // The boat: both GIFs stacked, cross-fade between them
   const darkGif = `${BASE}[0001-0250].gif`
@@ -313,12 +180,7 @@ export default function MainView({ onNavigate }) {
     </div>
   )
 
-  // Landing scroll style — text moves with scroll direction
-  const landingScrollStyle = !inHome && absProgress > 0.02 ? {
-    opacity: scrollTextOpacity,
-    transform: `translateY(${scrollTextOffset}px)`,
-    transition: 'none',
-  } : textFade
+  const landingScrollStyle = textFade
 
   // ========== LANDING MODE ==========
   if (!inHome) {
