@@ -70,6 +70,15 @@ button {
     min-height: 0 !important;
     bottom: auto !important;
     left: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Push hiking image down ~half its height lower on mobile */
+  .bio-hiking-img {
+    top: 90% !important;
+    left: 15% !important;
+    width: 70% !important;
+    max-width: 420px !important;
   }
 
   .bio-hero > .bio-text-banners {
@@ -78,7 +87,7 @@ button {
     top: 8vh !important;
   }
 
-  /* Events wrapper: below image, centered, no overlap */
+  /* Events wrapper: below image, centered, slight overlap with image bottom */
   .bio-events-wrapper {
     position: relative !important;
     right: auto !important;
@@ -89,7 +98,8 @@ button {
     min-width: 320px !important;
     align-items: center !important;
     align-self: center !important;
-    margin-top: 0 !important;
+    margin-top: clamp(-80px, -8vh, -30px) !important;
+    z-index: 3 !important;
   }
 
   /* Regatta cards: horizontal row, flex ratios preserved from inline styles */
