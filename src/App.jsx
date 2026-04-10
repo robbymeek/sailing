@@ -210,7 +210,7 @@ export default function App() {
         </Routes>
       </div>
 
-      {/* Preload adjacent pages off-screen for instant scroll-based transitions */}
+      {/* Preload Biography + Event Calendar off-screen for snappier page transitions */}
       <div aria-hidden="true" style={{
         position: 'fixed', top: '-200vh', left: '-200vw',
         width: '100vw', height: '100vh',
@@ -219,8 +219,6 @@ export default function App() {
       }}>
         {displayLocation.pathname !== '/biography' && <Biography onNavigate={() => {}} />}
         {displayLocation.pathname !== '/event-calendar' && <EventCalendar onNavigate={() => {}} />}
-        {!isMobile && displayLocation.pathname !== '/contact' && <Contact onNavigate={() => {}} />}
-        {!isMobile && displayLocation.pathname !== '/landing' && <MainView onNavigate={() => {}} />}
       </div>
     </div>
   )
