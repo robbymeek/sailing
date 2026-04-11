@@ -238,8 +238,8 @@ export default function Team({ onNavigate }) {
         ...entrance.style(1),
         position: 'relative',
         overflow: 'hidden',
-        padding: '140px 40px 160px',
-        minHeight: 'clamp(780px, 100vh, 1100px)',
+        padding: '80px 40px 140px',
+        minHeight: 'clamp(720px, 94vh, 1040px)',
       }}>
         {/* Aggressive grayscale/high-contrast sailing photo */}
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
@@ -279,12 +279,12 @@ export default function Team({ onNavigate }) {
             className="chrome-text"
             style={{
               fontFamily: '"Didot", "Bodoni 72", "Bodoni MT", "Playfair Display", Georgia, serif',
-              fontSize: 'clamp(60px, 10vw, 148px)',
+              fontSize: 'clamp(44px, 7vw, 104px)',
               fontWeight: 500,
               textTransform: 'uppercase',
               letterSpacing: '0.035em',
               lineHeight: 1,
-              margin: '0 0 28px',
+              margin: '0 0 14px',
             }}
           >
             The Team
@@ -327,7 +327,7 @@ export default function Team({ onNavigate }) {
 
           {/* Individual Supporters — cobalt heading, white list */}
           <h2 style={{
-            color: ACCENT,
+            color: '#fff',
             fontSize: 'clamp(28px, 4vw, 44px)',
             fontWeight: 500,
             letterSpacing: '-1.2px',
