@@ -206,7 +206,7 @@ export default function Team({ onNavigate }) {
   const entrance = usePageEntrance(5, { staggerMs: 100, initialDelayMs: 50 })
 
   return (
-    <div style={{ minHeight: '100vh', background: 'rgb(0,150,235)' }}>
+    <div style={{ minHeight: '100vh', background: 'rgb(10,85,235)' }}>
       {/* Hero */}
       <div style={{
         position: 'relative',
