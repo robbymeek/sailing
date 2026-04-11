@@ -16,7 +16,7 @@ const INNER_BG = {
   '/event-calendar': 'rgb(0,0,0)',
   '/team': 'rgb(22,24,28)',
   '/contact': 'rgb(10,30,80)',
-  '/support': 'rgb(18,0,120)',
+  '/support': 'rgb(20,110,240)',
 }
 
 const VARIANT_MAP = {
@@ -25,7 +25,7 @@ const VARIANT_MAP = {
   '/event-calendar': 'dark',
   '/team': 'blue',
   '/contact': 'blue',
-  '/support': 'red',
+  '/support': 'blue',
 }
 
 const CURRENT_MAP = {
@@ -194,7 +194,7 @@ export default function App() {
   if (targetMode === 'hover') {
     navBg = 'transparent'
   } else if (targetMode === 'sticky') {
-    navBg = 'rgba(200,40,40,0.85)'
+    navBg = 'rgba(20,110,240,0.92)'
   } else {
     navBg = getBg(location.pathname)
   }
