@@ -13,21 +13,15 @@ const labelStyle = {
   textTransform: 'uppercase',
   margin: '0 0 6px',
 }
-const valueStyle = {
-  color: 'rgb(157,174,194)',
-  fontSize: 20,
-  fontWeight: 400,
-  letterSpacing: '-0.8px',
-  margin: '0 0 8px',
-}
 const metaStyle = {
-  color: 'rgba(255,255,255,0.7)',
+  color: 'rgba(255,255,255,0.72)',
   fontSize: 15,
   fontWeight: 400,
   lineHeight: 1.8,
 }
 
-const ACCENT = '#1E40FF'
+const ACCENT = 'rgb(10,85,235)'
+const PAGE_BG = 'rgb(22,24,28)'
 
 const SPONSORS = [
   {
@@ -60,42 +54,48 @@ const SPONSORS = [
   },
 ]
 
-function SponsorCard({ sponsor }) {
-  const [hovered, setHovered] = useState(false)
-
+// Expanding-panel sponsor card: sits in a flex row, grows wider via
+// flex-grow when hovered while siblings slim. Container controls row height.
+function SponsorCard({ sponsor, hovered, onHover, onLeave }) {
   return (
     <a
       href={sponsor.url}
       target="_blank"
       rel="noopener noreferrer"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={onHover}
+      onMouseLeave={onLeave}
       style={{
-        position: 'relative', overflow: 'hidden',
+        position: 'relative',
+        overflow: 'hidden',
         textDecoration: 'none',
         display: 'block',
-        aspectRatio: '3/4',
+        flexGrow: hovered ? 3 : 1,
+        flexBasis: 0,
+        flexShrink: 1,
+        minWidth: 0,
+        height: '100%',
+        transition: 'flex-grow 0.6s cubic-bezier(0.22, 1, 0.36, 1)',
       }}
     >
-      {/* Photo — mild desaturation at rest, darkens on hover */}
+      {/* Photo */}
       <img
         src={`${BASE}${sponsor.photo}`}
         alt={sponsor.name}
         style={{
           width: '100%', height: '100%',
           objectFit: 'cover',
-          transition: 'transform 0.5s ease, filter 0.5s ease',
-          transform: hovered ? 'scale(1.04)' : 'scale(1)',
-          filter: hovered ? 'brightness(0.25)' : 'grayscale(0.2) brightness(0.9)',
+          transition: 'transform 0.6s ease, filter 0.6s ease',
+          transform: hovered ? 'scale(1.06)' : 'scale(1)',
+          filter: hovered ? 'brightness(0.28)' : 'grayscale(0.3) brightness(0.82)',
           display: 'block',
         }}
       />
-      {/* Hover overlay — single royal-blue accent for every sponsor */}
+      {/* Cobalt overlay on hover */}
       <div style={{
         position: 'absolute', inset: 0,
         background: ACCENT,
-        opacity: hovered ? 0.85 : 0,
-        transition: 'opacity 0.4s ease',
+        opacity: hovered ? 0.82 : 0,
+        transition: 'opacity 0.5s ease',
         pointerEvents: 'none',
       }} />
       {/* Hover content — logo + description, centered */}
@@ -103,10 +103,10 @@ function SponsorCard({ sponsor }) {
         position: 'absolute', inset: 0,
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
-        padding: '24px 16px',
+        padding: '40px 32px',
         opacity: hovered ? 1 : 0,
-        transform: hovered ? 'translateY(0)' : 'translateY(10px)',
-        transition: 'opacity 0.4s ease, transform 0.4s ease',
+        transform: hovered ? 'translateY(0)' : 'translateY(12px)',
+        transition: 'opacity 0.5s ease, transform 0.5s ease',
         pointerEvents: 'none',
       }}>
         {sponsor.logo && (
@@ -114,33 +114,33 @@ function SponsorCard({ sponsor }) {
             src={`${BASE}${sponsor.logo}`}
             alt=""
             style={{
-              maxWidth: '60%', maxHeight: 50, objectFit: 'contain',
-              marginBottom: 16,
+              maxWidth: 180, maxHeight: 72, objectFit: 'contain',
+              marginBottom: 22,
               filter: 'brightness(0) invert(1)',
             }}
           />
         )}
         <p style={{
-          color: '#fff', fontSize: 13, fontWeight: 500,
-          letterSpacing: '-0.2px',
-          margin: sponsor.logo ? 0 : '0 0 8px', textAlign: 'center',
+          color: '#fff', fontSize: 17, fontWeight: 500,
+          letterSpacing: '-0.3px',
+          margin: sponsor.logo ? 0 : '0 0 10px', textAlign: 'center',
         }}>{sponsor.name}</p>
         <p style={{
-          color: 'rgba(255,255,255,0.85)', fontSize: 12,
-          textAlign: 'center', lineHeight: 1.6, margin: '8px 0 0',
-          maxWidth: 220,
+          color: 'rgba(255,255,255,0.92)', fontSize: 13,
+          textAlign: 'center', lineHeight: 1.65, margin: '12px 0 0',
+          maxWidth: 340,
         }}>{sponsor.desc}</p>
       </div>
       {/* Resting bottom label — solid bar, fades out on hover */}
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
-        background: 'rgba(0,0,0,0.8)',
-        padding: '14px 14px 12px',
+        background: 'rgba(0,0,0,0.85)',
+        padding: '16px 18px',
         opacity: hovered ? 0 : 1,
         transition: 'opacity 0.3s ease',
         pointerEvents: 'none',
       }}>
-        <p style={{ ...labelStyle, margin: 0, color: 'rgb(117,117,117)' }}>
+        <p style={{ ...labelStyle, color: '#fff', margin: 0 }}>
           {sponsor.name}
         </p>
       </div>
@@ -164,12 +164,12 @@ function SupporterRow({ supporter }) {
     <div style={{
       display: 'flex', alignItems: 'center', gap: 14,
       padding: '14px 0',
-      borderBottom: '1px solid rgba(255,255,255,0.06)',
+      borderBottom: '1px solid rgba(255,255,255,0.12)',
     }}>
       <span style={{
         width: 6, height: 6,
         background: ACCENT,
-        opacity: supporter.url ? (hovered ? 1 : 0.85) : 0.85,
+        opacity: supporter.url ? (hovered ? 1 : 0.9) : 0.9,
         flexShrink: 0,
         transition: 'opacity 0.25s ease',
       }} />
@@ -177,8 +177,9 @@ function SupporterRow({ supporter }) {
         fontSize: 14,
         fontWeight: 500,
         letterSpacing: '-0.2px',
-        color: supporter.url && hovered ? '#fff' : 'rgba(255,255,255,0.85)',
-        transition: 'color 0.25s ease',
+        color: '#fff',
+        opacity: supporter.url && hovered ? 1 : 0.95,
+        transition: 'opacity 0.25s ease',
       }}>
         {supporter.name}
       </span>
@@ -203,139 +204,157 @@ function SupporterRow({ supporter }) {
 }
 
 export default function Team({ onNavigate }) {
-  const entrance = usePageEntrance(5, { staggerMs: 100, initialDelayMs: 50 })
+  const entrance = usePageEntrance(4, { staggerMs: 100, initialDelayMs: 50 })
+  const [hoveredIdx, setHoveredIdx] = useState(null)
 
   return (
-    <div style={{ minHeight: '100vh', background: 'rgb(10,85,235)' }}>
-      {/* Hero */}
+    <div style={{ minHeight: '100vh', background: PAGE_BG }}>
+      {/* Sponsor cards — full-bleed hero. Row grows taller when any card
+          is hovered; hovered card also expands horizontally via flex-grow. */}
       <div style={{
-        position: 'relative',
+        ...entrance.style(0),
+        display: 'flex',
         width: '100%',
-        height: 'clamp(320px, 42vh, 440px)',
-        overflow: 'hidden',
-        marginBottom: 60,
+        height: hoveredIdx !== null
+          ? 'clamp(560px, 80vh, 780px)'
+          : 'clamp(420px, 60vh, 620px)',
+        transition: 'height 0.6s cubic-bezier(0.22, 1, 0.36, 1)',
       }}>
-        {/* Photo */}
-        <img
-          src={`${BASE}IMG_5854.JPG`}
-          alt=""
-          style={{
-            position: 'absolute', inset: 0,
-            width: '100%', height: '100%',
-            objectFit: 'cover', objectPosition: 'center 30%',
-          }}
-        />
-        {/* Two stacked solid overlays — near-black with a faint blue tint */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'rgba(0,0,0,0.72)',
-        }} />
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'rgba(30,64,255,0.08)',
-        }} />
-
-        {/* Hero content — left-aligned */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          display: 'flex', flexDirection: 'column',
-          justifyContent: 'center',
-          paddingLeft: 'clamp(24px, 5vw, 80px)',
-          paddingRight: 'clamp(24px, 5vw, 80px)',
-          maxWidth: 720,
-        }}>
-          <p style={labelStyle}>THE TEAM</p>
-          <p style={{
-            ...valueStyle,
-            fontSize: 24,
-            margin: '0 0 14px',
-            maxWidth: 560,
-          }}>
-            The sponsors, families, and supporters who make<br />
-            this Olympic campaign possible.
-          </p>
-          <p style={{
-            ...labelStyle,
-            margin: '0 0 22px',
-          }}>
-            LA 2028 CAMPAIGN · BUILT BY MANY HANDS
-          </p>
-          <div>
-            <button
-              onClick={() => onNavigate('Support')}
-              className="chrome-text"
-              style={{
-                // leave `background` unset so .chrome-text's gradient can paint
-                // (background-clip: text needs that gradient as the background source)
-                border: 'none',
-                cursor: 'pointer',
-                padding: '10px 28px',
-                paddingLeft: 0,
-                fontSize: 15,
-                fontWeight: 500,
-                letterSpacing: '-0.3px',
-                fontFamily: 'inherit',
-              }}
-            >
-              Support the Campaign
-            </button>
-          </div>
-        </div>
+        {SPONSORS.map((s, i) => (
+          <SponsorCard
+            key={s.name}
+            sponsor={s}
+            hovered={hoveredIdx === i}
+            onHover={() => setHoveredIdx(i)}
+            onLeave={() => setHoveredIdx(null)}
+          />
+        ))}
       </div>
 
-      {/* Sponsors grid */}
-      <div style={{ ...entrance.style(1), maxWidth: 1100, margin: '0 auto', padding: '0 40px' }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: 12,
-        }}>
-          {SPONSORS.map((s) => (
-            <SponsorCard key={s.name} sponsor={s} />
-          ))}
-        </div>
-      </div>
-
-      {/* Individual Supporters */}
+      {/* THE TEAM heading block — white text, between cards and supporters */}
       <div style={{
-        ...entrance.style(2),
+        ...entrance.style(1),
         maxWidth: 900,
         margin: '0 auto',
-        padding: '80px 40px',
+        padding: '90px 40px 70px',
       }}>
-        <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <p style={labelStyle}>INDIVIDUAL SUPPORTERS</p>
-          <p style={{ ...valueStyle, fontSize: 24, margin: 0 }}>
-            Those Who Show Up
-          </p>
+        <p style={labelStyle}>LA 2028 CAMPAIGN</p>
+        <h1 style={{
+          color: '#fff',
+          fontSize: 'clamp(40px, 6vw, 68px)',
+          fontWeight: 500,
+          letterSpacing: '-1.6px',
+          lineHeight: 1.02,
+          margin: '0 0 18px',
+        }}>
+          The Team
+        </h1>
+        <p style={{
+          ...metaStyle,
+          maxWidth: 560,
+          margin: '0 0 32px',
+        }}>
+          The sponsors, families, and supporters who make this Olympic campaign possible.
+        </p>
+        <button
+          onClick={() => onNavigate('Support')}
+          className="chrome-text"
+          style={{
+            // leave `background` unset so .chrome-text's gradient can paint
+            // (background-clip: text needs that gradient as the background source)
+            border: 'none',
+            cursor: 'pointer',
+            padding: '10px 0',
+            fontSize: 15,
+            fontWeight: 500,
+            letterSpacing: '-0.3px',
+            fontFamily: 'inherit',
+          }}
+        >
+          Support the Campaign
+        </button>
+      </div>
+
+      {/* Individual Supporters — sailing photo heavily stylized behind,
+          headline in cobalt, supporter list in white. */}
+      <div style={{
+        ...entrance.style(2),
+        position: 'relative',
+        overflow: 'hidden',
+        padding: '130px 40px 150px',
+        minHeight: 'clamp(640px, 88vh, 920px)',
+      }}>
+        {/* Aggressive grayscale/high-contrast sailing photo */}
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+          <img
+            src={`${BASE}IMG_5957 2.JPG`}
+            alt=""
+            style={{
+              width: '100%', height: '100%',
+              objectFit: 'cover',
+              objectPosition: 'center 20%',
+              filter: 'grayscale(1) contrast(1.5) brightness(0.52)',
+              transform: 'scale(1.14)',
+            }}
+          />
+          {/* Solid dark wash */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'rgba(0,0,0,0.58)',
+          }} />
+          {/* Cobalt tint layer */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'rgba(10,85,235,0.14)',
+          }} />
         </div>
-        <div style={{ maxWidth: 420, margin: '0 auto' }}>
-          {SUPPORTERS.map((s) => (
-            <SupporterRow key={s.name} supporter={s} />
-          ))}
-          {Array.from({ length: EMPTY_SLOTS }).map((_, i) => (
-            <div key={`empty-${i}`} style={{
-              display: 'flex', alignItems: 'center', gap: 14,
-              padding: '14px 0',
-              borderBottom: '1px solid rgba(255,255,255,0.06)',
-            }}>
-              <span style={{
-                width: 6, height: 6,
-                border: '1px solid rgba(255,255,255,0.15)',
-                background: 'transparent',
-                flexShrink: 0,
-              }} />
-              <span style={{
-                fontSize: 14,
-                fontWeight: 400,
-                letterSpacing: '-0.2px',
-                fontStyle: 'italic',
-                color: 'rgba(255,255,255,0.2)',
+
+        {/* Foreground content */}
+        <div style={{
+          position: 'relative',
+          zIndex: 1,
+          maxWidth: 900,
+          margin: '0 auto',
+          textAlign: 'center',
+        }}>
+          <h2 style={{
+            color: ACCENT,
+            fontSize: 'clamp(34px, 5.2vw, 56px)',
+            fontWeight: 500,
+            letterSpacing: '-1.5px',
+            lineHeight: 1.03,
+            margin: '0 0 52px',
+          }}>
+            Individual Supporters
+          </h2>
+          <div style={{ maxWidth: 440, margin: '0 auto', textAlign: 'left' }}>
+            {SUPPORTERS.map((s) => (
+              <SupporterRow key={s.name} supporter={s} />
+            ))}
+            {Array.from({ length: EMPTY_SLOTS }).map((_, i) => (
+              <div key={`empty-${i}`} style={{
+                display: 'flex', alignItems: 'center', gap: 14,
+                padding: '14px 0',
+                borderBottom: '1px solid rgba(255,255,255,0.12)',
               }}>
-                Your Name
-              </span>
-            </div>
-          ))}
+                <span style={{
+                  width: 6, height: 6,
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  background: 'transparent',
+                  flexShrink: 0,
+                }} />
+                <span style={{
+                  fontSize: 14,
+                  fontWeight: 400,
+                  letterSpacing: '-0.2px',
+                  fontStyle: 'italic',
+                  color: 'rgba(255,255,255,0.38)',
+                }}>
+                  Your Name
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -343,7 +362,7 @@ export default function Team({ onNavigate }) {
       <div style={{ height: 2, background: 'rgba(255,255,255,0.1)', maxWidth: 120, margin: '0 auto' }} />
 
       {/* Thank-you letter */}
-      <div style={{ ...entrance.style(4), maxWidth: 900, margin: '0 auto', padding: '50px 40px 40px' }}>
+      <div style={{ ...entrance.style(3), maxWidth: 900, margin: '0 auto', padding: '60px 40px 50px' }}>
         <p style={{ ...labelStyle, marginBottom: 24 }}>A NOTE FROM ROBBY</p>
         <div style={{ display: 'flex', gap: 40, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           {/* Photo */}
