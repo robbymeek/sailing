@@ -149,6 +149,10 @@ function SponsorCard({ sponsor, hovered, onHover, onLeave }) {
 }
 
 const SUPPORTERS = [
+  { name: 'AA ENT', url: 'https://aaentmd.com/' },
+  { name: 'US Sailing Team', url: 'https://www.ussailing.org/teams/ussailingteam/' },
+  { name: 'Sailing Foundation of NY', url: 'https://sfny.org/' },
+  { name: 'Annapolis Yacht Club', url: 'https://www.annapolisyc.com/' },
   { name: 'Charter Financial Group', url: 'https://www.charterfinancialgroup.com/' },
   { name: 'The Strom Family' },
   { name: 'The Ziskind Family' },
@@ -326,16 +330,6 @@ export default function Team({ onNavigate }) {
           </div>
 
           {/* Individual Supporters — cobalt heading, white list */}
-          <h2 style={{
-            color: '#fff',
-            fontSize: 'clamp(28px, 4vw, 44px)',
-            fontWeight: 500,
-            letterSpacing: '-1.2px',
-            lineHeight: 1.03,
-            margin: '0 0 44px',
-          }}>
-            Individual Supporters
-          </h2>
           <div style={{ maxWidth: 440, margin: '0 auto', textAlign: 'left' }}>
             {SUPPORTERS.map((s) => (
               <SupporterRow key={s.name} supporter={s} />
