@@ -260,7 +260,7 @@ export default function App() {
             current={CURRENT_MAP[location.pathname] || 'Home'}
             onNavigate={go}
             variant={navVariant}
-            excludeItems={navMode === 'hover' ? ['Support'] : undefined}
+            plainSupport={isHomeRoute}
           />
         </div>
       )}

@@ -5,7 +5,7 @@ const SHORT_LABELS = {
   'Event Calendar': 'Events',
 }
 
-export default function Nav({ current, onNavigate, variant, excludeItems }) {
+export default function Nav({ current, onNavigate, variant, excludeItems, plainSupport }) {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 600
 
   let dim, active
@@ -21,7 +21,9 @@ export default function Nav({ current, onNavigate, variant, excludeItems }) {
   }
 
   // On the dark variant, emphasize Support with chrome-shimmer as the single CTA accent.
-  const homeSupportCTA = variant === 'dark'
+  // Pass plainSupport to opt out (e.g. on the home hover nav, where Support
+  // should match the rest of the items visually).
+  const homeSupportCTA = variant === 'dark' && !plainSupport
 
   const visiblePages = excludeItems
     ? PAGES.filter((p) => !excludeItems.includes(p))
