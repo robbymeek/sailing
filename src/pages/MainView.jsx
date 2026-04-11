@@ -294,6 +294,7 @@ function HomeIntro({ onNavigate, boatSrc, days, hrs, mins, secs }) {
           ['Bio', 'Biography'],
           ['Team', 'Team'],
           ['Events', 'Event Calendar'],
+          ['Contact', 'Contact'],
           ['Support', 'Support'],
         ].map(([label, route]) => (
           <HomeNavLink key={route} label={label} onClick={() => onNavigate(route)} portrait={portrait} />

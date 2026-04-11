@@ -3,8 +3,7 @@ import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import Nav from './components/Nav'
 
 // Pages shown in the compact (narrow-viewport) overlay nav.
-// Contact is intentionally dropped at narrow widths — desktop nav still includes it.
-const COMPACT_PAGES = ['Home', 'Biography', 'Event Calendar', 'Team', 'Support']
+const COMPACT_PAGES = ['Home', 'Biography', 'Event Calendar', 'Team', 'Contact', 'Support']
 import MainView from './pages/MainView'
 import Biography from './pages/Biography'
 import EventCalendar from './pages/EventCalendar'
