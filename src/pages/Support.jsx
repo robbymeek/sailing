@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react'
-import '@fontsource-variable/fraunces/wght.css'
-import '@fontsource-variable/fraunces/wght-italic.css'
 import Footer from '../components/Footer'
 import useCountdown from '../hooks/useCountdown'
 import usePageEntrance from '../hooks/usePageEntrance'
@@ -20,22 +18,14 @@ const TIMELINE_DATA = [
   { year: '2028', main: 'LA Olympics' },
 ]
 
-const COSTS = [
-  { label: 'Training', pct: 50 },
-  { label: 'Equipment', pct: 20 },
-  { label: 'Travel', pct: 15 },
-  { label: 'Coaching', pct: 10 },
-  { label: 'Entry Fees', pct: 5 },
-]
-
 const BIO_STATS = [
   ['6x', 'National Champ'],
   ['3x', 'Continental Champ'],
   ['9+', 'Years in ILCA'],
 ]
 
-// Scoped to this page only — see outer container's fontFamily.
-const FONT_FAMILY = "'Fraunces Variable', Georgia, serif"
+// Classic editorial serif, scoped to this page via the outer container's fontFamily.
+const FONT_FAMILY = "'Times New Roman', Times, serif"
 
 const LABEL = {
   fontSize: 12,
@@ -45,6 +35,7 @@ const LABEL = {
 }
 
 // Returns visual treatment for a year node based on its status.
+// Opacities are tuned for legibility of white text against the cobalt background.
 function yearStatus(item) {
   if (item.current) {
     return {
@@ -55,134 +46,34 @@ function yearStatus(item) {
       },
       yearColor: '#fff',
       yearShadow: '0 0 32px rgba(220,40,40,0.4)',
-      milestoneColor: 'rgba(255,255,255,0.95)',
-      subColor: 'rgba(255,255,255,0.7)',
+      milestoneColor: '#fff',
+      subColor: 'rgba(255,255,255,0.85)',
     }
   }
   if (item.past) {
     return {
       dot: { width: 8, height: 8, background: '#fff' },
-      yearColor: 'rgba(255,255,255,0.55)',
+      yearColor: 'rgba(255,255,255,0.82)',
       yearShadow: 'none',
-      milestoneColor: 'rgba(255,255,255,0.75)',
-      subColor: 'rgba(255,255,255,0.55)',
+      milestoneColor: 'rgba(255,255,255,0.95)',
+      subColor: 'rgba(255,255,255,0.78)',
     }
   }
   return {
     dot: {
       width: 8, height: 8,
       background: 'transparent',
-      border: '1.5px solid rgba(255,255,255,0.25)',
+      border: '1.5px solid rgba(255,255,255,0.55)',
       boxSizing: 'border-box',
     },
-    yearColor: 'rgba(255,255,255,0.35)',
+    yearColor: 'rgba(255,255,255,0.62)',
     yearShadow: 'none',
-    milestoneColor: 'rgba(255,255,255,0.35)',
-    subColor: 'rgba(255,255,255,0.4)',
+    milestoneColor: 'rgba(255,255,255,0.62)',
+    subColor: 'rgba(255,255,255,0.62)',
   }
 }
 
 // ---------- Shared content blocks ----------
-
-function BioBlock() {
-  return (
-    <div>
-      <div style={{ ...LABEL, color: 'rgba(255,255,255,0.55)', marginBottom: 18 }}>
-        Who I Am
-      </div>
-      <p style={{
-        fontSize: 16,
-        fontWeight: 400,
-        lineHeight: 1.65,
-        color: 'rgba(255,255,255,0.82)',
-        margin: '0 0 28px',
-      }}>
-        Sailing since age nine, racing the ILCA since twelve. Six national championships and three continental titles. Studying Applied Mathematics and Economics at Harvard College while serving as Team Captain.
-      </p>
-      <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap' }}>
-        {BIO_STATS.map(([n, l]) => (
-          <div key={l}>
-            <div style={{
-              fontSize: 'clamp(36px, 5vw, 64px)',
-              fontWeight: 700,
-              lineHeight: 1,
-              letterSpacing: '-1.5px',
-              color: '#fff',
-            }}>{n}</div>
-            <div style={{
-              ...LABEL,
-              fontSize: 11,
-              color: 'rgba(255,255,255,0.5)',
-              marginTop: 8,
-            }}>{l}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function BodyBlock() {
-  return (
-    <div style={{
-      fontSize: 'clamp(17px, 1.6vw, 20px)',
-      fontWeight: 400,
-      lineHeight: 1.65,
-      color: 'rgba(255,255,255,0.88)',
-    }}>
-      <p style={{ margin: '0 0 1.1em' }}>
-        There is no shortcut. The only way to improve is to race the top sailors under the same conditions, on the same water, at the same time.
-      </p>
-      <p style={{ margin: 0 }}>
-        That means traveling to wherever the best regattas are happening — and doing it year-round.
-      </p>
-    </div>
-  )
-}
-
-function CostBlock({ isMobile }) {
-  const numeralSize = isMobile
-    ? 'clamp(56px, 14vw, 96px)'
-    : 'clamp(72px, 11vw, 180px)'
-  return (
-    <div>
-      <div style={{ ...LABEL, color: 'rgba(255,255,255,0.55)', marginBottom: 24 }}>
-        Where Your Support Goes
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {COSTS.map((item) => (
-          <div key={item.label} style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              minWidth: '2.4em',
-            }}>
-              <span style={{
-                fontSize: numeralSize,
-                fontWeight: 700,
-                lineHeight: 0.85,
-                letterSpacing: '-4px',
-                color: '#fff',
-              }}>{item.pct}</span>
-              <span style={{
-                fontSize: 'clamp(20px, 2vw, 32px)',
-                fontWeight: 500,
-                color: 'rgba(255,255,255,0.4)',
-                marginLeft: 6,
-                marginTop: '0.12em',
-              }}>%</span>
-            </div>
-            <div style={{
-              ...LABEL,
-              color: 'rgba(255,255,255,0.55)',
-              marginLeft: 'clamp(18px, 2vw, 32px)',
-            }}>{item.label}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 function PullQuote() {
   return (
@@ -191,14 +82,14 @@ function PullQuote() {
         fontSize: 'clamp(22px, 2.8vw, 36px)',
         fontWeight: 400,
         fontStyle: 'italic',
-        color: 'rgba(255,255,255,0.9)',
+        color: 'rgba(255,255,255,0.95)',
         lineHeight: 1.4,
       }}>
         &ldquo;Whether it&rsquo;s financial support, advice, a connection, or simply following along — it all matters.&rdquo;
       </div>
       <div style={{
         ...LABEL,
-        color: 'rgba(255,255,255,0.55)',
+        color: 'rgba(255,255,255,0.65)',
         marginTop: 18,
       }}>
         — Robby
@@ -218,14 +109,14 @@ function FinalCTA({ isMobile, days }) {
         fontSize: numeralSize,
         fontWeight: 700,
         lineHeight: 1,
-        letterSpacing: '-6px',
+        letterSpacing: '-2px',
         color: '#fff',
       }}>
         2028
       </div>
       <div style={{
         ...LABEL,
-        color: 'rgba(255,255,255,0.55)',
+        color: 'rgba(255,255,255,0.65)',
         marginTop: 20,
       }}>
         LA Olympics
@@ -241,12 +132,12 @@ function FinalCTA({ isMobile, days }) {
           fontWeight: 700,
           color: '#fff',
           lineHeight: 1,
-          letterSpacing: '-1.5px',
+          letterSpacing: '-0.5px',
         }}>{days}</span>
         <span style={{
           ...LABEL,
           fontSize: 14,
-          color: 'rgba(255,255,255,0.55)',
+          color: 'rgba(255,255,255,0.65)',
         }}>Days</span>
       </div>
       <div style={{ marginTop: 48 }}>
@@ -258,14 +149,14 @@ function FinalCTA({ isMobile, days }) {
             display: 'inline-block',
             fontSize: 'clamp(22px, 2.8vw, 40px)',
             fontWeight: 500,
-            color: ctaHover ? '#fff' : 'rgba(255,255,255,0.92)',
+            color: ctaHover ? '#fff' : 'rgba(255,255,255,0.95)',
             textDecoration: 'none',
             borderBottomStyle: 'solid',
             borderBottomWidth: ctaHover ? 3 : 2,
             borderBottomColor: 'rgb(220,40,40)',
             paddingBottom: 6,
             transition: 'color 0.2s ease, border-bottom-width 0.2s ease',
-            letterSpacing: '-0.3px',
+            letterSpacing: '-0.2px',
           }}
         >
           EMAIL ROBBY →
@@ -277,7 +168,7 @@ function FinalCTA({ isMobile, days }) {
           style={{
             fontSize: 13,
             fontStyle: 'italic',
-            color: 'rgba(255,255,255,0.55)',
+            color: 'rgba(255,255,255,0.7)',
             textDecoration: 'underline',
             textUnderlineOffset: '3px',
           }}
@@ -304,23 +195,13 @@ function HeroSection({ entrance, isMobile }) {
       boxSizing: 'border-box',
       overflow: 'hidden',
     }}>
-      <div style={{
-        position: 'absolute',
-        top: 'clamp(28px, 5vh, 56px)',
-        right: 'clamp(32px, 6vw, 120px)',
-        ...LABEL,
-        color: 'rgba(255,255,255,0.5)',
-      }}>
-        Support the Campaign
-      </div>
-
       <h1 style={{
         ...entrance.style(0),
         color: '#fff',
         fontSize: headlineSize,
         fontWeight: 700,
-        lineHeight: 0.95,
-        letterSpacing: '-3px',
+        lineHeight: 0.98,
+        letterSpacing: '-1px',
         margin: 0,
       }}>
         THE ROAD TO LA<br />
@@ -331,17 +212,69 @@ function HeroSection({ entrance, isMobile }) {
 
       <p style={{
         ...entrance.style(0),
-        color: 'rgba(255,255,255,0.82)',
+        color: 'rgba(255,255,255,0.92)',
         fontSize: 'clamp(18px, 2vw, 24px)',
         fontWeight: 400,
-        lineHeight: 1.5,
-        letterSpacing: '-0.3px',
-        maxWidth: 560,
+        lineHeight: 1.55,
+        letterSpacing: '-0.2px',
+        maxWidth: 580,
         marginTop: 'clamp(24px, 4vh, 48px)',
         marginBottom: 0,
       }}>
         I&rsquo;m campaigning for the 2028 Olympic Games in the ILCA 7. This is how I get there — and why I need you with me.
       </p>
+    </section>
+  )
+}
+
+// ---------- Bio section (its own standalone section, not pinned to the spine) ----------
+
+function BioSection({ entrance, isMobile }) {
+  return (
+    <section style={{
+      ...entrance.style(1),
+      maxWidth: 900,
+      margin: '0 auto',
+      padding: 'clamp(20px, 3vh, 48px) clamp(24px, 5vw, 80px) clamp(48px, 7vh, 96px)',
+      textAlign: 'center',
+    }}>
+      <div style={{ ...LABEL, color: 'rgba(255,255,255,0.65)', marginBottom: 24 }}>
+        Who I Am
+      </div>
+      <p style={{
+        fontSize: 'clamp(17px, 1.8vw, 22px)',
+        fontWeight: 400,
+        lineHeight: 1.65,
+        color: 'rgba(255,255,255,0.95)',
+        margin: '0 auto clamp(36px, 5vh, 60px)',
+        maxWidth: 680,
+      }}>
+        Sailing since age nine, racing the ILCA since twelve. Six national championships and three continental titles. Studying Applied Mathematics and Economics at Harvard College while serving as Team Captain.
+      </p>
+      <div style={{
+        display: 'flex',
+        gap: isMobile ? 32 : 72,
+        justifyContent: 'center',
+        flexWrap: 'wrap',
+      }}>
+        {BIO_STATS.map(([n, l]) => (
+          <div key={l} style={{ textAlign: 'center' }}>
+            <div style={{
+              fontSize: 'clamp(40px, 5.5vw, 72px)',
+              fontWeight: 700,
+              lineHeight: 1,
+              letterSpacing: '-1px',
+              color: '#fff',
+            }}>{n}</div>
+            <div style={{
+              ...LABEL,
+              fontSize: 11,
+              color: 'rgba(255,255,255,0.72)',
+              marginTop: 10,
+            }}>{l}</div>
+          </div>
+        ))}
+      </div>
     </section>
   )
 }
@@ -354,9 +287,9 @@ function YearLabel({ item, textAlign }) {
     <div style={{ textAlign }}>
       <div style={{
         fontSize: 'clamp(28px, 4vw, 56px)',
-        fontWeight: 600,
+        fontWeight: 700,
         lineHeight: 1,
-        letterSpacing: '-1.5px',
+        letterSpacing: '-0.5px',
         color: yearColor,
         textShadow: yearShadow,
         marginBottom: 10,
@@ -463,13 +396,13 @@ function SpineDesktop({ entrance, days }) {
   const rows = []
   years.forEach((item, i) => {
     const side = getSide(item.year)
-    // Tight base spacing; 2027 gets extra whitespace (it follows the cost block)
+    // Tight base spacing; the 2026→2027 and 2027→2028 gaps stretch out
     // to reinforce the "time stretches toward LA" rhythm.
     const marginTop =
       i === 0
         ? 0
         : item.year === '2027'
-          ? 'clamp(80px, 10vh, 140px)'
+          ? 'clamp(120px, 16vh, 220px)'
           : 'clamp(60px, 8vh, 100px)'
 
     rows.push(
@@ -481,48 +414,6 @@ function SpineDesktop({ entrance, days }) {
       />
     )
 
-    // Bio pinned into the 2019–2021 region, opposite those left-side labels.
-    if (item.year === '2019') {
-      rows.push(
-        <DesktopContentRow
-          key="bio"
-          side="right"
-          marginTop={'clamp(44px, 5vh, 72px)'}
-          maxWidth={380}
-          style={entrance.style(1)}
-        >
-          <BioBlock />
-        </DesktopContentRow>
-      )
-    }
-
-    // Body copy + cost block both live on the LEFT of the spine at the 2026→2027
-    // stretch, opposite 2026's right-side label. Pull-quote lives on the right.
-    if (item.year === '2026') {
-      rows.push(
-        <DesktopContentRow
-          key="body"
-          side="left"
-          marginTop={'clamp(60px, 7vh, 90px)'}
-          maxWidth={420}
-          style={entrance.style(2)}
-        >
-          <BodyBlock />
-        </DesktopContentRow>
-      )
-      rows.push(
-        <DesktopContentRow
-          key="cost"
-          side="left"
-          marginTop={'clamp(60px, 7vh, 100px)'}
-          maxWidth={480}
-          style={entrance.style(3)}
-        >
-          <CostBlock isMobile={false} />
-        </DesktopContentRow>
-      )
-    }
-
     if (item.year === '2027') {
       rows.push(
         <DesktopContentRow
@@ -530,7 +421,7 @@ function SpineDesktop({ entrance, days }) {
           side="right"
           marginTop={'clamp(60px, 7vh, 90px)'}
           maxWidth={480}
-          style={entrance.style(4)}
+          style={entrance.style(2)}
         >
           <PullQuote />
         </DesktopContentRow>
@@ -553,15 +444,15 @@ function SpineDesktop({ entrance, days }) {
         top: 0,
         bottom: 0,
         width: 2,
-        background: 'rgba(255,255,255,0.22)',
+        background: 'rgba(255,255,255,0.4)',
       }} />
 
       {rows}
 
       {/* 2028 breaks the alternating rule: centered on the spine, biggest numeral on the page */}
       <div style={{
-        ...entrance.style(5),
-        marginTop: 'clamp(100px, 14vh, 200px)',
+        ...entrance.style(3),
+        marginTop: 'clamp(120px, 16vh, 240px)',
         position: 'relative',
         textAlign: 'center',
       }}>
@@ -579,9 +470,9 @@ function MobileYearLabel({ item }) {
     <div>
       <div style={{
         fontSize: 'clamp(32px, 8vw, 48px)',
-        fontWeight: 600,
+        fontWeight: 700,
         lineHeight: 1,
-        letterSpacing: '-1.2px',
+        letterSpacing: '-0.5px',
         color: yearColor,
         textShadow: yearShadow,
         marginBottom: 8,
@@ -622,7 +513,7 @@ function SpineMobile({ entrance, days }) {
       i === 0
         ? 0
         : item.year === '2027'
-          ? 'clamp(64px, 9vh, 110px)'
+          ? 'clamp(80px, 11vh, 140px)'
           : 'clamp(40px, 5vh, 72px)'
 
     rows.push(
@@ -644,23 +535,18 @@ function SpineMobile({ entrance, days }) {
       </div>
     )
 
-    const contentWrap = (key, idx, child) => (
-      <div key={key} style={{
-        ...entrance.style(idx),
-        marginTop: 'clamp(32px, 5vh, 56px)',
-        paddingLeft: CONTENT_PAD_LEFT,
-        paddingRight: 12,
-      }}>
-        {child}
-      </div>
-    )
-
-    if (item.year === '2019') rows.push(contentWrap('bio', 1, <BioBlock />))
-    if (item.year === '2026') {
-      rows.push(contentWrap('body', 2, <BodyBlock />))
-      rows.push(contentWrap('cost', 3, <CostBlock isMobile={true} />))
+    if (item.year === '2027') {
+      rows.push(
+        <div key="quote" style={{
+          ...entrance.style(2),
+          marginTop: 'clamp(32px, 5vh, 56px)',
+          paddingLeft: CONTENT_PAD_LEFT,
+          paddingRight: 12,
+        }}>
+          <PullQuote />
+        </div>
+      )
     }
-    if (item.year === '2027') rows.push(contentWrap('quote', 4, <PullQuote />))
   })
 
   return (
@@ -675,7 +561,7 @@ function SpineMobile({ entrance, days }) {
         top: 0,
         bottom: 0,
         width: 2,
-        background: 'rgba(255,255,255,0.22)',
+        background: 'rgba(255,255,255,0.4)',
         transform: 'translateX(-1px)',
       }} />
 
@@ -683,7 +569,7 @@ function SpineMobile({ entrance, days }) {
 
       {/* 2028 anchor — on mobile it still sits right of the spine in the same column */}
       <div style={{
-        ...entrance.style(5),
+        ...entrance.style(3),
         marginTop: 'clamp(80px, 12vh, 160px)',
         paddingLeft: CONTENT_PAD_LEFT,
         paddingRight: 12,
@@ -706,9 +592,8 @@ export default function Support({ onNavigate }) {
     return () => window.removeEventListener('resize', h)
   }, [])
 
-  // 6 staggered entrance beats:
-  //   0 hero, 1 bio, 2 body copy, 3 cost block, 4 pull-quote, 5 final CTA + close
-  const entrance = usePageEntrance(6, { staggerMs: 120, initialDelayMs: 60 })
+  // 4 staggered entrance beats: 0 hero, 1 bio, 2 pull-quote, 3 final CTA + close
+  const entrance = usePageEntrance(4, { staggerMs: 120, initialDelayMs: 60 })
 
   const { days } = useCountdown(new Date('2028-07-14T00:00:00'))
 
@@ -716,21 +601,23 @@ export default function Support({ onNavigate }) {
     <div style={{
       minHeight: '100vh',
       background: 'rgb(20,110,240)',
-      // Fraunces is scoped to this page only — inherited by every descendant.
+      // Serif stack scoped to this page only — inherited by every descendant.
       fontFamily: FONT_FAMILY,
     }}>
       <HeroSection entrance={entrance} isMobile={isMobile} />
+
+      <BioSection entrance={entrance} isMobile={isMobile} />
 
       {isMobile
         ? <SpineMobile entrance={entrance} days={days} />
         : <SpineDesktop entrance={entrance} days={days} />}
 
       <div style={{
-        ...entrance.style(5),
+        ...entrance.style(3),
         textAlign: 'center',
         fontSize: 'clamp(20px, 2.4vw, 32px)',
         fontWeight: 400,
-        color: 'rgba(255,255,255,0.7)',
+        color: 'rgba(255,255,255,0.88)',
         maxWidth: 680,
         margin: '0 auto',
         padding: 'clamp(40px, 6vh, 80px) 20px',
