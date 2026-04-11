@@ -1,78 +1,67 @@
-const BASE = import.meta.env.BASE_URL
-
 export default function Contact({ onNavigate }) {
-
   return (
     <div style={{
       height: '100dvh',
-      position: 'relative',
+      background: 'rgb(240,240,240)',
       display: 'flex',
-      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
       overflow: 'hidden',
+      padding: '0 24px',
+      boxSizing: 'border-box',
     }}>
-      {/* Background photo */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0 }}>
-        <img
-          src={`${BASE}P1177244.jpeg`}
-          alt=""
-          style={{
-            width: '100%', height: '100%',
-            objectFit: 'cover', objectPosition: 'center 40%',
-          }}
-        />
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'rgba(10,20,80,0.75)',
-        }} />
-      </div>
-
-      {/* Content */}
-      <div style={{
-        position: 'relative', zIndex: 1, flex: 1,
-        display: 'flex', flexDirection: 'column',
-      }}>
-        {/* Main content - centered */}
-        <div style={{
-          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      <div style={{ textAlign: 'center', maxWidth: 520 }}>
+        <h1 style={{
+          color: 'rgb(15,15,15)',
+          fontSize: 'clamp(28px, 3.4vw, 44px)',
+          fontWeight: 500,
+          margin: '0 0 10px',
+          letterSpacing: '-0.8px',
         }}>
-          <div style={{
-            width: '100%',
-            background: 'rgba(240,240,240,0.94)',
-            padding: '48px 20px',
-            textAlign: 'center',
-          }}>
-            <h1 style={{
-              color: 'rgb(30,30,30)', fontSize: 22, fontWeight: 600, margin: '0 0 4px',
-              letterSpacing: '-0.3px',
-            }}>Robby Meek</h1>
-            <p style={{ color: 'rgb(110,110,110)', fontSize: 14, margin: '0 0 24px' }}>
-              Annapolis, Maryland
-            </p>
-            <p style={{ color: 'rgb(80,80,80)', fontSize: 13, margin: '0 0 4px' }}>
-              Sailing: robbymeek+LA2028@gmail.com
-            </p>
-            <p style={{ color: 'rgb(80,80,80)', fontSize: 13, margin: '0 0 24px' }}>
-              Personal: robbymeek@gmail.com
-            </p>
-            <button
-              onClick={() => onNavigate('Support')}
-              style={{
-                display: 'inline-block', color: 'rgb(60,60,60)', fontSize: 13,
-                border: '1px solid rgb(180,180,180)', padding: '10px 28px',
-                background: 'none', cursor: 'pointer',
-              }}
-            >
-              Support the Journey
-            </button>
-          </div>
-        </div>
-
-        {/* Footer credit */}
-        <div style={{ textAlign: 'center', padding: '20px' }}>
-          <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10 }}>
-            Website designed and made by Robby Meek
-          </p>
-        </div>
+          Robby Meek
+        </h1>
+        <p style={{
+          color: 'rgb(110,110,110)',
+          fontSize: 14,
+          margin: '0 0 36px',
+          letterSpacing: '0.3px',
+        }}>
+          Annapolis, Maryland
+        </p>
+        <p style={{ color: 'rgb(55,55,55)', fontSize: 14, margin: '0 0 10px' }}>
+          Sailing:{' '}
+          <a
+            href="mailto:robbymeek+LA2028@gmail.com"
+            style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: '3px' }}
+          >
+            robbymeek+LA2028@gmail.com
+          </a>
+        </p>
+        <p style={{ color: 'rgb(55,55,55)', fontSize: 14, margin: '0 0 40px' }}>
+          Personal:{' '}
+          <a
+            href="mailto:robbymeek@gmail.com"
+            style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: '3px' }}
+          >
+            robbymeek@gmail.com
+          </a>
+        </p>
+        <button
+          onClick={() => onNavigate('Support')}
+          style={{
+            display: 'inline-block',
+            color: 'rgb(25,25,25)',
+            fontSize: 13,
+            border: '1px solid rgb(160,160,160)',
+            padding: '11px 30px',
+            background: 'none',
+            cursor: 'pointer',
+            letterSpacing: '-0.2px',
+            fontFamily: 'inherit',
+          }}
+        >
+          Support the Journey
+        </button>
       </div>
     </div>
   )

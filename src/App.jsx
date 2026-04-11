@@ -15,7 +15,7 @@ const INNER_BG = {
   '/biography': 'rgb(230,235,240)',
   '/event-calendar': 'rgb(0,0,0)',
   '/team': 'rgb(22,24,28)',
-  '/contact': 'rgb(10,30,80)',
+  '/contact': 'rgb(240,240,240)',
   '/support': 'rgb(20,110,240)',
 }
 
@@ -24,7 +24,7 @@ const VARIANT_MAP = {
   '/biography': 'light',
   '/event-calendar': 'dark',
   '/team': 'blue',
-  '/contact': 'blue',
+  '/contact': 'light',
   '/support': 'blue',
 }
 
@@ -44,6 +44,9 @@ function getNavMode(pathname) {
   // narrow screens — see the isHomeRoute gates below.
   if (pathname === '/') return 'hover'
   if (pathname === '/support') return 'sticky'
+  // Contact is a single-viewport page — overlay the nav so the nav's height
+  // counts toward the 100dvh and the page can stay exactly one screen tall.
+  if (pathname === '/contact') return 'overlay'
   return 'static'
 }
 
