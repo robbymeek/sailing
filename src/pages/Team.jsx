@@ -309,7 +309,7 @@ export default function Team({ onNavigate }) {
 
           {/* Support CTA — plain underlined white so the chrome-text treatment
               stays reserved for the single editorial headline above. */}
-          <div style={{ marginBottom: 110 }}>
+          <div style={{ marginBottom: 48 }}>
             <button
               onClick={() => onNavigate('Support')}
               style={{
