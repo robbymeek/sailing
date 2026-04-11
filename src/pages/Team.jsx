@@ -69,7 +69,7 @@ function SponsorCard({ sponsor, hovered, onHover, onLeave }) {
         overflow: 'hidden',
         textDecoration: 'none',
         display: 'block',
-        flexGrow: hovered ? 3 : 1,
+        flexGrow: hovered ? 2.2 : 1,
         flexBasis: 0,
         flexShrink: 1,
         minWidth: 0,
@@ -86,15 +86,15 @@ function SponsorCard({ sponsor, hovered, onHover, onLeave }) {
           objectFit: 'cover',
           transition: 'transform 0.6s ease, filter 0.6s ease',
           transform: hovered ? 'scale(1.06)' : 'scale(1)',
-          filter: hovered ? 'brightness(0.28)' : 'grayscale(0.3) brightness(0.82)',
+          filter: hovered ? 'brightness(0.25)' : 'grayscale(0.3) brightness(0.82)',
           display: 'block',
         }}
       />
-      {/* Cobalt overlay on hover */}
+      {/* Cobalt overlay on hover — near-opaque so the highlight reads strong */}
       <div style={{
         position: 'absolute', inset: 0,
         background: ACCENT,
-        opacity: hovered ? 0.82 : 0,
+        opacity: hovered ? 0.95 : 0,
         transition: 'opacity 0.5s ease',
         pointerEvents: 'none',
       }} />
@@ -126,7 +126,7 @@ function SponsorCard({ sponsor, hovered, onHover, onLeave }) {
           margin: sponsor.logo ? 0 : '0 0 10px', textAlign: 'center',
         }}>{sponsor.name}</p>
         <p style={{
-          color: 'rgba(255,255,255,0.92)', fontSize: 13,
+          color: 'rgba(255,255,255,0.95)', fontSize: 13,
           textAlign: 'center', lineHeight: 1.65, margin: '12px 0 0',
           maxWidth: 340,
         }}>{sponsor.desc}</p>
@@ -164,7 +164,7 @@ function SupporterRow({ supporter }) {
     <div style={{
       display: 'flex', alignItems: 'center', gap: 14,
       padding: '14px 0',
-      borderBottom: '1px solid rgba(255,255,255,0.12)',
+      borderBottom: '1px solid rgba(255,255,255,0.14)',
     }}>
       <span style={{
         width: 6, height: 6,
@@ -204,7 +204,7 @@ function SupporterRow({ supporter }) {
 }
 
 export default function Team({ onNavigate }) {
-  const entrance = usePageEntrance(4, { staggerMs: 100, initialDelayMs: 50 })
+  const entrance = usePageEntrance(3, { staggerMs: 100, initialDelayMs: 50 })
   const [hoveredIdx, setHoveredIdx] = useState(null)
 
   return (
@@ -216,8 +216,8 @@ export default function Team({ onNavigate }) {
         display: 'flex',
         width: '100%',
         height: hoveredIdx !== null
-          ? 'clamp(560px, 80vh, 780px)'
-          : 'clamp(420px, 60vh, 620px)',
+          ? 'clamp(460px, 68vh, 660px)'
+          : 'clamp(380px, 56vh, 560px)',
         transition: 'height 0.6s cubic-bezier(0.22, 1, 0.36, 1)',
       }}>
         {SPONSORS.map((s, i) => (
@@ -231,58 +231,15 @@ export default function Team({ onNavigate }) {
         ))}
       </div>
 
-      {/* THE TEAM heading block — white text, between cards and supporters */}
+      {/* Editorial photo section — "The Team" ornate heading + Individual
+          Supporters list, both sitting over the aggressively stylized
+          sailing photo. */}
       <div style={{
         ...entrance.style(1),
-        maxWidth: 900,
-        margin: '0 auto',
-        padding: '90px 40px 70px',
-      }}>
-        <p style={labelStyle}>LA 2028 CAMPAIGN</p>
-        <h1 style={{
-          color: '#fff',
-          fontSize: 'clamp(40px, 6vw, 68px)',
-          fontWeight: 500,
-          letterSpacing: '-1.6px',
-          lineHeight: 1.02,
-          margin: '0 0 18px',
-        }}>
-          The Team
-        </h1>
-        <p style={{
-          ...metaStyle,
-          maxWidth: 560,
-          margin: '0 0 32px',
-        }}>
-          The sponsors, families, and supporters who make this Olympic campaign possible.
-        </p>
-        <button
-          onClick={() => onNavigate('Support')}
-          className="chrome-text"
-          style={{
-            // leave `background` unset so .chrome-text's gradient can paint
-            // (background-clip: text needs that gradient as the background source)
-            border: 'none',
-            cursor: 'pointer',
-            padding: '10px 0',
-            fontSize: 15,
-            fontWeight: 500,
-            letterSpacing: '-0.3px',
-            fontFamily: 'inherit',
-          }}
-        >
-          Support the Campaign
-        </button>
-      </div>
-
-      {/* Individual Supporters — sailing photo heavily stylized behind,
-          headline in cobalt, supporter list in white. */}
-      <div style={{
-        ...entrance.style(2),
         position: 'relative',
         overflow: 'hidden',
-        padding: '130px 40px 150px',
-        minHeight: 'clamp(640px, 88vh, 920px)',
+        padding: '140px 40px 160px',
+        minHeight: 'clamp(780px, 100vh, 1100px)',
       }}>
         {/* Aggressive grayscale/high-contrast sailing photo */}
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
@@ -293,14 +250,14 @@ export default function Team({ onNavigate }) {
               width: '100%', height: '100%',
               objectFit: 'cover',
               objectPosition: 'center 20%',
-              filter: 'grayscale(1) contrast(1.5) brightness(0.52)',
+              filter: 'grayscale(1) contrast(1.55) brightness(0.5)',
               transform: 'scale(1.14)',
             }}
           />
           {/* Solid dark wash */}
           <div style={{
             position: 'absolute', inset: 0,
-            background: 'rgba(0,0,0,0.58)',
+            background: 'rgba(0,0,0,0.62)',
           }} />
           {/* Cobalt tint layer */}
           <div style={{
@@ -313,17 +270,69 @@ export default function Team({ onNavigate }) {
         <div style={{
           position: 'relative',
           zIndex: 1,
-          maxWidth: 900,
+          maxWidth: 1100,
           margin: '0 auto',
           textAlign: 'center',
         }}>
+          {/* The Team — tall ornate serif caps in metallic white via .chrome-text */}
+          <h1
+            className="chrome-text"
+            style={{
+              fontFamily: '"Didot", "Bodoni 72", "Bodoni MT", "Playfair Display", Georgia, serif',
+              fontSize: 'clamp(60px, 10vw, 148px)',
+              fontWeight: 500,
+              textTransform: 'uppercase',
+              letterSpacing: '0.035em',
+              lineHeight: 1,
+              margin: '0 0 28px',
+            }}
+          >
+            The Team
+          </h1>
+
+          {/* Tagline — white body */}
+          <p style={{
+            color: 'rgba(255,255,255,0.88)',
+            fontSize: 'clamp(15px, 1.4vw, 18px)',
+            fontWeight: 400,
+            lineHeight: 1.7,
+            letterSpacing: '-0.2px',
+            maxWidth: 620,
+            margin: '0 auto 34px',
+          }}>
+            The sponsors, families, and supporters who make this Olympic campaign possible.
+          </p>
+
+          {/* Support CTA — plain underlined white so the chrome-text treatment
+              stays reserved for the single editorial headline above. */}
+          <div style={{ marginBottom: 110 }}>
+            <button
+              onClick={() => onNavigate('Support')}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '6px 0',
+                fontSize: 15,
+                fontWeight: 500,
+                letterSpacing: '-0.3px',
+                fontFamily: 'inherit',
+                color: '#fff',
+                borderBottom: '1px solid rgba(255,255,255,0.45)',
+              }}
+            >
+              Support the Campaign
+            </button>
+          </div>
+
+          {/* Individual Supporters — cobalt heading, white list */}
           <h2 style={{
             color: ACCENT,
-            fontSize: 'clamp(34px, 5.2vw, 56px)',
+            fontSize: 'clamp(28px, 4vw, 44px)',
             fontWeight: 500,
-            letterSpacing: '-1.5px',
+            letterSpacing: '-1.2px',
             lineHeight: 1.03,
-            margin: '0 0 52px',
+            margin: '0 0 44px',
           }}>
             Individual Supporters
           </h2>
@@ -335,7 +344,7 @@ export default function Team({ onNavigate }) {
               <div key={`empty-${i}`} style={{
                 display: 'flex', alignItems: 'center', gap: 14,
                 padding: '14px 0',
-                borderBottom: '1px solid rgba(255,255,255,0.12)',
+                borderBottom: '1px solid rgba(255,255,255,0.14)',
               }}>
                 <span style={{
                   width: 6, height: 6,
@@ -362,7 +371,7 @@ export default function Team({ onNavigate }) {
       <div style={{ height: 2, background: 'rgba(255,255,255,0.1)', maxWidth: 120, margin: '0 auto' }} />
 
       {/* Thank-you letter */}
-      <div style={{ ...entrance.style(3), maxWidth: 900, margin: '0 auto', padding: '60px 40px 50px' }}>
+      <div style={{ ...entrance.style(2), maxWidth: 900, margin: '0 auto', padding: '60px 40px 50px' }}>
         <p style={{ ...labelStyle, marginBottom: 24 }}>A NOTE FROM ROBBY</p>
         <div style={{ display: 'flex', gap: 40, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           {/* Photo */}
