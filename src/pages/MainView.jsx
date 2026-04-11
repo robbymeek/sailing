@@ -102,15 +102,22 @@ function HomeIntro({ onNavigate, boatSrc, days, hrs, mins, secs }) {
 
     const startTime = performance.now()
 
-    // Photo cadence: 80ms during flash, ease-out to 350ms during slowing, stop at 3200ms.
+    // Photo cadence: starts very fast (45ms), eases up to ~85ms by ~1.4s,
+    // then a slowing phase to ~480ms, then stops cycling — the last image
+    // hovers in place while the overlay fades blue→black on top of it.
     const delayForElapsed = (elapsed) => {
-      if (elapsed < 2000) return 80
-      if (elapsed < 3200) {
-        const t = (elapsed - 2000) / 1200
-        const eased = 1 - Math.pow(1 - t, 2)
-        return 80 + (350 - 80) * eased
+      if (elapsed < 1400) {
+        // Snap-fast at the start, gentle ramp 45ms → 85ms over 1.4s
+        const t = elapsed / 1400
+        return 45 + 40 * t
       }
-      return Infinity
+      if (elapsed < 2600) {
+        // Slowing: 85ms → 480ms ease-out over 1.2s
+        const t = (elapsed - 1400) / 1200
+        const eased = 1 - Math.pow(1 - t, 2)
+        return 85 + (480 - 85) * eased
+      }
+      return Infinity // hold last image
     }
 
     const cyclePhoto = () => {
@@ -145,18 +152,23 @@ function HomeIntro({ onNavigate, boatSrc, days, hrs, mins, secs }) {
     ])
 
     preload.then(() => {
+      // Phase timeline:
+      //   200ms : flash begins (snap-fast cadence)
+      //  1400ms : cadence ease-out begins
+      //  2600ms : last image latches in place; overlay starts blue→black
+      //  3400ms : boat starts fading in over the (still visible) last image
+      //  3800ms : photo layer hidden — overlay is mostly black by now
+      //  4400ms : rest state, bottom-left nav + countdown fade in
       schedule(200, () => {
         setPhase('flash')
-        setPhotoAnimDuration(80)
+        setPhotoAnimDuration(45)
         cyclePhoto()
       })
-      schedule(2000, () => setPhase('slowing'))
-      schedule(3200, () => {
-        setPhase('revealing')
-        setPhotoLayerVisible(false)
-      })
+      schedule(1400, () => setPhase('slowing'))
+      schedule(2600, () => setPhase('revealing'))
       schedule(3400, () => setBoatVisible(true))
-      schedule(4200, () => {
+      schedule(3800, () => setPhotoLayerVisible(false))
+      schedule(4400, () => {
         setPhase('rest')
         setUiVisible(true)
         introHasPlayed = true
@@ -175,16 +187,17 @@ function HomeIntro({ onNavigate, boatSrc, days, hrs, mins, secs }) {
   // single solid layer — no linear-gradient involved.
   const overlayStyle = (() => {
     let background = 'rgba(30,64,255,0)'
-    let transition = 'background 1.8s linear'
+    let transition = 'background 1.2s linear'
     if (phase === 'flash') {
       background = 'rgba(30,64,255,0.35)'
-      transition = 'background 1.8s linear'
+      transition = 'background 1.2s linear'
     } else if (phase === 'slowing') {
       background = 'rgba(30,64,255,0.75)'
       transition = 'background 1.2s linear'
     } else if (phase === 'revealing') {
-      background = 'rgba(0,0,0,0.85)'
-      transition = 'background 1s linear'
+      // Hue-shift over the full 1.2s of the held last image (2600→3800ms)
+      background = 'rgba(0,0,0,0.9)'
+      transition = 'background 1.2s linear'
     } else if (phase === 'rest') {
       background = 'rgba(0,0,0,1)'
       transition = 'background 0.6s linear'
