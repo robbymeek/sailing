@@ -192,11 +192,7 @@ function HomeIntro({ onNavigate, boatSrc, days, hrs, mins, secs }) {
     return { background, transition }
   })()
 
-  // Typographic anchor — countdown corner reuses the same label/value/meta treatment
-  const anchorLabel = {
-    color: 'rgb(117,117,117)', fontSize: 12, fontWeight: 400,
-    letterSpacing: '-0.48px', textTransform: 'uppercase', margin: '0 0 6px',
-  }
+  // Typographic anchor — countdown corner reuses the value/meta treatment
   const anchorValue = {
     color: 'rgb(157,174,194)', fontSize: 20, fontWeight: 400,
     letterSpacing: '-0.8px', margin: '0 0 8px',
@@ -319,8 +315,7 @@ function HomeIntro({ onNavigate, boatSrc, days, hrs, mins, secs }) {
             onClick={() => onNavigate('Event Calendar')}
             style={{ ...anchorButton, textAlign: 'right' }}
           >
-            <p style={anchorLabel}>EVENT CALENDAR</p>
-            <h1 style={anchorValue}>LA 2028</h1>
+            <h1 style={{ ...anchorValue, marginTop: 0 }}>LA 2028</h1>
           </button>
           <p style={anchorMeta}>{countdownText}</p>
         </div>

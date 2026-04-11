@@ -39,9 +39,11 @@ const CURRENT_MAP = {
 }
 
 function getNavMode(pathname) {
-  // Home has its own cinematic layout + persistent bottom-left nav baked
-  // into MainView — App.jsx should render no nav chrome at all for /.
-  if (pathname === '/') return 'none'
+  // Home uses hover-revealed top nav at large widths in addition to its
+  // baked-in bottom-left nav. Compact-mode fallbacks (hamburger + pinned
+  // Support) are suppressed on / because the bottom-left nav already covers
+  // narrow screens — see the isHomeRoute gates below.
+  if (pathname === '/') return 'hover'
   if (pathname === '/support') return 'sticky'
   return 'static'
 }
@@ -125,9 +127,6 @@ export default function App() {
   const [navMenuOpen, setNavMenuOpen] = useState(false)
 
   useLayoutEffect(() => {
-    // On / the measurement nav is not rendered, so this effect no-ops until
-    // the user leaves /, at which point it re-runs with the ref populated.
-    if (navMode === 'none') return
     const el = navMeasureRef.current
     if (!el) return
     const check = () => {
@@ -140,7 +139,7 @@ export default function App() {
     const ro = new ResizeObserver(check)
     ro.observe(document.body)
     return () => ro.disconnect()
-  }, [navMode])
+  }, [])
 
   // Close the overlay on route change and on Escape.
   useEffect(() => {
@@ -153,12 +152,17 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [navMenuOpen])
 
+  // The home route uses hover nav, but it has its own cinematic intro and a
+  // bottom-left nav that already telegraphs navigability — we don't need the
+  // discovery hint there. Other hover routes (currently none) would still get it.
+  const isHomeRoute = location.pathname === '/'
+
   // Discovery affordance: on hover-mode routes, briefly fade the nav in at low opacity
   // after the boat entrance completes so first-time visitors notice nav exists.
   // Runs once per mount of a hover route, does not use any storage APIs.
   const [navHint, setNavHint] = useState(false)
   useEffect(() => {
-    if (navMode !== 'hover') {
+    if (navMode !== 'hover' || isHomeRoute) {
       setNavHint(false)
       return
     }
@@ -168,7 +172,7 @@ export default function App() {
       clearTimeout(showT)
       clearTimeout(hideT)
     }
-  }, [navMode, location.pathname])
+  }, [navMode, location.pathname, isHomeRoute])
 
   let navVisible
   let navOpacity
@@ -216,14 +220,10 @@ export default function App() {
     supportUseShimmer = true
   }
 
-  // The home route (/) has its own persistent nav baked into MainView and
-  // should render no App-level nav chrome at all — no centered nav, no
-  // hamburger, no pinned Support CTA, no measurement nav.
-  const suppressNavChrome = navMode === 'none'
-
-  // Show the standalone pinned Support CTA on hover routes OR whenever the
-  // centered nav has collapsed into compact mode (it's been removed from both).
-  const showFixedSupport = !suppressNavChrome && (navMode === 'hover' || navOverflowing)
+  // Pinned top-right Support CTA appears whenever the centered nav has
+  // collapsed into compact mode — except on home, where the bottom-left
+  // nav already includes Support.
+  const showFixedSupport = navOverflowing && !isHomeRoute
 
   return (
     <div
@@ -236,20 +236,17 @@ export default function App() {
     >
       {/* Hidden measurement nav: renders the full horizontal nav off-screen so
           ResizeObserver can compare its natural content width to the viewport
-          and decide when to collapse into compact mode. Skipped on /
-          because the home route has no App-level nav chrome. */}
-      {!suppressNavChrome && (
-        <div ref={navMeasureRef} aria-hidden="true" style={{
-          position: 'fixed', top: -9999, left: -9999,
-          visibility: 'hidden', pointerEvents: 'none',
-          whiteSpace: 'nowrap',
-        }}>
-          <Nav current="Home" onNavigate={() => {}} variant="dark" />
-        </div>
-      )}
+          and decide when to collapse into compact mode. */}
+      <div ref={navMeasureRef} aria-hidden="true" style={{
+        position: 'fixed', top: -9999, left: -9999,
+        visibility: 'hidden', pointerEvents: 'none',
+        whiteSpace: 'nowrap',
+      }}>
+        <Nav current="Home" onNavigate={() => {}} variant="dark" />
+      </div>
 
-      {/* Regular centered Nav — hidden when compact mode is active or on /. */}
-      {!suppressNavChrome && !navOverflowing && (
+      {/* Regular centered Nav — hidden when compact mode is active. */}
+      {!navOverflowing && (
         <div style={{
           position: navPosition,
           top: 0, left: 0, right: 0,
@@ -271,8 +268,9 @@ export default function App() {
 
       {/* Compact-mode hamburger trigger: fixed top-left, two horizontal lines,
           animates to an X when the overlay is open. Lives outside any transform
-          or opacity wrapper so it stays put on scroll. */}
-      {!suppressNavChrome && navOverflowing && (
+          or opacity wrapper so it stays put on scroll. Skipped on home —
+          the bottom-left nav baked into MainView covers narrow screens. */}
+      {!isHomeRoute && navOverflowing && (
         <button
           onClick={() => setNavMenuOpen((o) => !o)}
           aria-label={navMenuOpen ? 'Close menu' : 'Open menu'}
@@ -305,7 +303,7 @@ export default function App() {
       )}
 
       {/* Compact-mode overlay: full-viewport backdrop + vertical stack. */}
-      {!suppressNavChrome && navOverflowing && (
+      {!isHomeRoute && navOverflowing && (
         <div
           onClick={() => setNavMenuOpen(false)}
           role="dialog"
