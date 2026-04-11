@@ -14,7 +14,7 @@ import Support from './pages/Support'
 const INNER_BG = {
   '/biography': 'rgb(230,235,240)',
   '/event-calendar': 'rgb(0,0,0)',
-  '/team': 'rgb(40,70,150)',
+  '/team': 'rgb(20,110,240)',
   '/contact': 'rgb(10,30,80)',
   '/support': 'rgb(18,0,120)',
 }
