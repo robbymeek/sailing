@@ -201,28 +201,16 @@ export default function App() {
 
   const navVariant = getVariant(location.pathname)
 
-  // Variant-aware colors for the fixed hamburger + Support CTA that live
-  // outside the regular Nav wrapper (so they need their own color logic).
-  let triggerColor, supportFallbackColor, supportUseShimmer
+  // Variant-aware color for the fixed hamburger trigger that lives outside
+  // the regular Nav wrapper (so it needs its own color logic).
+  let triggerColor
   if (navVariant === 'light') {
     triggerColor = 'rgba(0,0,0,0.6)'
-    supportFallbackColor = 'rgba(0,0,0,0.75)'
-    supportUseShimmer = false
   } else if (navVariant === 'red') {
     triggerColor = 'rgba(40,5,5,0.7)'
-    supportFallbackColor = 'rgba(40,5,5,0.85)'
-    supportUseShimmer = false
   } else {
-    // dark + blue — both sit on dark backgrounds, chrome-text reads fine
     triggerColor = 'rgba(255,255,255,0.7)'
-    supportFallbackColor = 'rgba(255,255,255,0.75)'
-    supportUseShimmer = true
   }
-
-  // Pinned top-right Support CTA appears whenever the centered nav has
-  // collapsed into compact mode — except on home, where the bottom-left
-  // nav already includes Support.
-  const showFixedSupport = navOverflowing && !isHomeRoute
 
   return (
     <div
@@ -346,31 +334,6 @@ export default function App() {
             })}
           </div>
         </div>
-      )}
-
-      {/* Always-visible Support CTA: on hover-mode routes, or whenever the centered
-          nav has collapsed into compact mode. Lives outside the nav wrapper so it
-          ignores any opacity gate and is always reachable. */}
-      {showFixedSupport && (
-        <button
-          onClick={() => go('Support')}
-          className={supportUseShimmer ? 'chrome-text' : undefined}
-          style={{
-            position: 'fixed',
-            top: 20, right: 24,
-            zIndex: 60,
-            background: supportUseShimmer ? undefined : 'none',
-            border: 'none',
-            padding: '4px 8px',
-            fontSize: 14,
-            fontWeight: 500,
-            color: supportUseShimmer ? undefined : supportFallbackColor,
-            letterSpacing: '-0.3px',
-            cursor: 'pointer',
-          }}
-        >
-          Support
-        </button>
       )}
 
       <div
