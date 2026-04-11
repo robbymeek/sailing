@@ -316,24 +316,49 @@ function HomeIntro({ onNavigate, boatSrc, days, hrs, mins, secs }) {
 
       {/* Top-right countdown corner — clickable, fades in with the nav */}
       {showCountdown && (
-        <div style={{
-          position: 'fixed',
-          top: 32, right: 32,
-          textAlign: 'right',
-          opacity: uiVisible ? 1 : 0,
-          transition: 'opacity 0.6s ease',
-          pointerEvents: uiVisible ? 'auto' : 'none',
-          zIndex: 20,
-        }}>
-          <button
-            onClick={() => onNavigate('Event Calendar')}
-            style={{ ...anchorButton, textAlign: 'right' }}
-          >
-            <h1 style={{ ...anchorValue, marginTop: 0 }}>LA 2028</h1>
-          </button>
-          <p style={anchorMeta}>{countdownText}</p>
-        </div>
+        <CountdownCorner
+          onNavigate={onNavigate}
+          uiVisible={uiVisible}
+          anchorButton={anchorButton}
+          anchorValue={anchorValue}
+          anchorMeta={anchorMeta}
+          countdownText={countdownText}
+        />
       )}
+    </div>
+  )
+}
+
+// Top-right countdown corner — LA 2028 hovers royal blue and click-throughs
+// to Event Calendar. The countdown line below is a non-interactive sibling.
+function CountdownCorner({ onNavigate, uiVisible, anchorButton, anchorValue, anchorMeta, countdownText }) {
+  const [hover, setHover] = useState(false)
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 32, right: 32,
+      textAlign: 'right',
+      opacity: uiVisible ? 1 : 0,
+      transition: 'opacity 0.6s ease',
+      pointerEvents: uiVisible ? 'auto' : 'none',
+      zIndex: 20,
+    }}>
+      <button
+        onClick={() => onNavigate('Event Calendar')}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        onFocus={() => setHover(true)}
+        onBlur={() => setHover(false)}
+        style={{ ...anchorButton, textAlign: 'right' }}
+      >
+        <h1 style={{
+          ...anchorValue,
+          marginTop: 0,
+          color: hover ? '#1E40FF' : anchorValue.color,
+          transition: 'color 0.25s ease',
+        }}>LA 2028</h1>
+      </button>
+      <p style={anchorMeta}>{countdownText}</p>
     </div>
   )
 }
