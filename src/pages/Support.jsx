@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Footer from '../components/Footer'
 import useCountdown from '../hooks/useCountdown'
 
@@ -57,18 +57,14 @@ const BIO_STATS = [
   ['9+', 'Years in ILCA'],
 ]
 
-// Snap pages — each shows two years. Photo is from the more notable year.
+// Snap pages — grouped year indices + background photo
 const SNAP_PAGES = [
-  { indices: [0, 1], photo: 'IMG_5343.jpeg' },      // 2017 + 2018
-  { indices: [2, 3], photo: 'Screen Shot 2022-01-18 at 6.25.56 PM.jpg' }, // 2019 + 2020
-  { indices: [4, 5], photo: 'IMG_4733.jpeg' },       // 2021 + 2022
-  { indices: [6, 7], photo: 'IMG_5956.JPG' },        // 2023 + 2024
-  { indices: [8, 9], photo: 'IMG_6285.JPG' },        // 2025 + 2026
-  { indices: [10, 11], photo: null },                 // 2027 + 2028 (dark)
+  { indices: [2, 3, 4, 5], photo: 'IMG_4733.jpeg', type: 'quad' },       // 2019–2022
+  { indices: [6, 7], photo: 'IMG_5956.JPG', type: 'pair' },              // 2023+2024
+  { indices: [8, 9], photo: 'IMG_6285.JPG', type: 'pair' },              // 2025+2026
+  { indices: [10, 11], photo: null, type: 'last' },                       // 2027+2028
 ]
 const NUM_PAGES = SNAP_PAGES.length
-const PAGE_VH = 100 // each page is 100vh of scroll
-const TOTAL_VH = NUM_PAGES * PAGE_VH // outer container height
 
 const LABEL = {
   fontSize: 12,
@@ -120,21 +116,41 @@ function SailboatIcon({ variant = 'default', size = 22 }) {
   )
 }
 
-// ---------- First page overlay: hero + bio integrated into page 0 ----------
+// ---------- Hero section: sits above the timeline, fills viewport below nav ----------
 
-function FirstPageContent({ isMobile }) {
+function HeroSection({ isMobile }) {
   return (
-    <div style={{
-      position: 'absolute',
-      inset: 0,
+    <section style={{
+      position: 'relative',
+      width: '100%',
+      minHeight: 'calc(100vh - 60px)',
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'center',
-      padding: isMobile ? '0 24px 0 48px' : '0 clamp(48px, 6vw, 100px)',
+      overflow: 'hidden',
+      background: 'rgb(12,14,18)',
     }}>
-      {/* Headline + bio — left side on desktop, full width on mobile */}
+      {/* Background photo */}
+      <img
+        src={`${BASE}sailing-photos/IMG_5343.jpeg`}
+        alt=""
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          objectPosition: 'center',
+          filter: 'grayscale(0.2) contrast(1.1) brightness(0.65)',
+        }}
+      />
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)' }} />
+
       <div style={{
-        maxWidth: isMobile ? '100%' : 480,
+        position: 'relative',
+        zIndex: 1,
+        padding: isMobile ? '0 24px' : '0 clamp(48px, 6vw, 100px)',
+        maxWidth: isMobile ? '100%' : 540,
         marginLeft: isMobile ? 0 : 'clamp(24px, 4vw, 80px)',
       }}>
         <div style={{ ...LABEL, color: 'rgba(255,255,255,0.4)', marginBottom: 16 }}>
@@ -142,7 +158,7 @@ function FirstPageContent({ isMobile }) {
         </div>
         <h1 style={{
           color: '#fff',
-          fontSize: isMobile ? 'clamp(32px, 9vw, 56px)' : 'clamp(36px, 5vw, 72px)',
+          fontSize: isMobile ? 'clamp(36px, 10vw, 64px)' : 'clamp(40px, 5.5vw, 80px)',
           fontWeight: 700,
           lineHeight: 0.95,
           letterSpacing: '-2px',
@@ -193,7 +209,7 @@ function FirstPageContent({ isMobile }) {
           <span style={{ display: 'inline-block', animation: 'scrollHint 2s ease-in-out infinite' }}>↓</span>
         </div>
       </div>
-    </div>
+    </section>
   )
 }
 
@@ -289,110 +305,109 @@ function YearBlock({ item, side, verticalPos, isMobile, factBox }) {
 }
 
 function TimelineSection({ isMobile, days }) {
-  const outerRef = useRef(null)
+  const stickyRef = useRef(null)
   const [activePage, setActivePage] = useState(0)
-  const [sailboatProgress, setSailboatProgress] = useState(0)
-  const rafRef = useRef(null)
-  const snapTimerRef = useRef(null)
-  const isSnappingRef = useRef(false)
+  const cooldownRef = useRef(false)
+  const activePageRef = useRef(0)
 
-  useEffect(() => {
-    function onScroll() {
-      if (rafRef.current) return
-      rafRef.current = requestAnimationFrame(() => {
-        rafRef.current = null
-        const outer = outerRef.current
-        if (!outer) return
+  // Keep ref in sync for use inside event handlers
+  activePageRef.current = activePage
 
-        const rect = outer.getBoundingClientRect()
-        const outerHeight = outer.offsetHeight
-        const viewportH = window.innerHeight
-        const scrolled = -rect.top
-        const scrollRange = outerHeight - viewportH
-        if (scrollRange <= 0) return
-        const progress = Math.max(0, Math.min(1, scrolled / scrollRange))
-
-        setSailboatProgress(progress)
-
-        // Determine active page
-        const pageIdx = Math.min(
-          NUM_PAGES - 1,
-          Math.floor(progress * NUM_PAGES)
-        )
-        setActivePage(pageIdx)
-
-        // Snap on scroll stop (debounced)
-        clearTimeout(snapTimerRef.current)
-        if (!isSnappingRef.current) {
-          snapTimerRef.current = setTimeout(() => {
-            // Re-read position for snap target
-            const r = outer.getBoundingClientRect()
-            const s = -r.top
-            const range = outerHeight - viewportH
-            if (range <= 0) return
-            const p = Math.max(0, Math.min(1, s / range))
-            const nearestPage = Math.round(p * (NUM_PAGES - 1))
-            const targetProgress = nearestPage / (NUM_PAGES - 1)
-            const outerTop = window.scrollY + r.top
-            const targetScroll = outerTop + targetProgress * range
-
-            // Only snap if we're not already close
-            if (Math.abs(window.scrollY - targetScroll) > 20) {
-              isSnappingRef.current = true
-              window.scrollTo({ top: targetScroll, behavior: 'smooth' })
-              setTimeout(() => { isSnappingRef.current = false }, 600)
-            }
-          }, 120)
-        }
-      })
-    }
-
-    window.addEventListener('scroll', onScroll, { passive: true })
-    onScroll()
-    return () => {
-      window.removeEventListener('scroll', onScroll)
-      clearTimeout(snapTimerRef.current)
-      if (rafRef.current) cancelAnimationFrame(rafRef.current)
-    }
+  // Navigate to a page by index
+  const goToPage = useCallback((idx) => {
+    const clamped = Math.max(0, Math.min(NUM_PAGES - 1, idx))
+    if (clamped === activePageRef.current) return
+    setActivePage(clamped)
+    activePageRef.current = clamped
+    // Cooldown prevents momentum from firing multiple pages
+    cooldownRef.current = true
+    setTimeout(() => { cooldownRef.current = false }, 500)
   }, [])
 
-  // Jump to a specific page when clicking a ghost sailboat
-  const scrollToPage = (pageIdx) => {
-    const outer = outerRef.current
-    if (!outer) return
-    const rect = outer.getBoundingClientRect()
-    const outerHeight = outer.offsetHeight
-    const viewportH = window.innerHeight
-    const scrollRange = outerHeight - viewportH
-    const targetProgress = pageIdx / (NUM_PAGES - 1)
-    const outerTop = window.scrollY + rect.top
-    const targetScroll = outerTop + targetProgress * scrollRange
-    isSnappingRef.current = true
-    window.scrollTo({ top: targetScroll, behavior: 'smooth' })
-    setTimeout(() => { isSnappingRef.current = false }, 600)
-  }
+  // Wheel handler: intercept scroll when the sticky frame is in view,
+  // one tick = one page, with cooldown to block momentum
+  useEffect(() => {
+    const el = stickyRef.current
+    if (!el) return
+
+    function onWheel(e) {
+      // Only intercept when the sticky frame is actually covering the viewport
+      const rect = el.getBoundingClientRect()
+      if (rect.top > 10 || rect.bottom < window.innerHeight - 10) return
+
+      // At first page scrolling up, or last page scrolling down → let normal scroll happen
+      const cur = activePageRef.current
+      if (e.deltaY < 0 && cur === 0) return
+      if (e.deltaY > 0 && cur === NUM_PAGES - 1) return
+
+      e.preventDefault()
+      if (cooldownRef.current) return
+
+      if (e.deltaY > 0) {
+        goToPage(cur + 1)
+      } else if (e.deltaY < 0) {
+        goToPage(cur - 1)
+      }
+    }
+
+    window.addEventListener('wheel', onWheel, { passive: false })
+    return () => window.removeEventListener('wheel', onWheel)
+  }, [goToPage])
+
+  // Touch support: swipe up/down = page forward/back
+  useEffect(() => {
+    const el = stickyRef.current
+    if (!el) return
+    let touchStartY = 0
+
+    function onTouchStart(e) {
+      touchStartY = e.touches[0].clientY
+    }
+    function onTouchEnd(e) {
+      const rect = el.getBoundingClientRect()
+      if (rect.top > 10 || rect.bottom < window.innerHeight - 10) return
+
+      const dy = touchStartY - e.changedTouches[0].clientY
+      const cur = activePageRef.current
+      if (dy < 0 && cur === 0) return
+      if (dy > 0 && cur === NUM_PAGES - 1) return
+
+      if (Math.abs(dy) > 40) {
+        if (cooldownRef.current) return
+        if (dy > 0) goToPage(cur + 1)
+        else goToPage(cur - 1)
+      }
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchend', onTouchEnd, { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [goToPage])
 
   const spineLeft = isMobile ? 24 : '50%'
   const activePageData = SNAP_PAGES[activePage]
   const hasYears2026 = activePageData.indices.some(i => TIMELINE_DATA[i]?.current)
 
+  // Build ghost titles from page indices
+  const pageTitle = (pi) => {
+    const years = SNAP_PAGES[pi].indices.map(i => TIMELINE_DATA[i].year)
+    return years.length <= 2 ? years.join('–') : `${years[0]}–${years[years.length - 1]}`
+  }
+
   return (
     <div
-      ref={outerRef}
+      ref={stickyRef}
       style={{
         position: 'relative',
-        height: `${TOTAL_VH}vh`,
-      }}
-    >
-      {/* Sticky viewport frame */}
-      <div style={{
-        position: 'sticky',
-        top: 0,
         height: '100vh',
         width: '100%',
         overflow: 'hidden',
         background: 'rgb(12,14,18)',
-      }}>
+      }}
+    >
         {/* Background photos — one per page, crossfading */}
         {SNAP_PAGES.map((page, pi) => {
           if (!page.photo) return null
@@ -442,7 +457,7 @@ function TimelineSection({ isMobile, days }) {
           return (
             <div
               key={`ghost-${pi}`}
-              onClick={() => scrollToPage(pi)}
+              onClick={() => goToPage(pi)}
               style={{
                 position: 'absolute',
                 left: spineLeft,
@@ -455,7 +470,7 @@ function TimelineSection({ isMobile, days }) {
                 transition: 'opacity 0.4s ease',
                 pointerEvents: isActive ? 'none' : 'auto',
               }}
-              title={`${TIMELINE_DATA[SNAP_PAGES[pi].indices[0]].year}–${TIMELINE_DATA[SNAP_PAGES[pi].indices[1]].year}`}
+              title={pageTitle(pi)}
             >
               <SailboatIcon variant="ghost" size={16} />
             </div>
@@ -482,13 +497,6 @@ function TimelineSection({ isMobile, days }) {
         <div style={{ position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none' }}>
           {SNAP_PAGES.map((page, pi) => {
             const isActive = activePage === pi
-            const isLastPage = pi === NUM_PAGES - 1
-            const firstYear = TIMELINE_DATA[page.indices[0]]
-            const secondYear = TIMELINE_DATA[page.indices[1]]
-            // Alternate: even pages → first year top-left, second bottom-right
-            // Odd pages → first year top-right, second bottom-left
-            const firstSide = pi % 2 === 0 ? 'left' : 'right'
-            const secondSide = pi % 2 === 0 ? 'right' : 'left'
 
             return (
               <div key={pi} style={{
@@ -499,40 +507,70 @@ function TimelineSection({ isMobile, days }) {
                 transition: 'opacity 0.5s ease, transform 0.5s ease',
                 pointerEvents: isActive ? 'auto' : 'none',
               }}>
-                {pi === 0 ? (
-                  // First page: hero + bio + scroll hint
-                  <FirstPageContent isMobile={isMobile} />
-                ) : isLastPage ? (
-                  // Last page: 2027 + 2028 CTA
+                {page.type === 'last' ? (
                   <LastPageContent
-                    year2027={firstYear}
+                    year2027={TIMELINE_DATA[page.indices[0]]}
                     days={days}
                     isMobile={isMobile}
                   />
+                ) : page.type === 'quad' ? (
+                  <QuadPageContent
+                    items={page.indices.map(i => TIMELINE_DATA[i])}
+                    isMobile={isMobile}
+                    pageIndex={pi}
+                  />
                 ) : (
-                  <>
-                    <YearBlock
-                      item={firstYear}
-                      side={firstSide}
-                      verticalPos="33%"
-                      isMobile={isMobile}
-                      factBox={FACT_BOXES[firstYear.year]}
-                    />
-                    <YearBlock
-                      item={secondYear}
-                      side={secondSide}
-                      verticalPos="70%"
-                      isMobile={isMobile}
-                      factBox={FACT_BOXES[secondYear.year]}
-                    />
-                  </>
+                  <PairPageContent
+                    items={[TIMELINE_DATA[page.indices[0]], TIMELINE_DATA[page.indices[1]]]}
+                    isMobile={isMobile}
+                    pageIndex={pi}
+                  />
                 )}
               </div>
             )
           })}
         </div>
-      </div>
     </div>
+  )
+}
+
+// Pair page: 2 years, first top-left / second bottom-right (alternates by pageIndex)
+function PairPageContent({ items, isMobile, pageIndex }) {
+  const firstSide = pageIndex % 2 === 0 ? 'left' : 'right'
+  const secondSide = pageIndex % 2 === 0 ? 'right' : 'left'
+  return (
+    <>
+      <YearBlock item={items[0]} side={firstSide} verticalPos="33%" isMobile={isMobile} factBox={FACT_BOXES[items[0].year]} />
+      <YearBlock item={items[1]} side={secondSide} verticalPos="70%" isMobile={isMobile} factBox={FACT_BOXES[items[1].year]} />
+    </>
+  )
+}
+
+// Quad page: 4 years arranged in a grid pattern
+function QuadPageContent({ items, isMobile, pageIndex }) {
+  // 4 positions: top-left, top-right, bottom-left, bottom-right
+  const positions = isMobile
+    ? [{ top: '15%' }, { top: '38%' }, { top: '61%' }, { top: '84%' }]
+    : [
+        { top: '22%', side: 'left' },
+        { top: '38%', side: 'right' },
+        { top: '62%', side: 'left' },
+        { top: '78%', side: 'right' },
+      ]
+
+  return (
+    <>
+      {items.map((item, i) => (
+        <YearBlock
+          key={item.year}
+          item={item}
+          side={positions[i].side || 'left'}
+          verticalPos={positions[i].top}
+          isMobile={isMobile}
+          factBox={FACT_BOXES[item.year]}
+        />
+      ))}
+    </>
   )
 }
 
@@ -742,6 +780,7 @@ export default function Support({ onNavigate }) {
 
   return (
     <div style={{ minHeight: '100vh', background: 'rgb(12,14,18)' }}>
+      <HeroSection isMobile={isMobile} />
       <TimelineSection isMobile={isMobile} days={days} />
       <CostBreakdown isMobile={isMobile} />
       <CloseSection />
