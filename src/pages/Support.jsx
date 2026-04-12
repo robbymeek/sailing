@@ -79,141 +79,121 @@ const LABEL = {
 
 // ---------- Sailboat SVG ----------
 
-function SailboatIcon({ glow }) {
+function SailboatIcon({ variant = 'default', size = 22 }) {
+  // variant: 'active' (blue), 'ghost' (faint white), 'glow' (red for 2026)
+  const scale = size / 22
+  let mast, sail, jib, hull, filterStyle
+  if (variant === 'active') {
+    mast = 'rgba(80,160,255,0.95)'
+    sail = 'rgba(60,140,255,0.8)'
+    jib = 'rgba(80,160,255,0.6)'
+    hull = 'rgba(100,180,255,0.9)'
+    filterStyle = 'drop-shadow(0 0 6px rgba(60,140,255,0.5))'
+  } else if (variant === 'glow') {
+    mast = 'rgba(255,255,255,0.95)'
+    sail = 'rgba(255,255,255,0.8)'
+    jib = 'rgba(255,255,255,0.6)'
+    hull = 'rgba(255,255,255,0.9)'
+    filterStyle = 'drop-shadow(0 0 8px rgba(220,40,40,0.5))'
+  } else if (variant === 'ghost') {
+    mast = 'rgba(255,255,255,0.18)'
+    sail = 'rgba(255,255,255,0.1)'
+    jib = 'rgba(255,255,255,0.07)'
+    hull = 'rgba(255,255,255,0.15)'
+    filterStyle = 'none'
+  } else {
+    mast = 'rgba(255,255,255,0.9)'
+    sail = 'rgba(255,255,255,0.7)'
+    jib = 'rgba(255,255,255,0.5)'
+    hull = 'rgba(255,255,255,0.85)'
+    filterStyle = 'none'
+  }
   return (
-    <svg width="22" height="26" viewBox="0 0 22 26" fill="none" xmlns="http://www.w3.org/2000/svg"
-      style={{
-        filter: glow ? 'drop-shadow(0 0 8px rgba(220,40,40,0.5))' : 'none',
-        transition: 'filter 0.4s ease',
-      }}
+    <svg width={size} height={Math.round(26 * scale)} viewBox="0 0 22 26" fill="none" xmlns="http://www.w3.org/2000/svg"
+      style={{ filter: filterStyle, transition: 'filter 0.4s ease' }}
     >
-      {/* Mast */}
-      <line x1="11" y1="2" x2="11" y2="20" stroke="rgba(255,255,255,0.9)" strokeWidth="1.2" />
-      {/* Main sail */}
-      <path d="M11 3 L11 18 L4 18 Z" fill="rgba(255,255,255,0.7)" />
-      {/* Jib */}
-      <path d="M11 3 L11 14 L16 14 Z" fill="rgba(255,255,255,0.5)" />
-      {/* Hull */}
-      <path d="M3 20 L19 20 L17 24 L5 24 Z" fill="rgba(255,255,255,0.85)" />
+      <line x1="11" y1="2" x2="11" y2="20" stroke={mast} strokeWidth="1.2" />
+      <path d="M11 3 L11 18 L4 18 Z" fill={sail} />
+      <path d="M11 3 L11 14 L16 14 Z" fill={jib} />
+      <path d="M3 20 L19 20 L17 24 L5 24 Z" fill={hull} />
     </svg>
   )
 }
 
-// ---------- Hero ----------
+// ---------- First page overlay: hero + bio integrated into page 0 ----------
 
-function HeroSection({ isMobile }) {
+function FirstPageContent({ isMobile }) {
   return (
-    <section style={{
-      position: 'relative',
-      width: '100%',
-      minHeight: isMobile ? '70vh' : '80vh',
+    <div style={{
+      position: 'absolute',
+      inset: 0,
       display: 'flex',
       flexDirection: 'column',
-      justifyContent: 'flex-end',
-      overflow: 'hidden',
-      background: 'rgb(12,14,18)',
+      justifyContent: 'center',
+      padding: isMobile ? '0 24px 0 48px' : '0 clamp(48px, 6vw, 100px)',
     }}>
-      {/* Background photo — 2017 with heavy wash */}
-      <img
-        src={`${BASE}sailing-photos/IMG_5343.jpeg`}
-        alt=""
-        style={{
-          position: 'absolute',
-          inset: 0,
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          objectPosition: 'center',
-          filter: 'grayscale(0.2) contrast(1.1) brightness(0.65)',
-        }}
-      />
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)' }} />
-
+      {/* Headline + bio — left side on desktop, full width on mobile */}
       <div style={{
-        position: isMobile ? 'relative' : 'absolute',
-        bottom: isMobile ? 'auto' : 'clamp(48px, 8vh, 100px)',
-        left: isMobile ? 'auto' : 'clamp(32px, 6vw, 100px)',
-        zIndex: 1,
-        padding: isMobile ? 'clamp(100px, 20vh, 160px) 24px clamp(48px, 8vh, 80px)' : 0,
+        maxWidth: isMobile ? '100%' : 480,
+        marginLeft: isMobile ? 0 : 'clamp(24px, 4vw, 80px)',
       }}>
-        <div style={{ ...LABEL, color: 'rgba(255,255,255,0.4)', marginBottom: 'clamp(16px, 3vh, 32px)' }}>
+        <div style={{ ...LABEL, color: 'rgba(255,255,255,0.4)', marginBottom: 16 }}>
           Support the Campaign
         </div>
         <h1 style={{
           color: '#fff',
-          fontSize: isMobile ? 'clamp(36px, 10vw, 64px)' : 'clamp(36px, 7.5vw, 110px)',
+          fontSize: isMobile ? 'clamp(32px, 9vw, 56px)' : 'clamp(36px, 5vw, 72px)',
           fontWeight: 700,
           lineHeight: 0.95,
           letterSpacing: '-2px',
           margin: 0,
-          maxWidth: 900,
         }}>
           JOIN THE TEAM.
         </h1>
         <p style={{
-          color: 'rgba(255,255,255,0.78)',
-          fontSize: 'clamp(16px, 1.6vw, 21px)',
+          color: 'rgba(255,255,255,0.7)',
+          fontSize: 'clamp(14px, 1.3vw, 18px)',
           fontWeight: 400,
           lineHeight: 1.55,
-          maxWidth: 520,
-          marginTop: 'clamp(16px, 3vh, 32px)',
+          maxWidth: 420,
+          marginTop: 16,
           marginBottom: 0,
         }}>
-          I&rsquo;m campaigning for the 2028 Olympic Games in the ILCA 7. Here&rsquo;s where I&rsquo;ve been, where I&rsquo;m going, and how you can be part of it.
+          Campaigning for the 2028 Olympic Games in the ILCA 7. Six national championships, three continental titles, Harvard Team Captain.
         </p>
-      </div>
-    </section>
-  )
-}
 
-// ---------- Bio ----------
+        {/* Compact stats row */}
+        <div style={{
+          display: 'flex',
+          gap: isMobile ? 24 : 36,
+          marginTop: 24,
+          flexWrap: 'wrap',
+        }}>
+          {BIO_STATS.map(([n, l]) => (
+            <div key={l}>
+              <span style={{ fontSize: 'clamp(24px, 3vw, 36px)', fontWeight: 700, color: '#fff', letterSpacing: '-1px' }}>{n}</span>
+              <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '1px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginLeft: 8 }}>{l}</span>
+            </div>
+          ))}
+        </div>
 
-function BioSection({ isMobile }) {
-  return (
-    <section style={{
-      maxWidth: 900,
-      margin: '0 auto',
-      padding: 'clamp(60px, 10vh, 120px) clamp(24px, 5vw, 80px)',
-      textAlign: 'center',
-    }}>
-      <div style={{ ...LABEL, color: 'rgba(255,255,255,0.4)', marginBottom: 24 }}>
-        Who I Am
+        {/* Scroll hint */}
+        <div style={{
+          marginTop: 32,
+          fontSize: 12,
+          fontWeight: 400,
+          letterSpacing: '1.5px',
+          textTransform: 'uppercase',
+          color: 'rgba(255,255,255,0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}>
+          Scroll to explore the journey
+          <span style={{ display: 'inline-block', animation: 'scrollHint 2s ease-in-out infinite' }}>↓</span>
+        </div>
       </div>
-      <p style={{
-        fontSize: 'clamp(17px, 1.8vw, 22px)',
-        fontWeight: 400,
-        lineHeight: 1.65,
-        color: 'rgba(255,255,255,0.82)',
-        maxWidth: 640,
-        margin: '0 auto clamp(36px, 5vh, 56px)',
-      }}>
-        Sailing since age nine, racing the ILCA since twelve. Six national championships and three continental titles. Studying Applied Mathematics and Economics at Harvard College while serving as Team Captain.
-      </p>
-      <div style={{
-        display: 'flex',
-        gap: isMobile ? 32 : 72,
-        justifyContent: 'center',
-        flexWrap: 'wrap',
-      }}>
-        {BIO_STATS.map(([n, l]) => (
-          <div key={l} style={{ textAlign: 'center' }}>
-            <div style={{
-              fontSize: 'clamp(40px, 5.5vw, 72px)',
-              fontWeight: 700,
-              lineHeight: 1,
-              letterSpacing: '-1px',
-              color: '#fff',
-            }}>{n}</div>
-            <div style={{
-              ...LABEL,
-              fontSize: 11,
-              color: 'rgba(255,255,255,0.5)',
-              marginTop: 10,
-            }}>{l}</div>
-          </div>
-        ))}
-      </div>
-    </section>
+    </div>
   )
 }
 
@@ -376,11 +356,25 @@ function TimelineSection({ isMobile, days }) {
     }
   }, [])
 
+  // Jump to a specific page when clicking a ghost sailboat
+  const scrollToPage = (pageIdx) => {
+    const outer = outerRef.current
+    if (!outer) return
+    const rect = outer.getBoundingClientRect()
+    const outerHeight = outer.offsetHeight
+    const viewportH = window.innerHeight
+    const scrollRange = outerHeight - viewportH
+    const targetProgress = pageIdx / (NUM_PAGES - 1)
+    const outerTop = window.scrollY + rect.top
+    const targetScroll = outerTop + targetProgress * scrollRange
+    isSnappingRef.current = true
+    window.scrollTo({ top: targetScroll, behavior: 'smooth' })
+    setTimeout(() => { isSnappingRef.current = false }, 600)
+  }
+
   const spineLeft = isMobile ? 24 : '50%'
   const activePageData = SNAP_PAGES[activePage]
   const hasYears2026 = activePageData.indices.some(i => TIMELINE_DATA[i]?.current)
-  // Sailboat discrete position: snap to page center on the spine
-  const boatTop = 10 + (activePage / (NUM_PAGES - 1)) * 80
 
   return (
     <div
@@ -441,19 +435,47 @@ function TimelineSection({ isMobile, days }) {
           zIndex: 2,
         }} />
 
-        {/* Sailboat indicator */}
+        {/* Ghost sailboat stops — one per page */}
+        {SNAP_PAGES.map((_, pi) => {
+          const stopTop = 10 + (pi / (NUM_PAGES - 1)) * 80
+          const isActive = activePage === pi
+          return (
+            <div
+              key={`ghost-${pi}`}
+              onClick={() => scrollToPage(pi)}
+              style={{
+                position: 'absolute',
+                left: spineLeft,
+                top: `${stopTop}%`,
+                transform: 'translate(-50%, -50%)',
+                zIndex: isActive ? 5 : 3,
+                cursor: 'pointer',
+                padding: 8,
+                opacity: isActive ? 0 : 1,
+                transition: 'opacity 0.4s ease',
+                pointerEvents: isActive ? 'none' : 'auto',
+              }}
+              title={`${TIMELINE_DATA[SNAP_PAGES[pi].indices[0]].year}–${TIMELINE_DATA[SNAP_PAGES[pi].indices[1]].year}`}
+            >
+              <SailboatIcon variant="ghost" size={16} />
+            </div>
+          )
+        })}
+
+        {/* Active sailboat indicator */}
         <div
           className="sail-bob"
           style={{
             position: 'absolute',
             left: spineLeft,
-            top: `${boatTop}%`,
+            top: `${10 + (activePage / (NUM_PAGES - 1)) * 80}%`,
             transform: 'translate(-50%, -50%)',
-            zIndex: 3,
+            zIndex: 5,
             transition: 'top 0.5s ease',
+            pointerEvents: 'none',
           }}
         >
-          <SailboatIcon glow={hasYears2026} />
+          <SailboatIcon variant={hasYears2026 ? 'glow' : 'active'} />
         </div>
 
         {/* Page content — each page shows two years */}
@@ -477,8 +499,11 @@ function TimelineSection({ isMobile, days }) {
                 transition: 'opacity 0.5s ease, transform 0.5s ease',
                 pointerEvents: isActive ? 'auto' : 'none',
               }}>
-                {isLastPage ? (
-                  // Special 2027+2028 page
+                {pi === 0 ? (
+                  // First page: hero + bio + scroll hint
+                  <FirstPageContent isMobile={isMobile} />
+                ) : isLastPage ? (
+                  // Last page: 2027 + 2028 CTA
                   <LastPageContent
                     year2027={firstYear}
                     days={days}
@@ -717,8 +742,6 @@ export default function Support({ onNavigate }) {
 
   return (
     <div style={{ minHeight: '100vh', background: 'rgb(12,14,18)' }}>
-      <HeroSection isMobile={isMobile} />
-      <BioSection isMobile={isMobile} />
       <TimelineSection isMobile={isMobile} days={days} />
       <CostBreakdown isMobile={isMobile} />
       <CloseSection />

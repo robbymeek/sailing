@@ -145,6 +145,12 @@ button {
   }
 }
 
+/* Support page: scroll hint bounce */
+@keyframes scrollHint {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
+}
+
 /* Support page: sailboat gentle rocking */
 @keyframes sailBob {
   0%, 100% { transform: translate(-50%, -50%) rotate(-2deg); }
