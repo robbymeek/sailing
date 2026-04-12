@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Footer from '../components/Footer'
 import useCountdown from '../hooks/useCountdown'
 
@@ -24,7 +24,7 @@ const TIMELINE_DATA = [
 const YEAR_PHOTOS = {
   '2017': 'IMG_5343.jpeg',
   '2018': 'IMG_0062.JPG',
-  '2019': 'Screen Shot 2022-01-18 at 6.25.56 PM.png',
+  '2019': 'Screen Shot 2022-01-18 at 6.25.56 PM.jpg',
   '2020': 'IMG_3867.jpeg',
   '2021': 'IMG_4733.jpeg',
   '2022': 'IMG_8481.jpeg',
@@ -229,58 +229,64 @@ function TimelineSection({ isMobile, days }) {
   const [sailboatProgress, setSailboatProgress] = useState(0)
   const rafRef = useRef(null)
 
-  // Compute cumulative breakpoints
-  const sectionHeights = TIMELINE_DATA.map(item => {
-    const h = SECTION_HEIGHTS[item.year] || { desktop: 80, mobile: 60 }
-    return isMobile ? h.mobile : h.desktop
-  })
-  const totalVh = sectionHeights.reduce((a, b) => a + b, 0)
-
-  // Cumulative boundaries as fractions of total
-  const boundaries = []
-  let cumulative = 0
-  for (let i = 0; i < sectionHeights.length; i++) {
-    boundaries.push(cumulative / totalVh)
-    cumulative += sectionHeights[i]
-  }
-
-  const handleScroll = useCallback(() => {
-    if (rafRef.current) return
-    rafRef.current = requestAnimationFrame(() => {
-      rafRef.current = null
-      const outer = outerRef.current
-      if (!outer) return
-
-      const rect = outer.getBoundingClientRect()
-      const outerHeight = outer.offsetHeight
-      const viewportH = window.innerHeight
-      // scrolled = how far past the top of the outer container
-      const scrolled = -rect.top
-      // progress 0→1 across the full scroll region
-      const progress = Math.max(0, Math.min(1, scrolled / (outerHeight - viewportH)))
-
-      setSailboatProgress(progress)
-
-      // Find active year
-      let idx = 0
-      for (let i = boundaries.length - 1; i >= 0; i--) {
-        if (progress >= boundaries[i]) {
-          idx = i
-          break
-        }
-      }
-      setActiveIndex(idx)
+  // Memoize boundaries so they only recompute when isMobile changes
+  const { totalVh, boundaries } = useMemo(() => {
+    const heights = TIMELINE_DATA.map(item => {
+      const h = SECTION_HEIGHTS[item.year] || { desktop: 80, mobile: 60 }
+      return isMobile ? h.mobile : h.desktop
     })
-  }, [boundaries, totalVh])
+    const total = heights.reduce((a, b) => a + b, 0)
+    const bounds = []
+    let cum = 0
+    for (let i = 0; i < heights.length; i++) {
+      bounds.push(cum / total)
+      cum += heights[i]
+    }
+    return { totalVh: total, boundaries: bounds }
+  }, [isMobile])
+
+  // Store boundaries in a ref so the scroll handler never goes stale
+  const boundariesRef = useRef(boundaries)
+  boundariesRef.current = boundaries
 
   useEffect(() => {
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    handleScroll()
+    function onScroll() {
+      if (rafRef.current) return
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null
+        const outer = outerRef.current
+        if (!outer) return
+
+        const rect = outer.getBoundingClientRect()
+        const outerHeight = outer.offsetHeight
+        const viewportH = window.innerHeight
+        // scrolled = how far past the top of the outer container
+        const scrolled = -rect.top
+        // progress 0→1 across the full scroll region
+        const progress = Math.max(0, Math.min(1, scrolled / (outerHeight - viewportH)))
+
+        setSailboatProgress(progress)
+
+        // Find active year
+        const b = boundariesRef.current
+        let idx = 0
+        for (let i = b.length - 1; i >= 0; i--) {
+          if (progress >= b[i]) {
+            idx = i
+            break
+          }
+        }
+        setActiveIndex(idx)
+      })
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
     return () => {
-      window.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('scroll', onScroll)
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
     }
-  }, [handleScroll])
+  }, [])
 
   const activeYear = TIMELINE_DATA[activeIndex]?.year
   const spineLeft = isMobile ? 24 : '50%'
@@ -313,6 +319,7 @@ function TimelineSection({ isMobile, days }) {
               src={`${BASE}sailing-photos/${photo}`}
               alt=""
               loading={i < 2 ? 'eager' : 'lazy'}
+              decoding="async"
               style={{
                 position: 'absolute',
                 inset: 0,
