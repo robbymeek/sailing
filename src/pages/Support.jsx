@@ -1,24 +1,47 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Footer from '../components/Footer'
 import useCountdown from '../hooks/useCountdown'
-import usePageEntrance from '../hooks/usePageEntrance'
 
 const BASE = import.meta.env.BASE_URL
 
+// ---------- Data ----------
+
 const TIMELINE_DATA = [
-  { year: '2017', main: 'Started racing', past: true },
-  { year: '2018', main: 'First Youth Champs', past: true },
+  { year: '2017', main: 'Started racing', sub: null, past: true },
+  { year: '2018', main: 'First Youth Champs', sub: null, past: true },
   { year: '2019', main: '5th at HS Nationals', sub: ['Freshman year'], past: true },
-  { year: '2020', main: 'Covid', past: true },
+  { year: '2020', main: 'Covid', sub: null, past: true },
   { year: '2021', main: 'HS National Champion', sub: ['Orange Bowl Champion', '9th at Youth Worlds', 'North American Champion'], past: true },
   { year: '2022', main: 'HS National Champion', sub: ['5th at Youth Worlds'], past: true },
   { year: '2023', main: 'Harvard Sailing', sub: ['North American Champion'], past: true },
   { year: '2024', main: 'CrossnoKaye', sub: ['Train and work'], past: true },
   { year: '2025', main: 'North American Champion', sub: ['Top American at Europeans'], past: true },
-  { year: '2026', main: 'Olympic training', current: true },
-  { year: '2027', main: 'World Champs contender' },
-  { year: '2028', main: 'LA Olympics' },
+  { year: '2026', main: 'Olympic training', sub: null, current: true },
+  { year: '2027', main: 'World Champs contender', sub: null },
+  { year: '2028', main: 'LA Olympics', sub: null },
 ]
+
+const YEAR_PHOTOS = {
+  '2017': 'IMG_5343.jpeg',
+  '2018': 'IMG_0062.JPG',
+  '2019': 'Screen Shot 2022-01-18 at 6.25.56 PM.png',
+  '2020': 'IMG_3867.jpeg',
+  '2021': 'IMG_4733.jpeg',
+  '2022': 'IMG_8481.jpeg',
+  '2023': 'IMG_5956.JPG',
+  '2024': 'IMG_5957.JPG',
+  '2025': 'P1233011 (1).JPG',
+  '2026': 'IMG_6285.JPG',
+}
+
+const FACT_BOXES = {
+  '2017': { label: 'AGE 9', text: 'Started sailing on Long Island Sound. Fell in love with the speed, the strategy, and the solitude of singlehanded racing.' },
+  '2019': { label: 'FRESHMAN', text: '5th at HS Nationals as a freshman — the youngest sailor in the top 10.' },
+  '2021': { label: 'BREAKTHROUGH', text: 'Won the HS National Championship, the Orange Bowl, and placed 9th at Youth Worlds — all in the same year. Three continental titles would follow.' },
+  '2023': { label: 'HARVARD', text: 'Joined Harvard Sailing as Team Captain while studying Applied Mathematics and Economics. Won North Americans again.' },
+  '2025': { label: 'TOP AMERICAN', text: 'North American Champion for the third time. Top American finisher at the European Championships — a statement on the world stage.' },
+  '2026': { label: 'NOW', text: 'Full-time Olympic training. Every day is focused on one goal: making the US team for LA 2028.' },
+}
 
 const COSTS = [
   { label: 'Training', pct: 50 },
@@ -34,6 +57,22 @@ const BIO_STATS = [
   ['9+', 'Years in ILCA'],
 ]
 
+// Section scroll heights (in vh units) — early years fast, later years linger
+const SECTION_HEIGHTS = {
+  '2017': { desktop: 50, mobile: 35 },
+  '2018': { desktop: 50, mobile: 35 },
+  '2019': { desktop: 50, mobile: 35 },
+  '2020': { desktop: 40, mobile: 30 },
+  '2021': { desktop: 55, mobile: 40 },
+  '2022': { desktop: 50, mobile: 35 },
+  '2023': { desktop: 120, mobile: 80 },
+  '2024': { desktop: 120, mobile: 80 },
+  '2025': { desktop: 130, mobile: 90 },
+  '2026': { desktop: 140, mobile: 100 },
+  '2027': { desktop: 100, mobile: 80 },
+  '2028': { desktop: 100, mobile: 80 },
+}
+
 const LABEL = {
   fontSize: 12,
   fontWeight: 500,
@@ -41,216 +80,45 @@ const LABEL = {
   textTransform: 'uppercase',
 }
 
-function yearStatus(item) {
-  if (item.current) {
-    return {
-      dot: {
-        width: 14, height: 14,
-        background: 'rgb(220,40,40)',
-        boxShadow: '0 0 20px rgba(220,40,40,0.5), 0 0 60px rgba(220,40,40,0.15)',
-      },
-      yearColor: '#fff',
-      yearShadow: '0 0 30px rgba(220,40,40,0.35)',
-      milestoneColor: 'rgba(255,255,255,0.9)',
-      subColor: 'rgba(255,255,255,0.7)',
-    }
-  }
-  if (item.past) {
-    return {
-      dot: { width: 6, height: 6, background: 'rgba(255,255,255,0.5)' },
-      yearColor: 'rgba(255,255,255,0.55)',
-      yearShadow: 'none',
-      milestoneColor: 'rgba(255,255,255,0.65)',
-      subColor: 'rgba(255,255,255,0.45)',
-    }
-  }
-  return {
-    dot: {
-      width: 6, height: 6,
-      background: 'transparent',
-      border: '1px solid rgba(255,255,255,0.25)',
-      boxSizing: 'border-box',
-    },
-    yearColor: 'rgba(255,255,255,0.35)',
-    yearShadow: 'none',
-    milestoneColor: 'rgba(255,255,255,0.4)',
-    subColor: 'rgba(255,255,255,0.3)',
-  }
-}
+// ---------- Sailboat SVG ----------
 
-// ---------- Content blocks ----------
-
-function BodyBlock({ style }) {
+function SailboatIcon({ glow }) {
   return (
-    <div style={style}>
-      <p style={{
-        fontSize: 'clamp(16px, 1.4vw, 19px)',
-        fontWeight: 400,
-        lineHeight: 1.7,
-        color: 'rgba(255,255,255,0.75)',
-        margin: '0 0 1.1em',
-      }}>
-        There is no shortcut. The only way to improve is to race the top sailors under the same conditions, on the same water, at the same time.
-      </p>
-      <p style={{
-        fontSize: 'clamp(16px, 1.4vw, 19px)',
-        fontWeight: 400,
-        lineHeight: 1.7,
-        color: 'rgba(255,255,255,0.75)',
-        margin: 0,
-      }}>
-        That means traveling to wherever the best regattas are happening — and doing it year-round.
-      </p>
-    </div>
+    <svg width="22" height="26" viewBox="0 0 22 26" fill="none" xmlns="http://www.w3.org/2000/svg"
+      style={{
+        filter: glow ? 'drop-shadow(0 0 8px rgba(220,40,40,0.5))' : 'none',
+        transition: 'filter 0.4s ease',
+      }}
+    >
+      {/* Mast */}
+      <line x1="11" y1="2" x2="11" y2="20" stroke="rgba(255,255,255,0.9)" strokeWidth="1.2" />
+      {/* Main sail */}
+      <path d="M11 3 L11 18 L4 18 Z" fill="rgba(255,255,255,0.7)" />
+      {/* Jib */}
+      <path d="M11 3 L11 14 L16 14 Z" fill="rgba(255,255,255,0.5)" />
+      {/* Hull */}
+      <path d="M3 20 L19 20 L17 24 L5 24 Z" fill="rgba(255,255,255,0.85)" />
+    </svg>
   )
 }
 
-function CostBlock({ isMobile, style }) {
-  const numSize = isMobile ? 'clamp(40px, 10vw, 72px)' : 'clamp(48px, 8vw, 120px)'
-  return (
-    <div style={style}>
-      <div style={{ ...LABEL, color: 'rgba(255,255,255,0.35)', marginBottom: 28 }}>
-        Where Your Support Goes
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {COSTS.map((item) => (
-          <div key={item.label} style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-              <span style={{
-                fontSize: numSize,
-                fontWeight: 700,
-                lineHeight: 0.9,
-                letterSpacing: '-2px',
-                color: '#fff',
-              }}>{item.pct}</span>
-              <span style={{
-                fontSize: 'clamp(14px, 1.5vw, 22px)',
-                fontWeight: 500,
-                color: 'rgba(255,255,255,0.3)',
-                marginLeft: 4,
-                marginTop: '0.08em',
-              }}>%</span>
-            </div>
-            <div style={{
-              ...LABEL,
-              fontSize: 11,
-              color: 'rgba(255,255,255,0.4)',
-              marginLeft: 'clamp(14px, 2vw, 28px)',
-            }}>{item.label}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+// ---------- Hero ----------
 
-function PullQuote({ style }) {
-  return (
-    <div style={style}>
-      <div style={{
-        fontSize: 'clamp(20px, 2.4vw, 32px)',
-        fontWeight: 400,
-        fontStyle: 'italic',
-        color: 'rgba(255,255,255,0.85)',
-        lineHeight: 1.45,
-      }}>
-        &ldquo;Whether it&rsquo;s financial support, advice, a connection, or simply following along — it all matters.&rdquo;
-      </div>
-      <div style={{ ...LABEL, color: 'rgba(255,255,255,0.4)', marginTop: 20 }}>
-        — Robby
-      </div>
-    </div>
-  )
-}
-
-function FinalCTA({ isMobile, days, style }) {
-  const [ctaHover, setCtaHover] = useState(false)
-  const numSize = isMobile ? 'clamp(56px, 14vw, 100px)' : 'clamp(72px, 13vw, 200px)'
-  return (
-    <div style={{ textAlign: isMobile ? 'left' : 'center', ...style }}>
-      <div style={{
-        fontSize: numSize,
-        fontWeight: 700,
-        lineHeight: 1,
-        letterSpacing: '-3px',
-        color: '#fff',
-      }}>
-        2028
-      </div>
-      <div style={{ ...LABEL, color: 'rgba(255,255,255,0.5)', marginTop: 20 }}>
-        LA Olympics
-      </div>
-      <div style={{
-        marginTop: 36,
-        display: 'inline-flex',
-        alignItems: 'baseline',
-        gap: 14,
-      }}>
-        <span style={{
-          fontSize: 'clamp(32px, 4.5vw, 64px)',
-          fontWeight: 700,
-          color: '#fff',
-          lineHeight: 1,
-          letterSpacing: '-1px',
-        }}>{days}</span>
-        <span style={{ ...LABEL, fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>Days</span>
-      </div>
-      <div style={{ marginTop: 48 }}>
-        <a
-          href="mailto:robbymeek+LA2028@gmail.com?subject=Supporting%20Your%20Olympic%20Campaign"
-          onMouseEnter={() => setCtaHover(true)}
-          onMouseLeave={() => setCtaHover(false)}
-          style={{
-            display: 'inline-block',
-            fontSize: 'clamp(20px, 2.5vw, 36px)',
-            fontWeight: 500,
-            color: ctaHover ? '#fff' : 'rgba(255,255,255,0.92)',
-            textDecoration: 'none',
-            borderBottomStyle: 'solid',
-            borderBottomWidth: ctaHover ? 3 : 2,
-            borderBottomColor: 'rgb(220,40,40)',
-            paddingBottom: 6,
-            transition: 'color 0.2s ease, border-bottom-width 0.2s ease',
-            letterSpacing: '-0.3px',
-          }}
-        >
-          EMAIL ROBBY →
-        </a>
-      </div>
-      <div style={{ marginTop: 24 }}>
-        <a
-          href="mailto:robbymeek+LA2028@gmail.com?subject=Connecting"
-          style={{
-            fontSize: 13,
-            fontStyle: 'italic',
-            color: 'rgba(255,255,255,0.5)',
-            textDecoration: 'underline',
-            textUnderlineOffset: '3px',
-          }}
-        >
-          or reach out about anything else
-        </a>
-      </div>
-    </div>
-  )
-}
-
-// ---------- Section 1: Cinematic Hero ----------
-
-function HeroSection({ entrance, isMobile }) {
+function HeroSection({ isMobile }) {
   return (
     <section style={{
       position: 'relative',
       width: '100%',
-      minHeight: isMobile ? '70dvh' : '100dvh',
+      minHeight: isMobile ? '70vh' : '80vh',
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'flex-end',
       overflow: 'hidden',
+      background: 'rgb(12,14,18)',
     }}>
-      {/* Background photo */}
+      {/* Background photo — 2017 with heavy wash */}
       <img
-        src={`${BASE}P1177244.jpeg`}
+        src={`${BASE}sailing-photos/IMG_5343.jpeg`}
         alt=""
         style={{
           position: 'absolute',
@@ -258,34 +126,23 @@ function HeroSection({ entrance, isMobile }) {
           width: '100%',
           height: '100%',
           objectFit: 'cover',
-          objectPosition: 'center 30%',
-          filter: 'grayscale(0.15) contrast(1.1)',
+          objectPosition: 'center',
+          filter: 'grayscale(0.2) contrast(1.1) brightness(0.65)',
         }}
       />
-      {/* Dark wash */}
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)' }} />
-      {/* Cool tint */}
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(10,85,235,0.06)' }} />
 
-      {/* Content */}
       <div style={{
-        position: 'relative',
+        position: isMobile ? 'relative' : 'absolute',
+        bottom: isMobile ? 'auto' : 'clamp(48px, 8vh, 100px)',
+        left: isMobile ? 'auto' : 'clamp(32px, 6vw, 100px)',
         zIndex: 1,
-        padding: isMobile
-          ? 'clamp(80px, 16vh, 120px) 24px clamp(48px, 8vh, 80px)'
-          : 'clamp(60px, 10vh, 120px) clamp(32px, 6vw, 100px) clamp(60px, 10vh, 120px)',
+        padding: isMobile ? 'clamp(100px, 20vh, 160px) 24px clamp(48px, 8vh, 80px)' : 0,
       }}>
-        {/* Small label */}
-        <div style={{
-          ...LABEL,
-          color: 'rgba(255,255,255,0.4)',
-          marginBottom: 'clamp(24px, 4vh, 48px)',
-        }}>
+        <div style={{ ...LABEL, color: 'rgba(255,255,255,0.4)', marginBottom: 'clamp(16px, 3vh, 32px)' }}>
           Support the Campaign
         </div>
-
         <h1 style={{
-          ...entrance.style(0),
           color: '#fff',
           fontSize: isMobile ? 'clamp(36px, 10vw, 64px)' : 'clamp(36px, 7.5vw, 110px)',
           fontWeight: 700,
@@ -294,14 +151,10 @@ function HeroSection({ entrance, isMobile }) {
           margin: 0,
           maxWidth: 900,
         }}>
-          THE ROAD TO LA<br />
-          RUNS THROUGH<br />
-          EVERY REGATTA<br />
-          IN BETWEEN.
+          JOIN THE TEAM<br />
+          BEHIND IT ALL.
         </h1>
-
         <p style={{
-          ...entrance.style(0),
           color: 'rgba(255,255,255,0.78)',
           fontSize: 'clamp(16px, 1.6vw, 21px)',
           fontWeight: 400,
@@ -310,19 +163,18 @@ function HeroSection({ entrance, isMobile }) {
           marginTop: 'clamp(16px, 3vh, 32px)',
           marginBottom: 0,
         }}>
-          I&rsquo;m campaigning for the 2028 Olympic Games in the ILCA 7. This is how I get there — and why I need you with me.
+          I&rsquo;m campaigning for the 2028 Olympic Games in the ILCA 7. Here&rsquo;s where I&rsquo;ve been, where I&rsquo;m going, and how you can be part of it.
         </p>
       </div>
     </section>
   )
 }
 
-// ---------- Section 2: Bio / credentials ----------
+// ---------- Bio ----------
 
-function BioSection({ entrance, isMobile }) {
+function BioSection({ isMobile }) {
   return (
     <section style={{
-      ...entrance.style(1),
       maxWidth: 900,
       margin: '0 auto',
       padding: 'clamp(60px, 10vh, 120px) clamp(24px, 5vw, 80px)',
@@ -369,303 +221,526 @@ function BioSection({ entrance, isMobile }) {
   )
 }
 
-// ---------- Section 3: Photo break ----------
+// ---------- Scroll-driven Timeline ----------
 
-function PhotoBreak({ entrance, isMobile }) {
+function TimelineSection({ isMobile, days }) {
+  const outerRef = useRef(null)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [sailboatProgress, setSailboatProgress] = useState(0)
+  const rafRef = useRef(null)
+
+  // Compute cumulative breakpoints
+  const sectionHeights = TIMELINE_DATA.map(item => {
+    const h = SECTION_HEIGHTS[item.year] || { desktop: 80, mobile: 60 }
+    return isMobile ? h.mobile : h.desktop
+  })
+  const totalVh = sectionHeights.reduce((a, b) => a + b, 0)
+
+  // Cumulative boundaries as fractions of total
+  const boundaries = []
+  let cumulative = 0
+  for (let i = 0; i < sectionHeights.length; i++) {
+    boundaries.push(cumulative / totalVh)
+    cumulative += sectionHeights[i]
+  }
+
+  const handleScroll = useCallback(() => {
+    if (rafRef.current) return
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null
+      const outer = outerRef.current
+      if (!outer) return
+
+      const rect = outer.getBoundingClientRect()
+      const outerHeight = outer.offsetHeight
+      const viewportH = window.innerHeight
+      // scrolled = how far past the top of the outer container
+      const scrolled = -rect.top
+      // progress 0→1 across the full scroll region
+      const progress = Math.max(0, Math.min(1, scrolled / (outerHeight - viewportH)))
+
+      setSailboatProgress(progress)
+
+      // Find active year
+      let idx = 0
+      for (let i = boundaries.length - 1; i >= 0; i--) {
+        if (progress >= boundaries[i]) {
+          idx = i
+          break
+        }
+      }
+      setActiveIndex(idx)
+    })
+  }, [boundaries, totalVh])
+
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll()
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    }
+  }, [handleScroll])
+
+  const activeYear = TIMELINE_DATA[activeIndex]?.year
+  const spineLeft = isMobile ? 24 : '50%'
+
   return (
-    <div style={entrance.style(2)}>
-      <img
-        src={`${BASE}IMG_5854.JPG`}
-        alt=""
-        style={{
-          width: '100%',
-          height: isMobile ? 'clamp(200px, 30vh, 320px)' : 'clamp(280px, 40vh, 480px)',
-          objectFit: 'cover',
-          objectPosition: 'center 40%',
-          filter: 'grayscale(0.6) contrast(1.3) brightness(0.55)',
-          display: 'block',
-        }}
-      />
+    <div
+      ref={outerRef}
+      style={{
+        position: 'relative',
+        height: `${totalVh}vh`,
+      }}
+    >
+      {/* Sticky viewport frame */}
+      <div style={{
+        position: 'sticky',
+        top: 0,
+        height: '100vh',
+        width: '100%',
+        overflow: 'hidden',
+        background: 'rgb(12,14,18)',
+      }}>
+        {/* Background photos — stacked, crossfading */}
+        {TIMELINE_DATA.map((item, i) => {
+          const photo = YEAR_PHOTOS[item.year]
+          if (!photo) return null
+          const isActive = activeYear === item.year
+          return (
+            <img
+              key={item.year}
+              src={`${BASE}sailing-photos/${photo}`}
+              alt=""
+              loading={i < 2 ? 'eager' : 'lazy'}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                objectPosition: 'center',
+                filter: 'grayscale(0.2) contrast(1.1) brightness(0.65)',
+                opacity: isActive ? 1 : 0,
+                transition: 'opacity 0.8s ease',
+                willChange: 'opacity',
+                zIndex: 0,
+              }}
+            />
+          )
+        })}
+
+        {/* Dark overlay */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(0,0,0,0.5)',
+          zIndex: 1,
+        }} />
+
+        {/* Spine line */}
+        <div style={{
+          position: 'absolute',
+          left: spineLeft,
+          top: '10%',
+          bottom: '10%',
+          width: 1,
+          background: 'rgba(255,255,255,0.15)',
+          transform: isMobile ? 'none' : 'translateX(-0.5px)',
+          zIndex: 2,
+        }} />
+
+        {/* Sailboat indicator */}
+        <div
+          className="sail-bob"
+          style={{
+            position: 'absolute',
+            left: spineLeft,
+            top: `${10 + sailboatProgress * 80}%`,
+            transform: 'translate(-50%, -50%)',
+            zIndex: 3,
+            transition: 'top 0.1s linear',
+          }}
+        >
+          <SailboatIcon glow={activeYear === '2026'} />
+        </div>
+
+        {/* Year content */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 4,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          pointerEvents: 'none',
+        }}>
+          {TIMELINE_DATA.map((item, i) => {
+            const isActive = activeIndex === i
+            const is2028 = item.year === '2028'
+            const isLeft = isMobile ? false : (i % 2 === 0)
+            const factBox = FACT_BOXES[item.year]
+            const isPast = item.past
+            const isCurrent = item.current
+            const isFuture = !isPast && !isCurrent
+
+            // Year numeral styling
+            let yearColor = 'rgba(255,255,255,0.7)'
+            let yearShadow = 'none'
+            if (isCurrent) {
+              yearColor = '#fff'
+              yearShadow = '0 0 30px rgba(220,40,40,0.35)'
+            } else if (isFuture) {
+              yearColor = 'rgba(255,255,255,0.4)'
+            }
+
+            if (is2028) {
+              return (
+                <div key={item.year} style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: isActive ? 1 : 0,
+                  transform: isActive ? 'translateY(0)' : 'translateY(8px)',
+                  transition: 'opacity 0.5s ease, transform 0.5s ease',
+                  pointerEvents: isActive ? 'auto' : 'none',
+                  padding: isMobile ? '0 24px' : 0,
+                }}>
+                  <div style={{
+                    fontSize: isMobile ? 'clamp(56px, 14vw, 100px)' : 'clamp(72px, 13vw, 200px)',
+                    fontWeight: 700,
+                    lineHeight: 1,
+                    letterSpacing: '-3px',
+                    color: '#fff',
+                    textAlign: 'center',
+                  }}>
+                    2028
+                  </div>
+                  <div style={{ ...LABEL, color: 'rgba(255,255,255,0.5)', marginTop: 20, textAlign: 'center' }}>
+                    LA Olympics
+                  </div>
+                  <div style={{
+                    marginTop: 36,
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    gap: 14,
+                  }}>
+                    <span style={{
+                      fontSize: 'clamp(32px, 4.5vw, 64px)',
+                      fontWeight: 700,
+                      color: '#fff',
+                      lineHeight: 1,
+                      letterSpacing: '-1px',
+                    }}>{days}</span>
+                    <span style={{ ...LABEL, fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>Days</span>
+                  </div>
+                  <CTABlock isMobile={isMobile} />
+                </div>
+              )
+            }
+
+            // Regular year
+            return (
+              <div key={item.year} style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: isMobile ? 'center' : 'center',
+                justifyContent: 'center',
+                opacity: isActive ? 1 : 0,
+                transform: isActive ? 'translateY(0)' : 'translateY(8px)',
+                transition: 'opacity 0.5s ease, transform 0.5s ease',
+                pointerEvents: 'none',
+              }}>
+                {/* Desktop layout: year on one side, fact on other */}
+                {isMobile ? (
+                  <div style={{
+                    position: 'absolute',
+                    left: 48,
+                    right: 20,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                  }}>
+                    <div style={{
+                      fontSize: 'clamp(32px, 8vw, 56px)',
+                      fontWeight: 700,
+                      lineHeight: 1,
+                      letterSpacing: '-1px',
+                      color: yearColor,
+                      textShadow: yearShadow,
+                      marginBottom: 8,
+                    }}>
+                      {item.year}
+                    </div>
+                    <div style={{
+                      fontSize: 'clamp(14px, 1.2vw, 18px)',
+                      fontWeight: 400,
+                      color: isPast ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.4)',
+                      lineHeight: 1.5,
+                    }}>
+                      {item.main}
+                    </div>
+                    {item.sub && item.sub.map((s, si) => (
+                      <div key={si} style={{
+                        fontSize: 13,
+                        fontStyle: 'italic',
+                        color: isPast ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.3)',
+                        lineHeight: 1.5,
+                        marginTop: 3,
+                      }}>{s}</div>
+                    ))}
+                    {factBox && (
+                      <div style={{
+                        marginTop: 20,
+                        maxWidth: 'calc(100vw - 80px)',
+                        padding: '16px 20px',
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: 8,
+                        borderLeft: isCurrent ? '2px solid rgba(220,40,40,0.5)' : '1px solid rgba(255,255,255,0.08)',
+                      }}>
+                        <div style={{ fontSize: 10, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: 6, fontWeight: 500 }}>
+                          {factBox.label}
+                        </div>
+                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
+                          {factBox.text}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    {/* Left column */}
+                    <div style={{
+                      position: 'absolute',
+                      right: 'calc(50% + 40px)',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      textAlign: 'right',
+                      maxWidth: 340,
+                    }}>
+                      {isLeft ? (
+                        <YearContent item={item} yearColor={yearColor} yearShadow={yearShadow} isPast={isPast} />
+                      ) : factBox ? (
+                        <FactBoxContent factBox={factBox} isCurrent={isCurrent} align="right" />
+                      ) : null}
+                    </div>
+                    {/* Right column */}
+                    <div style={{
+                      position: 'absolute',
+                      left: 'calc(50% + 40px)',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      textAlign: 'left',
+                      maxWidth: 340,
+                    }}>
+                      {!isLeft ? (
+                        <YearContent item={item} yearColor={yearColor} yearShadow={yearShadow} isPast={isPast} />
+                      ) : factBox ? (
+                        <FactBoxContent factBox={factBox} isCurrent={isCurrent} align="left" />
+                      ) : null}
+                    </div>
+                  </>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }
 
-// ---------- Section 4: Spine ----------
-
-function YearLabel({ item, textAlign }) {
-  const { yearColor, yearShadow, milestoneColor, subColor } = yearStatus(item)
+function YearContent({ item, yearColor, yearShadow, isPast }) {
   return (
-    <div style={{ textAlign }}>
+    <>
       <div style={{
-        fontSize: 'clamp(24px, 3.5vw, 48px)',
-        fontWeight: 600,
+        fontSize: 'clamp(48px, 7vw, 100px)',
+        fontWeight: 700,
         lineHeight: 1,
-        letterSpacing: '-1px',
+        letterSpacing: '-2px',
         color: yearColor,
         textShadow: yearShadow,
-        marginBottom: 8,
+        marginBottom: 10,
       }}>
         {item.year}
       </div>
       <div style={{
-        fontSize: 14,
+        fontSize: 'clamp(14px, 1.2vw, 18px)',
         fontWeight: 400,
+        color: isPast ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.4)',
         lineHeight: 1.5,
-        color: milestoneColor,
       }}>
         {item.main}
       </div>
       {item.sub && item.sub.map((s, si) => (
         <div key={si} style={{
-          fontSize: 12,
+          fontSize: 13,
           fontStyle: 'italic',
-          color: subColor,
+          color: isPast ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.3)',
           lineHeight: 1.5,
           marginTop: 3,
         }}>{s}</div>
       ))}
-    </div>
+    </>
   )
 }
 
-function DesktopYearRow({ item, side, marginTop }) {
-  const { dot } = yearStatus(item)
+function FactBoxContent({ factBox, isCurrent, align }) {
   return (
     <div style={{
-      position: 'relative',
-      marginTop,
-      display: 'flex',
-      alignItems: 'flex-start',
+      maxWidth: 280,
+      padding: '16px 20px',
+      background: 'rgba(255,255,255,0.06)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: 8,
+      borderLeft: isCurrent ? '2px solid rgba(220,40,40,0.5)' : '1px solid rgba(255,255,255,0.08)',
+      marginLeft: align === 'right' ? 'auto' : 0,
+      marginRight: align === 'left' ? 'auto' : 0,
     }}>
-      <div style={{
-        position: 'absolute',
-        left: '50%',
-        top: item.current ? 8 : 12,
-        transform: 'translate(-50%, 0)',
-        borderRadius: '50%',
-        zIndex: 2,
-        ...dot,
-      }} />
-      <div style={{ flex: 1, paddingRight: 'clamp(32px, 3.5vw, 56px)', minWidth: 0 }}>
-        {side === 'left' && <YearLabel item={item} textAlign="right" />}
+      <div style={{ fontSize: 10, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: 6, fontWeight: 500 }}>
+        {factBox.label}
       </div>
-      <div style={{ flex: 1, paddingLeft: 'clamp(32px, 3.5vw, 56px)', minWidth: 0 }}>
-        {side === 'right' && <YearLabel item={item} textAlign="left" />}
+      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
+        {factBox.text}
       </div>
     </div>
   )
 }
 
-function ContentRow({ side, marginTop, maxWidth, children, style }) {
+function CTABlock({ isMobile }) {
+  const [ctaHover, setCtaHover] = useState(false)
   return (
-    <div style={{
-      position: 'relative',
-      marginTop,
-      display: 'flex',
-      alignItems: 'flex-start',
-      ...style,
+    <>
+      <div style={{ marginTop: 48, textAlign: 'center' }}>
+        <a
+          href="mailto:robbymeek+LA2028@gmail.com?subject=Supporting%20Your%20Olympic%20Campaign"
+          onMouseEnter={() => setCtaHover(true)}
+          onMouseLeave={() => setCtaHover(false)}
+          style={{
+            display: 'inline-block',
+            fontSize: 'clamp(20px, 2.5vw, 36px)',
+            fontWeight: 500,
+            color: ctaHover ? '#fff' : 'rgba(255,255,255,0.92)',
+            textDecoration: 'none',
+            borderBottomStyle: 'solid',
+            borderBottomWidth: ctaHover ? 3 : 2,
+            borderBottomColor: 'rgb(220,40,40)',
+            paddingBottom: 6,
+            transition: 'color 0.2s ease, border-bottom-width 0.2s ease',
+            letterSpacing: '-0.3px',
+            pointerEvents: 'auto',
+          }}
+        >
+          EMAIL ROBBY &rarr;
+        </a>
+      </div>
+      <div style={{ marginTop: 24, textAlign: 'center' }}>
+        <a
+          href="mailto:robbymeek+LA2028@gmail.com?subject=Connecting"
+          style={{
+            fontSize: 13,
+            fontStyle: 'italic',
+            color: 'rgba(255,255,255,0.5)',
+            textDecoration: 'underline',
+            textUnderlineOffset: '3px',
+            pointerEvents: 'auto',
+          }}
+        >
+          or reach out about anything else
+        </a>
+      </div>
+    </>
+  )
+}
+
+// ---------- Cost Breakdown ----------
+
+function CostBreakdown({ isMobile }) {
+  return (
+    <section style={{
+      background: 'rgba(255,255,255,0.03)',
+      padding: 'clamp(60px, 10vh, 120px) clamp(24px, 5vw, 80px)',
     }}>
       <div style={{
-        flex: 1,
-        paddingRight: 'clamp(36px, 4vw, 72px)',
-        minWidth: 0,
+        ...LABEL,
+        color: 'rgba(255,255,255,0.35)',
+        textAlign: 'center',
+        marginBottom: 'clamp(40px, 6vh, 64px)',
+      }}>
+        Where Your Support Goes
+      </div>
+      <div style={{
         display: 'flex',
-        justifyContent: 'flex-end',
+        justifyContent: 'center',
+        gap: isMobile ? 'clamp(16px, 4vw, 32px)' : 'clamp(32px, 4vw, 64px)',
+        flexWrap: 'wrap',
+        maxWidth: 1000,
+        margin: '0 auto',
       }}>
-        {side === 'left' && <div style={{ maxWidth, width: '100%' }}>{children}</div>}
+        {COSTS.map((item) => (
+          <div key={item.label} style={{
+            textAlign: 'center',
+            minWidth: isMobile ? 'calc(45% - 16px)' : 'auto',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
+              <span style={{
+                fontSize: isMobile ? 'clamp(40px, 10vw, 72px)' : 'clamp(48px, 7vw, 100px)',
+                fontWeight: 700,
+                lineHeight: 0.9,
+                letterSpacing: '-2px',
+                color: '#fff',
+              }}>{item.pct}</span>
+              <span style={{
+                fontSize: 'clamp(14px, 1.5vw, 22px)',
+                fontWeight: 500,
+                color: 'rgba(255,255,255,0.3)',
+                marginLeft: 4,
+                marginTop: '0.08em',
+              }}>%</span>
+            </div>
+            <div style={{
+              ...LABEL,
+              fontSize: 11,
+              color: 'rgba(255,255,255,0.4)',
+              marginTop: 8,
+            }}>{item.label}</div>
+          </div>
+        ))}
       </div>
-      <div style={{ flex: 1, paddingLeft: 'clamp(36px, 4vw, 72px)', minWidth: 0 }}>
-        {side === 'right' && <div style={{ maxWidth }}>{children}</div>}
-      </div>
-    </div>
+    </section>
   )
 }
 
-// Compute the spacing for each year based on its position in the timeline.
-function getYearSpacing(year, i) {
-  if (i === 0) return 0
-  if (year === '2025') return 'clamp(64px, 9vh, 100px)'
-  if (year === '2026') return 'clamp(80px, 11vh, 140px)'
-  if (year === '2027') return 'clamp(120px, 16vh, 220px)'
-  return 'clamp(48px, 7vh, 80px)' // 2017–2024 tight
-}
+// ---------- Close ----------
 
-function SpineDesktop({ entrance, days }) {
-  const years = TIMELINE_DATA.filter((y) => y.year !== '2028')
-  // Even array-index → right, odd → left
-  const getSide = (_year, idx) => (idx % 2 === 0 ? 'right' : 'left')
-  const oppositeSide = (s) => (s === 'left' ? 'right' : 'left')
-
-  const rows = []
-  years.forEach((item, i) => {
-    const side = getSide(item.year, i)
-    rows.push(
-      <DesktopYearRow key={item.year} item={item} side={side} marginTop={getYearSpacing(item.year, i)} />
-    )
-
-    // Body copy after 2025, on the opposite side
-    if (item.year === '2025') {
-      rows.push(
-        <ContentRow key="body" side={oppositeSide(side)} marginTop="clamp(40px, 5vh, 64px)" maxWidth={400}>
-          <BodyBlock style={entrance.style(3)} />
-        </ContentRow>
-      )
-    }
-
-    // Cost breakdown in the 2026→2027 gap, on the left
-    if (item.year === '2026') {
-      rows.push(
-        <ContentRow key="cost" side="left" marginTop="clamp(60px, 8vh, 100px)" maxWidth={440}>
-          <CostBlock isMobile={false} style={entrance.style(3)} />
-        </ContentRow>
-      )
-    }
-
-    // Pull-quote after 2027, on the opposite side
-    if (item.year === '2027') {
-      rows.push(
-        <ContentRow key="quote" side={oppositeSide(side)} marginTop="clamp(48px, 6vh, 80px)" maxWidth={440}>
-          <PullQuote style={entrance.style(4)} />
-        </ContentRow>
-      )
-    }
-  })
-
+function CloseSection() {
   return (
-    <div style={{
-      position: 'relative',
-      maxWidth: 1200,
-      margin: '0 auto',
-      padding: 'clamp(80px, 12vh, 160px) 0 clamp(60px, 8vh, 100px)',
-    }}>
-      {/* Spine line */}
+    <div style={{ textAlign: 'center', maxWidth: 600, margin: '0 auto', padding: 'clamp(40px, 6vh, 80px) 20px' }}>
       <div style={{
-        position: 'absolute',
-        left: '50%',
-        transform: 'translateX(-0.5px)',
-        top: 0,
-        bottom: 0,
-        width: 1,
-        background: 'rgba(10,85,235,0.3)',
-      }} />
-
-      {rows}
-
-      {/* 2028 — centered, straddling the spine */}
-      <FinalCTA
-        isMobile={false}
-        days={days}
-        style={{ ...entrance.style(5), marginTop: 'clamp(140px, 18vh, 260px)' }}
-      />
-    </div>
-  )
-}
-
-// ---------- Mobile spine ----------
-
-function MobileYearLabel({ item }) {
-  const { yearColor, yearShadow, milestoneColor, subColor } = yearStatus(item)
-  return (
-    <div>
+        fontSize: 'clamp(20px, 2.4vw, 32px)',
+        fontWeight: 400,
+        fontStyle: 'italic',
+        color: 'rgba(255,255,255,0.85)',
+        lineHeight: 1.45,
+        marginBottom: 16,
+      }}>
+        &ldquo;Whether it&rsquo;s financial support, advice, a connection, or simply following along &mdash; it all matters.&rdquo;
+      </div>
+      <div style={{ ...LABEL, color: 'rgba(255,255,255,0.4)', marginBottom: 'clamp(32px, 4vh, 56px)' }}>
+        &mdash; Robby
+      </div>
       <div style={{
-        fontSize: 'clamp(24px, 7vw, 40px)',
-        fontWeight: 600,
-        lineHeight: 1,
-        letterSpacing: '-0.5px',
-        color: yearColor,
-        textShadow: yearShadow,
-        marginBottom: 6,
+        fontSize: 'clamp(18px, 2.2vw, 28px)',
+        fontWeight: 400,
+        color: 'rgba(255,255,255,0.6)',
+        lineHeight: 1.4,
       }}>
-        {item.year}
+        Thank you for being part of this.
       </div>
-      <div style={{ fontSize: 13, fontWeight: 400, lineHeight: 1.5, color: milestoneColor }}>
-        {item.main}
-      </div>
-      {item.sub && item.sub.map((s, si) => (
-        <div key={si} style={{
-          fontSize: 11,
-          fontStyle: 'italic',
-          color: subColor,
-          lineHeight: 1.5,
-          marginTop: 2,
-        }}>{s}</div>
-      ))}
-    </div>
-  )
-}
-
-function SpineMobile({ entrance, days }) {
-  const SPINE_LEFT = 24
-  const PAD_LEFT = 48
-
-  const rows = []
-  TIMELINE_DATA.forEach((item, i) => {
-    if (item.year === '2028') return
-    const { dot } = yearStatus(item)
-
-    rows.push(
-      <div key={item.year} style={{
-        position: 'relative',
-        marginTop: getYearSpacing(item.year, i),
-        paddingLeft: PAD_LEFT,
-      }}>
-        <div style={{
-          position: 'absolute',
-          left: SPINE_LEFT,
-          top: item.current ? 6 : 10,
-          transform: 'translate(-50%, 0)',
-          borderRadius: '50%',
-          zIndex: 2,
-          ...dot,
-        }} />
-        <MobileYearLabel item={item} />
-      </div>
-    )
-
-    const wrap = (key, idx, child) => (
-      <div key={key} style={{
-        ...entrance.style(idx),
-        marginTop: 'clamp(28px, 4vh, 48px)',
-        paddingLeft: PAD_LEFT,
-        paddingRight: 16,
-      }}>
-        {child}
-      </div>
-    )
-
-    if (item.year === '2025') rows.push(wrap('body', 3, <BodyBlock style={{}} />))
-    if (item.year === '2026') rows.push(wrap('cost', 3, <CostBlock isMobile={true} style={{}} />))
-    if (item.year === '2027') rows.push(wrap('quote', 4, <PullQuote style={{}} />))
-  })
-
-  return (
-    <div style={{
-      position: 'relative',
-      padding: 'clamp(60px, 10vh, 100px) 20px clamp(48px, 7vh, 80px)',
-    }}>
-      {/* Left-rail spine */}
-      <div style={{
-        position: 'absolute',
-        left: SPINE_LEFT,
-        top: 0,
-        bottom: 0,
-        width: 1,
-        background: 'rgba(10,85,235,0.3)',
-        transform: 'translateX(-0.5px)',
-      }} />
-
-      {rows}
-
-      <FinalCTA
-        isMobile={true}
-        days={days}
-        style={{
-          ...entrance.style(5),
-          marginTop: 'clamp(80px, 12vh, 160px)',
-          paddingLeft: PAD_LEFT,
-          paddingRight: 16,
-        }}
-      />
     </div>
   )
 }
@@ -682,34 +757,15 @@ export default function Support({ onNavigate }) {
     return () => window.removeEventListener('resize', h)
   }, [])
 
-  // 6 entrance beats: hero, bio, photo, body+cost, quote, CTA+close
-  const entrance = usePageEntrance(6, { staggerMs: 120, initialDelayMs: 60 })
   const { days } = useCountdown(new Date('2028-07-14T00:00:00'))
 
   return (
     <div style={{ minHeight: '100vh', background: 'rgb(12,14,18)' }}>
-      <HeroSection entrance={entrance} isMobile={isMobile} />
-      <BioSection entrance={entrance} isMobile={isMobile} />
-      <PhotoBreak entrance={entrance} isMobile={isMobile} />
-
-      {isMobile
-        ? <SpineMobile entrance={entrance} days={days} />
-        : <SpineDesktop entrance={entrance} days={days} />}
-
-      <div style={{
-        ...entrance.style(5),
-        textAlign: 'center',
-        fontSize: 'clamp(18px, 2.2vw, 28px)',
-        fontWeight: 400,
-        color: 'rgba(255,255,255,0.6)',
-        maxWidth: 600,
-        margin: '0 auto',
-        padding: 'clamp(40px, 6vh, 80px) 20px',
-        lineHeight: 1.4,
-      }}>
-        Thank you for being part of this.
-      </div>
-
+      <HeroSection isMobile={isMobile} />
+      <BioSection isMobile={isMobile} />
+      <TimelineSection isMobile={isMobile} days={days} />
+      <CostBreakdown isMobile={isMobile} />
+      <CloseSection />
       <Footer variant="dark" onNavigate={onNavigate} />
     </div>
   )

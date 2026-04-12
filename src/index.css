@@ -48,17 +48,6 @@ button {
   animation: chromeShimmer 6s ease infinite;
 }
 
-/* Support page layout - stack on mobile */
-@media (max-width: 700px) {
-  .support-layout {
-    flex-direction: column !important;
-  }
-  .timeline-sidebar {
-    width: 100% !important;
-    position: relative !important;
-    padding: 0 !important;
-  }
-}
 
 /* Bio hero — medium screens: cards move below image */
 @media (max-width: 900px) {
@@ -154,6 +143,15 @@ button {
     padding: clamp(8px, 1.5vh, 16px) 16px clamp(12px, 2vh, 24px) !important;
     margin-top: 0 !important;
   }
+}
+
+/* Support page: sailboat gentle rocking */
+@keyframes sailBob {
+  0%, 100% { transform: translate(-50%, -50%) rotate(-2deg); }
+  50% { transform: translate(-50%, -50%) rotate(2deg); }
+}
+.sail-bob {
+  animation: sailBob 3s ease-in-out infinite;
 }
 
 /* Marquee animation */
