@@ -57,21 +57,18 @@ const BIO_STATS = [
   ['9+', 'Years in ILCA'],
 ]
 
-// Section scroll heights (in vh units) — early years fast, later years linger
-const SECTION_HEIGHTS = {
-  '2017': { desktop: 50, mobile: 35 },
-  '2018': { desktop: 50, mobile: 35 },
-  '2019': { desktop: 50, mobile: 35 },
-  '2020': { desktop: 40, mobile: 30 },
-  '2021': { desktop: 55, mobile: 40 },
-  '2022': { desktop: 50, mobile: 35 },
-  '2023': { desktop: 120, mobile: 80 },
-  '2024': { desktop: 120, mobile: 80 },
-  '2025': { desktop: 130, mobile: 90 },
-  '2026': { desktop: 140, mobile: 100 },
-  '2027': { desktop: 100, mobile: 80 },
-  '2028': { desktop: 100, mobile: 80 },
-}
+// Snap pages — each shows two years. Photo is from the more notable year.
+const SNAP_PAGES = [
+  { indices: [0, 1], photo: 'IMG_5343.jpeg' },      // 2017 + 2018
+  { indices: [2, 3], photo: 'Screen Shot 2022-01-18 at 6.25.56 PM.jpg' }, // 2019 + 2020
+  { indices: [4, 5], photo: 'IMG_4733.jpeg' },       // 2021 + 2022
+  { indices: [6, 7], photo: 'IMG_5956.JPG' },        // 2023 + 2024
+  { indices: [8, 9], photo: 'IMG_6285.JPG' },        // 2025 + 2026
+  { indices: [10, 11], photo: null },                 // 2027 + 2028 (dark)
+]
+const NUM_PAGES = SNAP_PAGES.length
+const PAGE_VH = 100 // each page is 100vh of scroll
+const TOTAL_VH = NUM_PAGES * PAGE_VH // outer container height
 
 const LABEL = {
   fontSize: 12,
@@ -151,8 +148,7 @@ function HeroSection({ isMobile }) {
           margin: 0,
           maxWidth: 900,
         }}>
-          JOIN THE TEAM<br />
-          BEHIND IT ALL.
+          JOIN THE TEAM.
         </h1>
         <p style={{
           color: 'rgba(255,255,255,0.78)',
@@ -223,31 +219,102 @@ function BioSection({ isMobile }) {
 
 // ---------- Scroll-driven Timeline ----------
 
+function getYearStyle(item) {
+  if (item.current) return { color: '#fff', shadow: '0 0 30px rgba(220,40,40,0.35)', milestone: 'rgba(255,255,255,0.9)', sub: 'rgba(255,255,255,0.7)' }
+  if (item.past) return { color: 'rgba(255,255,255,0.7)', shadow: 'none', milestone: 'rgba(255,255,255,0.65)', sub: 'rgba(255,255,255,0.45)' }
+  return { color: 'rgba(255,255,255,0.4)', shadow: 'none', milestone: 'rgba(255,255,255,0.4)', sub: 'rgba(255,255,255,0.3)' }
+}
+
+function YearBlock({ item, side, verticalPos, isMobile, factBox }) {
+  const s = getYearStyle(item)
+  const isCurrent = item.current
+
+  if (isMobile) {
+    return (
+      <div style={{
+        position: 'absolute',
+        left: 48,
+        right: 20,
+        top: verticalPos,
+        transform: 'translateY(-50%)',
+      }}>
+        <div style={{ fontSize: 'clamp(28px, 7vw, 44px)', fontWeight: 700, lineHeight: 1, letterSpacing: '-1px', color: s.color, textShadow: s.shadow, marginBottom: 6 }}>
+          {item.year}
+        </div>
+        <div style={{ fontSize: 'clamp(13px, 1.2vw, 16px)', fontWeight: 400, color: s.milestone, lineHeight: 1.5 }}>
+          {item.main}
+        </div>
+        {item.sub && item.sub.map((t, i) => (
+          <div key={i} style={{ fontSize: 12, fontStyle: 'italic', color: s.sub, lineHeight: 1.5, marginTop: 2 }}>{t}</div>
+        ))}
+        {factBox && (
+          <div style={{
+            marginTop: 12,
+            maxWidth: 'calc(100vw - 80px)',
+            padding: '12px 16px',
+            background: 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 8,
+            borderLeft: isCurrent ? '2px solid rgba(220,40,40,0.5)' : '1px solid rgba(255,255,255,0.08)',
+          }}>
+            <div style={{ fontSize: 10, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: 4, fontWeight: 500 }}>{factBox.label}</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>{factBox.text}</div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Desktop: position on one side of the spine
+  const isLeft = side === 'left'
+  const positioning = isLeft
+    ? { right: 'calc(50% + 40px)', textAlign: 'right' }
+    : { left: 'calc(50% + 40px)', textAlign: 'left' }
+
+  return (
+    <div style={{
+      position: 'absolute',
+      top: verticalPos,
+      transform: 'translateY(-50%)',
+      maxWidth: 360,
+      ...positioning,
+    }}>
+      <div style={{ fontSize: 'clamp(40px, 5.5vw, 80px)', fontWeight: 700, lineHeight: 1, letterSpacing: '-2px', color: s.color, textShadow: s.shadow, marginBottom: 8 }}>
+        {item.year}
+      </div>
+      <div style={{ fontSize: 'clamp(14px, 1.2vw, 18px)', fontWeight: 400, color: s.milestone, lineHeight: 1.5 }}>
+        {item.main}
+      </div>
+      {item.sub && item.sub.map((t, i) => (
+        <div key={i} style={{ fontSize: 13, fontStyle: 'italic', color: s.sub, lineHeight: 1.5, marginTop: 3 }}>{t}</div>
+      ))}
+      {factBox && (
+        <div style={{
+          marginTop: 16,
+          maxWidth: 280,
+          padding: '16px 20px',
+          background: 'rgba(255,255,255,0.06)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 8,
+          borderLeft: isCurrent ? '2px solid rgba(220,40,40,0.5)' : '1px solid rgba(255,255,255,0.08)',
+          marginLeft: isLeft ? 'auto' : 0,
+          marginRight: !isLeft ? 'auto' : 0,
+        }}>
+          <div style={{ fontSize: 10, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: 6, fontWeight: 500 }}>{factBox.label}</div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>{factBox.text}</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function TimelineSection({ isMobile, days }) {
   const outerRef = useRef(null)
-  const [activeIndex, setActiveIndex] = useState(0)
+  const [activePage, setActivePage] = useState(0)
   const [sailboatProgress, setSailboatProgress] = useState(0)
   const rafRef = useRef(null)
-
-  // Memoize boundaries so they only recompute when isMobile changes
-  const { totalVh, boundaries } = useMemo(() => {
-    const heights = TIMELINE_DATA.map(item => {
-      const h = SECTION_HEIGHTS[item.year] || { desktop: 80, mobile: 60 }
-      return isMobile ? h.mobile : h.desktop
-    })
-    const total = heights.reduce((a, b) => a + b, 0)
-    const bounds = []
-    let cum = 0
-    for (let i = 0; i < heights.length; i++) {
-      bounds.push(cum / total)
-      cum += heights[i]
-    }
-    return { totalVh: total, boundaries: bounds }
-  }, [isMobile])
-
-  // Store boundaries in a ref so the scroll handler never goes stale
-  const boundariesRef = useRef(boundaries)
-  boundariesRef.current = boundaries
+  const snapTimerRef = useRef(null)
+  const isSnappingRef = useRef(false)
 
   useEffect(() => {
     function onScroll() {
@@ -260,23 +327,43 @@ function TimelineSection({ isMobile, days }) {
         const rect = outer.getBoundingClientRect()
         const outerHeight = outer.offsetHeight
         const viewportH = window.innerHeight
-        // scrolled = how far past the top of the outer container
         const scrolled = -rect.top
-        // progress 0→1 across the full scroll region
-        const progress = Math.max(0, Math.min(1, scrolled / (outerHeight - viewportH)))
+        const scrollRange = outerHeight - viewportH
+        if (scrollRange <= 0) return
+        const progress = Math.max(0, Math.min(1, scrolled / scrollRange))
 
         setSailboatProgress(progress)
 
-        // Find active year
-        const b = boundariesRef.current
-        let idx = 0
-        for (let i = b.length - 1; i >= 0; i--) {
-          if (progress >= b[i]) {
-            idx = i
-            break
-          }
+        // Determine active page
+        const pageIdx = Math.min(
+          NUM_PAGES - 1,
+          Math.floor(progress * NUM_PAGES)
+        )
+        setActivePage(pageIdx)
+
+        // Snap on scroll stop (debounced)
+        clearTimeout(snapTimerRef.current)
+        if (!isSnappingRef.current) {
+          snapTimerRef.current = setTimeout(() => {
+            // Re-read position for snap target
+            const r = outer.getBoundingClientRect()
+            const s = -r.top
+            const range = outerHeight - viewportH
+            if (range <= 0) return
+            const p = Math.max(0, Math.min(1, s / range))
+            const nearestPage = Math.round(p * (NUM_PAGES - 1))
+            const targetProgress = nearestPage / (NUM_PAGES - 1)
+            const outerTop = window.scrollY + r.top
+            const targetScroll = outerTop + targetProgress * range
+
+            // Only snap if we're not already close
+            if (Math.abs(window.scrollY - targetScroll) > 20) {
+              isSnappingRef.current = true
+              window.scrollTo({ top: targetScroll, behavior: 'smooth' })
+              setTimeout(() => { isSnappingRef.current = false }, 600)
+            }
+          }, 120)
         }
-        setActiveIndex(idx)
       })
     }
 
@@ -284,19 +371,23 @@ function TimelineSection({ isMobile, days }) {
     onScroll()
     return () => {
       window.removeEventListener('scroll', onScroll)
+      clearTimeout(snapTimerRef.current)
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
     }
   }, [])
 
-  const activeYear = TIMELINE_DATA[activeIndex]?.year
   const spineLeft = isMobile ? 24 : '50%'
+  const activePageData = SNAP_PAGES[activePage]
+  const hasYears2026 = activePageData.indices.some(i => TIMELINE_DATA[i]?.current)
+  // Sailboat discrete position: snap to page center on the spine
+  const boatTop = 10 + (activePage / (NUM_PAGES - 1)) * 80
 
   return (
     <div
       ref={outerRef}
       style={{
         position: 'relative',
-        height: `${totalVh}vh`,
+        height: `${TOTAL_VH}vh`,
       }}
     >
       {/* Sticky viewport frame */}
@@ -308,17 +399,15 @@ function TimelineSection({ isMobile, days }) {
         overflow: 'hidden',
         background: 'rgb(12,14,18)',
       }}>
-        {/* Background photos — stacked, crossfading */}
-        {TIMELINE_DATA.map((item, i) => {
-          const photo = YEAR_PHOTOS[item.year]
-          if (!photo) return null
-          const isActive = activeYear === item.year
+        {/* Background photos — one per page, crossfading */}
+        {SNAP_PAGES.map((page, pi) => {
+          if (!page.photo) return null
           return (
             <img
-              key={item.year}
-              src={`${BASE}sailing-photos/${photo}`}
+              key={pi}
+              src={`${BASE}sailing-photos/${page.photo}`}
               alt=""
-              loading={i < 2 ? 'eager' : 'lazy'}
+              loading={pi < 2 ? 'eager' : 'lazy'}
               decoding="async"
               style={{
                 position: 'absolute',
@@ -328,7 +417,7 @@ function TimelineSection({ isMobile, days }) {
                 objectFit: 'cover',
                 objectPosition: 'center',
                 filter: 'grayscale(0.2) contrast(1.1) brightness(0.65)',
-                opacity: isActive ? 1 : 0,
+                opacity: activePage === pi ? 1 : 0,
                 transition: 'opacity 0.8s ease',
                 willChange: 'opacity',
                 zIndex: 0,
@@ -338,12 +427,7 @@ function TimelineSection({ isMobile, days }) {
         })}
 
         {/* Dark overlay */}
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'rgba(0,0,0,0.5)',
-          zIndex: 1,
-        }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1 }} />
 
         {/* Spine line */}
         <div style={{
@@ -363,193 +447,59 @@ function TimelineSection({ isMobile, days }) {
           style={{
             position: 'absolute',
             left: spineLeft,
-            top: `${10 + sailboatProgress * 80}%`,
+            top: `${boatTop}%`,
             transform: 'translate(-50%, -50%)',
             zIndex: 3,
-            transition: 'top 0.1s linear',
+            transition: 'top 0.5s ease',
           }}
         >
-          <SailboatIcon glow={activeYear === '2026'} />
+          <SailboatIcon glow={hasYears2026} />
         </div>
 
-        {/* Year content */}
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          zIndex: 4,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          pointerEvents: 'none',
-        }}>
-          {TIMELINE_DATA.map((item, i) => {
-            const isActive = activeIndex === i
-            const is2028 = item.year === '2028'
-            const isLeft = isMobile ? false : (i % 2 === 0)
-            const factBox = FACT_BOXES[item.year]
-            const isPast = item.past
-            const isCurrent = item.current
-            const isFuture = !isPast && !isCurrent
+        {/* Page content — each page shows two years */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none' }}>
+          {SNAP_PAGES.map((page, pi) => {
+            const isActive = activePage === pi
+            const isLastPage = pi === NUM_PAGES - 1
+            const firstYear = TIMELINE_DATA[page.indices[0]]
+            const secondYear = TIMELINE_DATA[page.indices[1]]
+            // Alternate: even pages → first year top-left, second bottom-right
+            // Odd pages → first year top-right, second bottom-left
+            const firstSide = pi % 2 === 0 ? 'left' : 'right'
+            const secondSide = pi % 2 === 0 ? 'right' : 'left'
 
-            // Year numeral styling
-            let yearColor = 'rgba(255,255,255,0.7)'
-            let yearShadow = 'none'
-            if (isCurrent) {
-              yearColor = '#fff'
-              yearShadow = '0 0 30px rgba(220,40,40,0.35)'
-            } else if (isFuture) {
-              yearColor = 'rgba(255,255,255,0.4)'
-            }
-
-            if (is2028) {
-              return (
-                <div key={item.year} style={{
-                  position: 'absolute',
-                  inset: 0,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  opacity: isActive ? 1 : 0,
-                  transform: isActive ? 'translateY(0)' : 'translateY(8px)',
-                  transition: 'opacity 0.5s ease, transform 0.5s ease',
-                  pointerEvents: isActive ? 'auto' : 'none',
-                  padding: isMobile ? '0 24px' : 0,
-                }}>
-                  <div style={{
-                    fontSize: isMobile ? 'clamp(56px, 14vw, 100px)' : 'clamp(72px, 13vw, 200px)',
-                    fontWeight: 700,
-                    lineHeight: 1,
-                    letterSpacing: '-3px',
-                    color: '#fff',
-                    textAlign: 'center',
-                  }}>
-                    2028
-                  </div>
-                  <div style={{ ...LABEL, color: 'rgba(255,255,255,0.5)', marginTop: 20, textAlign: 'center' }}>
-                    LA Olympics
-                  </div>
-                  <div style={{
-                    marginTop: 36,
-                    display: 'flex',
-                    alignItems: 'baseline',
-                    gap: 14,
-                  }}>
-                    <span style={{
-                      fontSize: 'clamp(32px, 4.5vw, 64px)',
-                      fontWeight: 700,
-                      color: '#fff',
-                      lineHeight: 1,
-                      letterSpacing: '-1px',
-                    }}>{days}</span>
-                    <span style={{ ...LABEL, fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>Days</span>
-                  </div>
-                  <CTABlock isMobile={isMobile} />
-                </div>
-              )
-            }
-
-            // Regular year
             return (
-              <div key={item.year} style={{
+              <div key={pi} style={{
                 position: 'absolute',
                 inset: 0,
-                display: 'flex',
-                alignItems: isMobile ? 'center' : 'center',
-                justifyContent: 'center',
                 opacity: isActive ? 1 : 0,
                 transform: isActive ? 'translateY(0)' : 'translateY(8px)',
                 transition: 'opacity 0.5s ease, transform 0.5s ease',
-                pointerEvents: 'none',
+                pointerEvents: isActive ? 'auto' : 'none',
               }}>
-                {/* Desktop layout: year on one side, fact on other */}
-                {isMobile ? (
-                  <div style={{
-                    position: 'absolute',
-                    left: 48,
-                    right: 20,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                  }}>
-                    <div style={{
-                      fontSize: 'clamp(32px, 8vw, 56px)',
-                      fontWeight: 700,
-                      lineHeight: 1,
-                      letterSpacing: '-1px',
-                      color: yearColor,
-                      textShadow: yearShadow,
-                      marginBottom: 8,
-                    }}>
-                      {item.year}
-                    </div>
-                    <div style={{
-                      fontSize: 'clamp(14px, 1.2vw, 18px)',
-                      fontWeight: 400,
-                      color: isPast ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.4)',
-                      lineHeight: 1.5,
-                    }}>
-                      {item.main}
-                    </div>
-                    {item.sub && item.sub.map((s, si) => (
-                      <div key={si} style={{
-                        fontSize: 13,
-                        fontStyle: 'italic',
-                        color: isPast ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.3)',
-                        lineHeight: 1.5,
-                        marginTop: 3,
-                      }}>{s}</div>
-                    ))}
-                    {factBox && (
-                      <div style={{
-                        marginTop: 20,
-                        maxWidth: 'calc(100vw - 80px)',
-                        padding: '16px 20px',
-                        background: 'rgba(255,255,255,0.06)',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        borderRadius: 8,
-                        borderLeft: isCurrent ? '2px solid rgba(220,40,40,0.5)' : '1px solid rgba(255,255,255,0.08)',
-                      }}>
-                        <div style={{ fontSize: 10, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: 6, fontWeight: 500 }}>
-                          {factBox.label}
-                        </div>
-                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
-                          {factBox.text}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                {isLastPage ? (
+                  // Special 2027+2028 page
+                  <LastPageContent
+                    year2027={firstYear}
+                    days={days}
+                    isMobile={isMobile}
+                  />
                 ) : (
                   <>
-                    {/* Left column */}
-                    <div style={{
-                      position: 'absolute',
-                      right: 'calc(50% + 40px)',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      textAlign: 'right',
-                      maxWidth: 340,
-                    }}>
-                      {isLeft ? (
-                        <YearContent item={item} yearColor={yearColor} yearShadow={yearShadow} isPast={isPast} />
-                      ) : factBox ? (
-                        <FactBoxContent factBox={factBox} isCurrent={isCurrent} align="right" />
-                      ) : null}
-                    </div>
-                    {/* Right column */}
-                    <div style={{
-                      position: 'absolute',
-                      left: 'calc(50% + 40px)',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      textAlign: 'left',
-                      maxWidth: 340,
-                    }}>
-                      {!isLeft ? (
-                        <YearContent item={item} yearColor={yearColor} yearShadow={yearShadow} isPast={isPast} />
-                      ) : factBox ? (
-                        <FactBoxContent factBox={factBox} isCurrent={isCurrent} align="left" />
-                      ) : null}
-                    </div>
+                    <YearBlock
+                      item={firstYear}
+                      side={firstSide}
+                      verticalPos="33%"
+                      isMobile={isMobile}
+                      factBox={FACT_BOXES[firstYear.year]}
+                    />
+                    <YearBlock
+                      item={secondYear}
+                      side={secondSide}
+                      verticalPos="70%"
+                      isMobile={isMobile}
+                      factBox={FACT_BOXES[secondYear.year]}
+                    />
                   </>
                 )}
               </div>
@@ -561,60 +511,59 @@ function TimelineSection({ isMobile, days }) {
   )
 }
 
-function YearContent({ item, yearColor, yearShadow, isPast }) {
+function LastPageContent({ year2027, days, isMobile }) {
+  const s2027 = getYearStyle(year2027)
   return (
     <>
+      {/* 2027 — muted, upper portion */}
       <div style={{
-        fontSize: 'clamp(48px, 7vw, 100px)',
-        fontWeight: 700,
-        lineHeight: 1,
-        letterSpacing: '-2px',
-        color: yearColor,
-        textShadow: yearShadow,
-        marginBottom: 10,
+        position: 'absolute',
+        top: '22%',
+        left: isMobile ? 48 : undefined,
+        right: isMobile ? 20 : 'calc(50% + 40px)',
+        textAlign: isMobile ? 'left' : 'right',
+        transform: 'translateY(-50%)',
       }}>
-        {item.year}
+        <div style={{ fontSize: isMobile ? 'clamp(28px, 7vw, 44px)' : 'clamp(40px, 5.5vw, 80px)', fontWeight: 700, lineHeight: 1, letterSpacing: '-2px', color: s2027.color, marginBottom: 8 }}>
+          {year2027.year}
+        </div>
+        <div style={{ fontSize: 'clamp(14px, 1.2vw, 18px)', fontWeight: 400, color: s2027.milestone, lineHeight: 1.5 }}>
+          {year2027.main}
+        </div>
       </div>
-      <div style={{
-        fontSize: 'clamp(14px, 1.2vw, 18px)',
-        fontWeight: 400,
-        color: isPast ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.4)',
-        lineHeight: 1.5,
-      }}>
-        {item.main}
-      </div>
-      {item.sub && item.sub.map((s, si) => (
-        <div key={si} style={{
-          fontSize: 13,
-          fontStyle: 'italic',
-          color: isPast ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.3)',
-          lineHeight: 1.5,
-          marginTop: 3,
-        }}>{s}</div>
-      ))}
-    </>
-  )
-}
 
-function FactBoxContent({ factBox, isCurrent, align }) {
-  return (
-    <div style={{
-      maxWidth: 280,
-      padding: '16px 20px',
-      background: 'rgba(255,255,255,0.06)',
-      border: '1px solid rgba(255,255,255,0.08)',
-      borderRadius: 8,
-      borderLeft: isCurrent ? '2px solid rgba(220,40,40,0.5)' : '1px solid rgba(255,255,255,0.08)',
-      marginLeft: align === 'right' ? 'auto' : 0,
-      marginRight: align === 'left' ? 'auto' : 0,
-    }}>
-      <div style={{ fontSize: 10, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: 6, fontWeight: 500 }}>
-        {factBox.label}
+      {/* 2028 — centered CTA */}
+      <div style={{
+        position: 'absolute',
+        top: '60%',
+        left: 0,
+        right: 0,
+        transform: 'translateY(-50%)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: isMobile ? '0 24px' : 0,
+      }}>
+        <div style={{
+          fontSize: isMobile ? 'clamp(56px, 14vw, 100px)' : 'clamp(72px, 13vw, 200px)',
+          fontWeight: 700,
+          lineHeight: 1,
+          letterSpacing: '-3px',
+          color: '#fff',
+          textAlign: 'center',
+        }}>
+          2028
+        </div>
+        <div style={{ ...LABEL, color: 'rgba(255,255,255,0.5)', marginTop: 20, textAlign: 'center' }}>
+          LA Olympics
+        </div>
+        <div style={{ marginTop: 28, display: 'flex', alignItems: 'baseline', gap: 14 }}>
+          <span style={{ fontSize: 'clamp(32px, 4.5vw, 64px)', fontWeight: 700, color: '#fff', lineHeight: 1, letterSpacing: '-1px' }}>{days}</span>
+          <span style={{ ...LABEL, fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>Days</span>
+        </div>
+        <CTABlock isMobile={isMobile} />
       </div>
-      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
-        {factBox.text}
-      </div>
-    </div>
+    </>
   )
 }
 
