@@ -16,7 +16,7 @@ const INNER_BG = {
   '/event-calendar': 'rgb(0,0,0)',
   '/team': 'rgb(22,24,28)',
   '/contact': 'rgb(240,240,240)',
-  '/support': 'rgb(20,110,240)',
+  '/support': 'rgb(12,14,18)',
 }
 
 const VARIANT_MAP = {
@@ -25,7 +25,7 @@ const VARIANT_MAP = {
   '/event-calendar': 'dark',
   '/team': 'blue',
   '/contact': 'light',
-  '/support': 'blue',
+  '/support': 'dark',
 }
 
 const CURRENT_MAP = {
@@ -43,7 +43,7 @@ function getNavMode(pathname) {
   // Support) are suppressed on / because the bottom-left nav already covers
   // narrow screens — see the isHomeRoute gates below.
   if (pathname === '/') return 'hover'
-  if (pathname === '/support') return 'sticky'
+  if (pathname === '/support') return 'static'
   // Contact is a single-viewport page — overlay the nav so the nav's height
   // counts toward the 100dvh and the page can stay exactly one screen tall.
   if (pathname === '/contact') return 'overlay'

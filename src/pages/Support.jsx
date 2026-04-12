@@ -3,6 +3,8 @@ import Footer from '../components/Footer'
 import useCountdown from '../hooks/useCountdown'
 import usePageEntrance from '../hooks/usePageEntrance'
 
+const BASE = import.meta.env.BASE_URL
+
 const TIMELINE_DATA = [
   { year: '2017', main: 'Started racing', past: true },
   { year: '2018', main: 'First Youth Champs', past: true },
@@ -18,14 +20,19 @@ const TIMELINE_DATA = [
   { year: '2028', main: 'LA Olympics' },
 ]
 
+const COSTS = [
+  { label: 'Training', pct: 50 },
+  { label: 'Equipment', pct: 20 },
+  { label: 'Travel', pct: 15 },
+  { label: 'Coaching', pct: 10 },
+  { label: 'Entry Fees', pct: 5 },
+]
+
 const BIO_STATS = [
   ['6x', 'National Champ'],
   ['3x', 'Continental Champ'],
   ['9+', 'Years in ILCA'],
 ]
-
-// Classic editorial serif, scoped to this page via the outer container's fontFamily.
-const FONT_FAMILY = "'Times New Roman', Times, serif"
 
 const LABEL = {
   fontSize: 12,
@@ -34,111 +41,159 @@ const LABEL = {
   textTransform: 'uppercase',
 }
 
-// Returns visual treatment for a year node based on its status.
-// Opacities are tuned for legibility of white text against the cobalt background.
 function yearStatus(item) {
   if (item.current) {
     return {
       dot: {
-        width: 18, height: 18,
+        width: 14, height: 14,
         background: 'rgb(220,40,40)',
-        boxShadow: '0 0 24px rgba(220,40,40,0.55)',
+        boxShadow: '0 0 20px rgba(220,40,40,0.5), 0 0 60px rgba(220,40,40,0.15)',
       },
       yearColor: '#fff',
-      yearShadow: '0 0 32px rgba(220,40,40,0.4)',
-      milestoneColor: '#fff',
-      subColor: 'rgba(255,255,255,0.85)',
+      yearShadow: '0 0 30px rgba(220,40,40,0.35)',
+      milestoneColor: 'rgba(255,255,255,0.9)',
+      subColor: 'rgba(255,255,255,0.7)',
     }
   }
   if (item.past) {
     return {
-      dot: { width: 8, height: 8, background: '#fff' },
-      yearColor: 'rgba(255,255,255,0.82)',
+      dot: { width: 6, height: 6, background: 'rgba(255,255,255,0.5)' },
+      yearColor: 'rgba(255,255,255,0.55)',
       yearShadow: 'none',
-      milestoneColor: 'rgba(255,255,255,0.95)',
-      subColor: 'rgba(255,255,255,0.78)',
+      milestoneColor: 'rgba(255,255,255,0.65)',
+      subColor: 'rgba(255,255,255,0.45)',
     }
   }
   return {
     dot: {
-      width: 8, height: 8,
+      width: 6, height: 6,
       background: 'transparent',
-      border: '1.5px solid rgba(255,255,255,0.55)',
+      border: '1px solid rgba(255,255,255,0.25)',
       boxSizing: 'border-box',
     },
-    yearColor: 'rgba(255,255,255,0.62)',
+    yearColor: 'rgba(255,255,255,0.35)',
     yearShadow: 'none',
-    milestoneColor: 'rgba(255,255,255,0.62)',
-    subColor: 'rgba(255,255,255,0.62)',
+    milestoneColor: 'rgba(255,255,255,0.4)',
+    subColor: 'rgba(255,255,255,0.3)',
   }
 }
 
-// ---------- Shared content blocks ----------
+// ---------- Content blocks ----------
 
-function PullQuote() {
+function BodyBlock({ style }) {
   return (
-    <div>
+    <div style={style}>
+      <p style={{
+        fontSize: 'clamp(16px, 1.4vw, 19px)',
+        fontWeight: 400,
+        lineHeight: 1.7,
+        color: 'rgba(255,255,255,0.75)',
+        margin: '0 0 1.1em',
+      }}>
+        There is no shortcut. The only way to improve is to race the top sailors under the same conditions, on the same water, at the same time.
+      </p>
+      <p style={{
+        fontSize: 'clamp(16px, 1.4vw, 19px)',
+        fontWeight: 400,
+        lineHeight: 1.7,
+        color: 'rgba(255,255,255,0.75)',
+        margin: 0,
+      }}>
+        That means traveling to wherever the best regattas are happening — and doing it year-round.
+      </p>
+    </div>
+  )
+}
+
+function CostBlock({ isMobile, style }) {
+  const numSize = isMobile ? 'clamp(40px, 10vw, 72px)' : 'clamp(48px, 8vw, 120px)'
+  return (
+    <div style={style}>
+      <div style={{ ...LABEL, color: 'rgba(255,255,255,0.35)', marginBottom: 28 }}>
+        Where Your Support Goes
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {COSTS.map((item) => (
+          <div key={item.label} style={{ display: 'flex', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+              <span style={{
+                fontSize: numSize,
+                fontWeight: 700,
+                lineHeight: 0.9,
+                letterSpacing: '-2px',
+                color: '#fff',
+              }}>{item.pct}</span>
+              <span style={{
+                fontSize: 'clamp(14px, 1.5vw, 22px)',
+                fontWeight: 500,
+                color: 'rgba(255,255,255,0.3)',
+                marginLeft: 4,
+                marginTop: '0.08em',
+              }}>%</span>
+            </div>
+            <div style={{
+              ...LABEL,
+              fontSize: 11,
+              color: 'rgba(255,255,255,0.4)',
+              marginLeft: 'clamp(14px, 2vw, 28px)',
+            }}>{item.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function PullQuote({ style }) {
+  return (
+    <div style={style}>
       <div style={{
-        fontSize: 'clamp(22px, 2.8vw, 36px)',
+        fontSize: 'clamp(20px, 2.4vw, 32px)',
         fontWeight: 400,
         fontStyle: 'italic',
-        color: 'rgba(255,255,255,0.95)',
-        lineHeight: 1.4,
+        color: 'rgba(255,255,255,0.85)',
+        lineHeight: 1.45,
       }}>
         &ldquo;Whether it&rsquo;s financial support, advice, a connection, or simply following along — it all matters.&rdquo;
       </div>
-      <div style={{
-        ...LABEL,
-        color: 'rgba(255,255,255,0.65)',
-        marginTop: 18,
-      }}>
+      <div style={{ ...LABEL, color: 'rgba(255,255,255,0.4)', marginTop: 20 }}>
         — Robby
       </div>
     </div>
   )
 }
 
-function FinalCTA({ isMobile, days }) {
+function FinalCTA({ isMobile, days, style }) {
   const [ctaHover, setCtaHover] = useState(false)
-  const numeralSize = isMobile
-    ? 'clamp(64px, 16vw, 120px)'
-    : 'clamp(80px, 14vw, 220px)'
+  const numSize = isMobile ? 'clamp(56px, 14vw, 100px)' : 'clamp(72px, 13vw, 200px)'
   return (
-    <>
+    <div style={{ textAlign: isMobile ? 'left' : 'center', ...style }}>
       <div style={{
-        fontSize: numeralSize,
+        fontSize: numSize,
         fontWeight: 700,
         lineHeight: 1,
-        letterSpacing: '-2px',
+        letterSpacing: '-3px',
         color: '#fff',
       }}>
         2028
       </div>
-      <div style={{
-        ...LABEL,
-        color: 'rgba(255,255,255,0.65)',
-        marginTop: 20,
-      }}>
+      <div style={{ ...LABEL, color: 'rgba(255,255,255,0.5)', marginTop: 20 }}>
         LA Olympics
       </div>
       <div style={{
-        marginTop: 32,
+        marginTop: 36,
         display: 'inline-flex',
         alignItems: 'baseline',
         gap: 14,
       }}>
         <span style={{
-          fontSize: 'clamp(36px, 5vw, 72px)',
+          fontSize: 'clamp(32px, 4.5vw, 64px)',
           fontWeight: 700,
           color: '#fff',
           lineHeight: 1,
-          letterSpacing: '-0.5px',
+          letterSpacing: '-1px',
         }}>{days}</span>
-        <span style={{
-          ...LABEL,
-          fontSize: 14,
-          color: 'rgba(255,255,255,0.65)',
-        }}>Days</span>
+        <span style={{ ...LABEL, fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>Days</span>
       </div>
       <div style={{ marginTop: 48 }}>
         <a
@@ -147,16 +202,16 @@ function FinalCTA({ isMobile, days }) {
           onMouseLeave={() => setCtaHover(false)}
           style={{
             display: 'inline-block',
-            fontSize: 'clamp(22px, 2.8vw, 40px)',
+            fontSize: 'clamp(20px, 2.5vw, 36px)',
             fontWeight: 500,
-            color: ctaHover ? '#fff' : 'rgba(255,255,255,0.95)',
+            color: ctaHover ? '#fff' : 'rgba(255,255,255,0.92)',
             textDecoration: 'none',
             borderBottomStyle: 'solid',
             borderBottomWidth: ctaHover ? 3 : 2,
             borderBottomColor: 'rgb(220,40,40)',
             paddingBottom: 6,
             transition: 'color 0.2s ease, border-bottom-width 0.2s ease',
-            letterSpacing: '-0.2px',
+            letterSpacing: '-0.3px',
           }}
         >
           EMAIL ROBBY →
@@ -168,7 +223,7 @@ function FinalCTA({ isMobile, days }) {
           style={{
             fontSize: 13,
             fontStyle: 'italic',
-            color: 'rgba(255,255,255,0.7)',
+            color: 'rgba(255,255,255,0.5)',
             textDecoration: 'underline',
             textUnderlineOffset: '3px',
           }}
@@ -176,58 +231,93 @@ function FinalCTA({ isMobile, days }) {
           or reach out about anything else
         </a>
       </div>
-    </>
+    </div>
   )
 }
 
-// ---------- Hero ----------
+// ---------- Section 1: Cinematic Hero ----------
 
 function HeroSection({ entrance, isMobile }) {
-  const headlineSize = isMobile
-    ? 'clamp(40px, 11vw, 72px)'
-    : 'clamp(44px, 9vw, 130px)'
   return (
     <section style={{
       position: 'relative',
       width: '100%',
-      minHeight: 'clamp(480px, 85vh, 780px)',
-      padding: 'clamp(60px, 12vh, 140px) clamp(32px, 6vw, 120px) clamp(40px, 6vh, 80px)',
-      boxSizing: 'border-box',
+      minHeight: isMobile ? '70dvh' : '100dvh',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'flex-end',
       overflow: 'hidden',
     }}>
-      <h1 style={{
-        ...entrance.style(0),
-        color: '#fff',
-        fontSize: headlineSize,
-        fontWeight: 700,
-        lineHeight: 0.98,
-        letterSpacing: '-1px',
-        margin: 0,
-      }}>
-        THE ROAD TO LA<br />
-        RUNS THROUGH<br />
-        EVERY REGATTA<br />
-        IN BETWEEN.
-      </h1>
+      {/* Background photo */}
+      <img
+        src={`${BASE}P1177244.jpeg`}
+        alt=""
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          objectPosition: 'center 30%',
+          filter: 'grayscale(0.15) contrast(1.1)',
+        }}
+      />
+      {/* Dark wash */}
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)' }} />
+      {/* Cool tint */}
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(10,85,235,0.06)' }} />
 
-      <p style={{
-        ...entrance.style(0),
-        color: 'rgba(255,255,255,0.92)',
-        fontSize: 'clamp(18px, 2vw, 24px)',
-        fontWeight: 400,
-        lineHeight: 1.55,
-        letterSpacing: '-0.2px',
-        maxWidth: 580,
-        marginTop: 'clamp(24px, 4vh, 48px)',
-        marginBottom: 0,
+      {/* Content */}
+      <div style={{
+        position: 'relative',
+        zIndex: 1,
+        padding: isMobile
+          ? 'clamp(80px, 16vh, 120px) 24px clamp(48px, 8vh, 80px)'
+          : 'clamp(60px, 10vh, 120px) clamp(32px, 6vw, 100px) clamp(60px, 10vh, 120px)',
       }}>
-        I&rsquo;m campaigning for the 2028 Olympic Games in the ILCA 7. This is how I get there — and why I need you with me.
-      </p>
+        {/* Small label */}
+        <div style={{
+          ...LABEL,
+          color: 'rgba(255,255,255,0.4)',
+          marginBottom: 'clamp(24px, 4vh, 48px)',
+        }}>
+          Support the Campaign
+        </div>
+
+        <h1 style={{
+          ...entrance.style(0),
+          color: '#fff',
+          fontSize: isMobile ? 'clamp(36px, 10vw, 64px)' : 'clamp(36px, 7.5vw, 110px)',
+          fontWeight: 700,
+          lineHeight: 0.95,
+          letterSpacing: '-2px',
+          margin: 0,
+          maxWidth: 900,
+        }}>
+          THE ROAD TO LA<br />
+          RUNS THROUGH<br />
+          EVERY REGATTA<br />
+          IN BETWEEN.
+        </h1>
+
+        <p style={{
+          ...entrance.style(0),
+          color: 'rgba(255,255,255,0.78)',
+          fontSize: 'clamp(16px, 1.6vw, 21px)',
+          fontWeight: 400,
+          lineHeight: 1.55,
+          maxWidth: 520,
+          marginTop: 'clamp(16px, 3vh, 32px)',
+          marginBottom: 0,
+        }}>
+          I&rsquo;m campaigning for the 2028 Olympic Games in the ILCA 7. This is how I get there — and why I need you with me.
+        </p>
+      </div>
     </section>
   )
 }
 
-// ---------- Bio section (its own standalone section, not pinned to the spine) ----------
+// ---------- Section 2: Bio / credentials ----------
 
 function BioSection({ entrance, isMobile }) {
   return (
@@ -235,19 +325,19 @@ function BioSection({ entrance, isMobile }) {
       ...entrance.style(1),
       maxWidth: 900,
       margin: '0 auto',
-      padding: 'clamp(20px, 3vh, 48px) clamp(24px, 5vw, 80px) clamp(48px, 7vh, 96px)',
+      padding: 'clamp(60px, 10vh, 120px) clamp(24px, 5vw, 80px)',
       textAlign: 'center',
     }}>
-      <div style={{ ...LABEL, color: 'rgba(255,255,255,0.65)', marginBottom: 24 }}>
+      <div style={{ ...LABEL, color: 'rgba(255,255,255,0.4)', marginBottom: 24 }}>
         Who I Am
       </div>
       <p style={{
         fontSize: 'clamp(17px, 1.8vw, 22px)',
         fontWeight: 400,
         lineHeight: 1.65,
-        color: 'rgba(255,255,255,0.95)',
-        margin: '0 auto clamp(36px, 5vh, 60px)',
-        maxWidth: 680,
+        color: 'rgba(255,255,255,0.82)',
+        maxWidth: 640,
+        margin: '0 auto clamp(36px, 5vh, 56px)',
       }}>
         Sailing since age nine, racing the ILCA since twelve. Six national championships and three continental titles. Studying Applied Mathematics and Economics at Harvard College while serving as Team Captain.
       </p>
@@ -269,7 +359,7 @@ function BioSection({ entrance, isMobile }) {
             <div style={{
               ...LABEL,
               fontSize: 11,
-              color: 'rgba(255,255,255,0.72)',
+              color: 'rgba(255,255,255,0.5)',
               marginTop: 10,
             }}>{l}</div>
           </div>
@@ -279,34 +369,55 @@ function BioSection({ entrance, isMobile }) {
   )
 }
 
-// ---------- Desktop spine pieces ----------
+// ---------- Section 3: Photo break ----------
+
+function PhotoBreak({ entrance, isMobile }) {
+  return (
+    <div style={entrance.style(2)}>
+      <img
+        src={`${BASE}IMG_5854.JPG`}
+        alt=""
+        style={{
+          width: '100%',
+          height: isMobile ? 'clamp(200px, 30vh, 320px)' : 'clamp(280px, 40vh, 480px)',
+          objectFit: 'cover',
+          objectPosition: 'center 40%',
+          filter: 'grayscale(0.6) contrast(1.3) brightness(0.55)',
+          display: 'block',
+        }}
+      />
+    </div>
+  )
+}
+
+// ---------- Section 4: Spine ----------
 
 function YearLabel({ item, textAlign }) {
   const { yearColor, yearShadow, milestoneColor, subColor } = yearStatus(item)
   return (
     <div style={{ textAlign }}>
       <div style={{
-        fontSize: 'clamp(28px, 4vw, 56px)',
-        fontWeight: 700,
+        fontSize: 'clamp(24px, 3.5vw, 48px)',
+        fontWeight: 600,
         lineHeight: 1,
-        letterSpacing: '-0.5px',
+        letterSpacing: '-1px',
         color: yearColor,
         textShadow: yearShadow,
-        marginBottom: 10,
+        marginBottom: 8,
       }}>
         {item.year}
       </div>
       <div style={{
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: 400,
-        lineHeight: 1.45,
+        lineHeight: 1.5,
         color: milestoneColor,
       }}>
         {item.main}
       </div>
-      {item.sub && item.sub.map((s, i) => (
-        <div key={i} style={{
-          fontSize: 13,
+      {item.sub && item.sub.map((s, si) => (
+        <div key={si} style={{
+          fontSize: 12,
           fontStyle: 'italic',
           color: subColor,
           lineHeight: 1.5,
@@ -329,31 +440,23 @@ function DesktopYearRow({ item, side, marginTop }) {
       <div style={{
         position: 'absolute',
         left: '50%',
-        top: 12,
+        top: item.current ? 8 : 12,
         transform: 'translate(-50%, 0)',
         borderRadius: '50%',
         zIndex: 2,
         ...dot,
       }} />
-      <div style={{
-        flex: 1,
-        paddingRight: 'clamp(32px, 3.5vw, 56px)',
-        minWidth: 0,
-      }}>
+      <div style={{ flex: 1, paddingRight: 'clamp(32px, 3.5vw, 56px)', minWidth: 0 }}>
         {side === 'left' && <YearLabel item={item} textAlign="right" />}
       </div>
-      <div style={{
-        flex: 1,
-        paddingLeft: 'clamp(32px, 3.5vw, 56px)',
-        minWidth: 0,
-      }}>
+      <div style={{ flex: 1, paddingLeft: 'clamp(32px, 3.5vw, 56px)', minWidth: 0 }}>
         {side === 'right' && <YearLabel item={item} textAlign="left" />}
       </div>
     </div>
   )
 }
 
-function DesktopContentRow({ side, marginTop, maxWidth, children, style }) {
+function ContentRow({ side, marginTop, maxWidth, children, style }) {
   return (
     <div style={{
       position: 'relative',
@@ -369,62 +472,61 @@ function DesktopContentRow({ side, marginTop, maxWidth, children, style }) {
         display: 'flex',
         justifyContent: 'flex-end',
       }}>
-        {side === 'left' && (
-          <div style={{ maxWidth, width: '100%' }}>{children}</div>
-        )}
+        {side === 'left' && <div style={{ maxWidth, width: '100%' }}>{children}</div>}
       </div>
-      <div style={{
-        flex: 1,
-        paddingLeft: 'clamp(36px, 4vw, 72px)',
-        minWidth: 0,
-      }}>
-        {side === 'right' && (
-          <div style={{ maxWidth }}>{children}</div>
-        )}
+      <div style={{ flex: 1, paddingLeft: 'clamp(36px, 4vw, 72px)', minWidth: 0 }}>
+        {side === 'right' && <div style={{ maxWidth }}>{children}</div>}
       </div>
     </div>
   )
 }
 
+// Compute the spacing for each year based on its position in the timeline.
+function getYearSpacing(year, i) {
+  if (i === 0) return 0
+  if (year === '2025') return 'clamp(64px, 9vh, 100px)'
+  if (year === '2026') return 'clamp(80px, 11vh, 140px)'
+  if (year === '2027') return 'clamp(120px, 16vh, 220px)'
+  return 'clamp(48px, 7vh, 80px)' // 2017–2024 tight
+}
+
 function SpineDesktop({ entrance, days }) {
   const years = TIMELINE_DATA.filter((y) => y.year !== '2028')
-
-  // Alternating sides by year parity — even year numbers on the right,
-  // odd on the left. Produces the zig-zag reading rhythm.
-  const getSide = (yearStr) => (parseInt(yearStr, 10) % 2 === 0 ? 'right' : 'left')
+  // Even array-index → right, odd → left
+  const getSide = (_year, idx) => (idx % 2 === 0 ? 'right' : 'left')
+  const oppositeSide = (s) => (s === 'left' ? 'right' : 'left')
 
   const rows = []
   years.forEach((item, i) => {
-    const side = getSide(item.year)
-    // Tight base spacing; the 2026→2027 and 2027→2028 gaps stretch out
-    // to reinforce the "time stretches toward LA" rhythm.
-    const marginTop =
-      i === 0
-        ? 0
-        : item.year === '2027'
-          ? 'clamp(120px, 16vh, 220px)'
-          : 'clamp(60px, 8vh, 100px)'
-
+    const side = getSide(item.year, i)
     rows.push(
-      <DesktopYearRow
-        key={item.year}
-        item={item}
-        side={side}
-        marginTop={marginTop}
-      />
+      <DesktopYearRow key={item.year} item={item} side={side} marginTop={getYearSpacing(item.year, i)} />
     )
 
+    // Body copy after 2025, on the opposite side
+    if (item.year === '2025') {
+      rows.push(
+        <ContentRow key="body" side={oppositeSide(side)} marginTop="clamp(40px, 5vh, 64px)" maxWidth={400}>
+          <BodyBlock style={entrance.style(3)} />
+        </ContentRow>
+      )
+    }
+
+    // Cost breakdown in the 2026→2027 gap, on the left
+    if (item.year === '2026') {
+      rows.push(
+        <ContentRow key="cost" side="left" marginTop="clamp(60px, 8vh, 100px)" maxWidth={440}>
+          <CostBlock isMobile={false} style={entrance.style(3)} />
+        </ContentRow>
+      )
+    }
+
+    // Pull-quote after 2027, on the opposite side
     if (item.year === '2027') {
       rows.push(
-        <DesktopContentRow
-          key="quote"
-          side="right"
-          marginTop={'clamp(60px, 7vh, 90px)'}
-          maxWidth={480}
-          style={entrance.style(2)}
-        >
-          <PullQuote />
-        </DesktopContentRow>
+        <ContentRow key="quote" side={oppositeSide(side)} marginTop="clamp(48px, 6vh, 80px)" maxWidth={440}>
+          <PullQuote style={entrance.style(4)} />
+        </ContentRow>
       )
     }
   })
@@ -434,30 +536,27 @@ function SpineDesktop({ entrance, days }) {
       position: 'relative',
       maxWidth: 1200,
       margin: '0 auto',
-      padding: 'clamp(60px, 10vh, 120px) 0 clamp(80px, 12vh, 160px)',
+      padding: 'clamp(80px, 12vh, 160px) 0 clamp(60px, 8vh, 100px)',
     }}>
-      {/* Spine — a single flat line, center of the container, full height */}
+      {/* Spine line */}
       <div style={{
         position: 'absolute',
         left: '50%',
-        transform: 'translateX(-1px)',
+        transform: 'translateX(-0.5px)',
         top: 0,
         bottom: 0,
-        width: 2,
-        background: 'rgba(255,255,255,0.4)',
+        width: 1,
+        background: 'rgba(10,85,235,0.3)',
       }} />
 
       {rows}
 
-      {/* 2028 breaks the alternating rule: centered on the spine, biggest numeral on the page */}
-      <div style={{
-        ...entrance.style(3),
-        marginTop: 'clamp(120px, 16vh, 240px)',
-        position: 'relative',
-        textAlign: 'center',
-      }}>
-        <FinalCTA isMobile={false} days={days} />
-      </div>
+      {/* 2028 — centered, straddling the spine */}
+      <FinalCTA
+        isMobile={false}
+        days={days}
+        style={{ ...entrance.style(5), marginTop: 'clamp(140px, 18vh, 260px)' }}
+      />
     </div>
   )
 }
@@ -469,31 +568,26 @@ function MobileYearLabel({ item }) {
   return (
     <div>
       <div style={{
-        fontSize: 'clamp(32px, 8vw, 48px)',
-        fontWeight: 700,
+        fontSize: 'clamp(24px, 7vw, 40px)',
+        fontWeight: 600,
         lineHeight: 1,
         letterSpacing: '-0.5px',
         color: yearColor,
         textShadow: yearShadow,
-        marginBottom: 8,
+        marginBottom: 6,
       }}>
         {item.year}
       </div>
-      <div style={{
-        fontSize: 14,
-        fontWeight: 400,
-        lineHeight: 1.45,
-        color: milestoneColor,
-      }}>
+      <div style={{ fontSize: 13, fontWeight: 400, lineHeight: 1.5, color: milestoneColor }}>
         {item.main}
       </div>
-      {item.sub && item.sub.map((s, i) => (
-        <div key={i} style={{
-          fontSize: 12,
+      {item.sub && item.sub.map((s, si) => (
+        <div key={si} style={{
+          fontSize: 11,
           fontStyle: 'italic',
           color: subColor,
           lineHeight: 1.5,
-          marginTop: 3,
+          marginTop: 2,
         }}>{s}</div>
       ))}
     </div>
@@ -502,30 +596,23 @@ function MobileYearLabel({ item }) {
 
 function SpineMobile({ entrance, days }) {
   const SPINE_LEFT = 24
-  const CONTENT_PAD_LEFT = 52
+  const PAD_LEFT = 48
 
   const rows = []
   TIMELINE_DATA.forEach((item, i) => {
     if (item.year === '2028') return
-
     const { dot } = yearStatus(item)
-    const marginTop =
-      i === 0
-        ? 0
-        : item.year === '2027'
-          ? 'clamp(80px, 11vh, 140px)'
-          : 'clamp(40px, 5vh, 72px)'
 
     rows.push(
       <div key={item.year} style={{
         position: 'relative',
-        marginTop,
-        paddingLeft: CONTENT_PAD_LEFT,
+        marginTop: getYearSpacing(item.year, i),
+        paddingLeft: PAD_LEFT,
       }}>
         <div style={{
           position: 'absolute',
           left: SPINE_LEFT,
-          top: 10,
+          top: item.current ? 6 : 10,
           transform: 'translate(-50%, 0)',
           borderRadius: '50%',
           zIndex: 2,
@@ -535,24 +622,26 @@ function SpineMobile({ entrance, days }) {
       </div>
     )
 
-    if (item.year === '2027') {
-      rows.push(
-        <div key="quote" style={{
-          ...entrance.style(2),
-          marginTop: 'clamp(32px, 5vh, 56px)',
-          paddingLeft: CONTENT_PAD_LEFT,
-          paddingRight: 12,
-        }}>
-          <PullQuote />
-        </div>
-      )
-    }
+    const wrap = (key, idx, child) => (
+      <div key={key} style={{
+        ...entrance.style(idx),
+        marginTop: 'clamp(28px, 4vh, 48px)',
+        paddingLeft: PAD_LEFT,
+        paddingRight: 16,
+      }}>
+        {child}
+      </div>
+    )
+
+    if (item.year === '2025') rows.push(wrap('body', 3, <BodyBlock style={{}} />))
+    if (item.year === '2026') rows.push(wrap('cost', 3, <CostBlock isMobile={true} style={{}} />))
+    if (item.year === '2027') rows.push(wrap('quote', 4, <PullQuote style={{}} />))
   })
 
   return (
     <div style={{
       position: 'relative',
-      padding: 'clamp(48px, 8vh, 80px) 20px clamp(60px, 10vh, 100px)',
+      padding: 'clamp(60px, 10vh, 100px) 20px clamp(48px, 7vh, 80px)',
     }}>
       {/* Left-rail spine */}
       <div style={{
@@ -560,22 +649,23 @@ function SpineMobile({ entrance, days }) {
         left: SPINE_LEFT,
         top: 0,
         bottom: 0,
-        width: 2,
-        background: 'rgba(255,255,255,0.4)',
-        transform: 'translateX(-1px)',
+        width: 1,
+        background: 'rgba(10,85,235,0.3)',
+        transform: 'translateX(-0.5px)',
       }} />
 
       {rows}
 
-      {/* 2028 anchor — on mobile it still sits right of the spine in the same column */}
-      <div style={{
-        ...entrance.style(3),
-        marginTop: 'clamp(80px, 12vh, 160px)',
-        paddingLeft: CONTENT_PAD_LEFT,
-        paddingRight: 12,
-      }}>
-        <FinalCTA isMobile={true} days={days} />
-      </div>
+      <FinalCTA
+        isMobile={true}
+        days={days}
+        style={{
+          ...entrance.style(5),
+          marginTop: 'clamp(80px, 12vh, 160px)',
+          paddingLeft: PAD_LEFT,
+          paddingRight: 16,
+        }}
+      />
     </div>
   )
 }
@@ -592,33 +682,27 @@ export default function Support({ onNavigate }) {
     return () => window.removeEventListener('resize', h)
   }, [])
 
-  // 4 staggered entrance beats: 0 hero, 1 bio, 2 pull-quote, 3 final CTA + close
-  const entrance = usePageEntrance(4, { staggerMs: 120, initialDelayMs: 60 })
-
+  // 6 entrance beats: hero, bio, photo, body+cost, quote, CTA+close
+  const entrance = usePageEntrance(6, { staggerMs: 120, initialDelayMs: 60 })
   const { days } = useCountdown(new Date('2028-07-14T00:00:00'))
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'rgb(20,110,240)',
-      // Serif stack scoped to this page only — inherited by every descendant.
-      fontFamily: FONT_FAMILY,
-    }}>
+    <div style={{ minHeight: '100vh', background: 'rgb(12,14,18)' }}>
       <HeroSection entrance={entrance} isMobile={isMobile} />
-
       <BioSection entrance={entrance} isMobile={isMobile} />
+      <PhotoBreak entrance={entrance} isMobile={isMobile} />
 
       {isMobile
         ? <SpineMobile entrance={entrance} days={days} />
         : <SpineDesktop entrance={entrance} days={days} />}
 
       <div style={{
-        ...entrance.style(3),
+        ...entrance.style(5),
         textAlign: 'center',
-        fontSize: 'clamp(20px, 2.4vw, 32px)',
+        fontSize: 'clamp(18px, 2.2vw, 28px)',
         fontWeight: 400,
-        color: 'rgba(255,255,255,0.88)',
-        maxWidth: 680,
+        color: 'rgba(255,255,255,0.6)',
+        maxWidth: 600,
         margin: '0 auto',
         padding: 'clamp(40px, 6vh, 80px) 20px',
         lineHeight: 1.4,
@@ -626,7 +710,7 @@ export default function Support({ onNavigate }) {
         Thank you for being part of this.
       </div>
 
-      <Footer variant="blue" onNavigate={onNavigate} />
+      <Footer variant="dark" onNavigate={onNavigate} />
     </div>
   )
 }
