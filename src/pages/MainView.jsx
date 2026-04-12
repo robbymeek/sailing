@@ -10,13 +10,14 @@ const BOAT_SIZE = 200
 // to /. No storage APIs — this lives for the tab's lifetime only.
 let introHasPlayed = false
 
-export default function MainView({ onNavigate }) {
+export default function MainView({ onNavigate, hoverNavOpen }) {
   const target = new Date('2028-07-14T00:00:00')
   const { days, hrs, mins, secs } = useCountdown(target)
 
   return (
     <HomeIntro
       onNavigate={onNavigate}
+      hoverNavOpen={hoverNavOpen}
       boatSrc={`${BASE}[0001-0250].gif`}
       days={days}
       hrs={hrs}
@@ -29,7 +30,7 @@ export default function MainView({ onNavigate }) {
 // ---------- Home intro + rest-state component ----------
 // All cinematic state and timers live here so MainView stays a thin
 // shell. Kept in the same file per the original brief.
-function HomeIntro({ onNavigate, boatSrc, days, hrs, mins, secs }) {
+function HomeIntro({ onNavigate, hoverNavOpen, boatSrc, days, hrs, mins, secs }) {
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -319,6 +320,7 @@ function HomeIntro({ onNavigate, boatSrc, days, hrs, mins, secs }) {
         <CountdownCorner
           onNavigate={onNavigate}
           uiVisible={uiVisible}
+          hoverNavOpen={hoverNavOpen}
           anchorButton={anchorButton}
           anchorValue={anchorValue}
           anchorMeta={anchorMeta}
@@ -331,15 +333,16 @@ function HomeIntro({ onNavigate, boatSrc, days, hrs, mins, secs }) {
 
 // Top-right countdown corner — LA 2028 hovers royal blue and click-throughs
 // to Event Calendar. The countdown line below is a non-interactive sibling.
-function CountdownCorner({ onNavigate, uiVisible, anchorButton, anchorValue, anchorMeta, countdownText }) {
+function CountdownCorner({ onNavigate, uiVisible, hoverNavOpen, anchorButton, anchorValue, anchorMeta, countdownText }) {
   const [hover, setHover] = useState(false)
   return (
     <div style={{
       position: 'fixed',
-      top: 32, right: 32,
+      top: hoverNavOpen ? 72 : 32,
+      right: 32,
       textAlign: 'right',
       opacity: uiVisible ? 1 : 0,
-      transition: 'opacity 0.6s ease',
+      transition: 'opacity 0.6s ease, top 0.3s ease',
       pointerEvents: uiVisible ? 'auto' : 'none',
       zIndex: 20,
     }}>

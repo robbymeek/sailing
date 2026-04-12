@@ -347,7 +347,7 @@ export default function App() {
         onTransitionEnd={handleExitComplete}
       >
         <Routes location={displayLocation}>
-          <Route path="/" element={<MainView onNavigate={go} />} />
+          <Route path="/" element={<MainView onNavigate={go} hoverNavOpen={hoverNav} />} />
           <Route path="/biography" element={<Biography onNavigate={go} />} />
           <Route path="/event-calendar" element={<EventCalendar onNavigate={go} />} />
           <Route path="/team" element={<Team onNavigate={go} />} />
