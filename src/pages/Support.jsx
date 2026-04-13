@@ -194,11 +194,12 @@ function HeroSlide({ isMobile }) {
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'center',
-      padding: isMobile ? '60px 24px 0 48px' : '0 clamp(48px, 6vw, 100px)',
+      padding: isMobile
+        ? '60px 24px 0 48px'
+        : '0 calc(50% + 60px) 0 clamp(48px, 6vw, 100px)',
     }}>
       <div style={{
-        maxWidth: isMobile ? '100%' : 540,
-        marginLeft: isMobile ? 0 : 'clamp(24px, 4vw, 80px)',
+        maxWidth: isMobile ? '100%' : undefined,
       }}>
         <div style={{ ...LABEL, color: 'rgba(255,255,255,0.4)', marginBottom: 16 }}>
           Support the Campaign
