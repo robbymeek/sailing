@@ -265,7 +265,7 @@ function PairSlide({ items, isMobile, slideIndex }) {
 
 function QuadSlide({ items, isMobile }) {
   const positions = isMobile
-    ? [{ top: '12%' }, { top: '34%' }, { top: '56%' }, { top: '78%' }]
+    ? [{ top: '5%' }, { top: '28%' }, { top: '51%' }, { top: '76%' }]
     : [
         { top: '12%', side: 'left' },
         { top: '32%', side: 'right' },
@@ -281,7 +281,7 @@ function QuadSlide({ items, isMobile }) {
           side={positions[i].side || 'left'}
           verticalPos={positions[i].top}
           isMobile={isMobile}
-          factBox={FACT_BOXES[item.year]}
+          factBox={isMobile ? null : FACT_BOXES[item.year]}
           anchor="top"
         />
       ))}
