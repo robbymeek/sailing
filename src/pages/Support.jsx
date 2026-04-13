@@ -102,7 +102,7 @@ function getYearStyle(item) {
   return { color: 'rgba(255,255,255,0.4)', shadow: 'none', milestone: 'rgba(255,255,255,0.4)', sub: 'rgba(255,255,255,0.3)' }
 }
 
-function YearBlock({ item, side, verticalPos, isMobile, factBox }) {
+function YearBlock({ item, side, verticalPos, isMobile, factBox, anchor = 'center' }) {
   const s = getYearStyle(item)
   const isCurrent = item.current
 
@@ -113,7 +113,7 @@ function YearBlock({ item, side, verticalPos, isMobile, factBox }) {
         left: 48,
         right: 20,
         top: verticalPos,
-        transform: 'translateY(-50%)',
+        transform: anchor === 'center' ? 'translateY(-50%)' : 'none',
       }}>
         <div style={{ fontSize: 'clamp(28px, 7vw, 44px)', fontWeight: 700, lineHeight: 1, letterSpacing: '-1px', color: s.color, textShadow: s.shadow, marginBottom: 6 }}>
           {item.year}
@@ -151,7 +151,7 @@ function YearBlock({ item, side, verticalPos, isMobile, factBox }) {
     <div style={{
       position: 'absolute',
       top: verticalPos,
-      transform: 'translateY(-50%)',
+      transform: anchor === 'center' ? 'translateY(-50%)' : 'none',
       maxWidth: 360,
       ...positioning,
     }}>
@@ -264,12 +264,12 @@ function PairSlide({ items, isMobile, slideIndex }) {
 
 function QuadSlide({ items, isMobile }) {
   const positions = isMobile
-    ? [{ top: '18%' }, { top: '38%' }, { top: '62%' }, { top: '84%' }]
+    ? [{ top: '8%' }, { top: '30%' }, { top: '52%' }, { top: '76%' }]
     : [
-        { top: '18%', side: 'left' },
-        { top: '38%', side: 'right' },
-        { top: '62%', side: 'left' },
-        { top: '80%', side: 'right' },
+        { top: '8%', side: 'left' },
+        { top: '28%', side: 'right' },
+        { top: '50%', side: 'left' },
+        { top: '74%', side: 'right' },
       ]
   return (
     <>
@@ -281,6 +281,7 @@ function QuadSlide({ items, isMobile }) {
           verticalPos={positions[i].top}
           isMobile={isMobile}
           factBox={FACT_BOXES[item.year]}
+          anchor="top"
         />
       ))}
     </>
