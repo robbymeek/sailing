@@ -402,33 +402,46 @@ export default function Support({ onNavigate }) {
     activeRef.current = clamped
   }, [])
 
-  // Wheel: any continuous scroll gesture moves exactly one slide.
-  // We track whether we've already moved for this gesture. The gesture
-  // "resets" after 300ms of no wheel events (user lifted fingers / stopped).
-  const wheelMovedRef = useRef(false)
-  const wheelResetTimer = useRef(null)
+  // Wheel: one scroll gesture = one page, no matter how long.
+  // Two separate scrolls = two pages.
+  //
+  // How it works:
+  // - On the FIRST wheel event of a gesture, move one page.
+  // - Ignore all further events until there's an 80ms gap (gesture ended).
+  // - After the gap, enforce a 250ms cooldown so trackpad momentum
+  //   tail-off doesn't accidentally start a new gesture.
+  const lastMoveTime = useRef(0)
+  const gestureActive = useRef(false)
+  const gapTimer = useRef(null)
 
   useEffect(() => {
     function onWheel(e) {
       e.preventDefault()
 
-      // Reset the "settled" timer on every wheel event
-      clearTimeout(wheelResetTimer.current)
-      wheelResetTimer.current = setTimeout(() => {
-        wheelMovedRef.current = false
-      }, 150)
+      // Every event resets the gap timer
+      clearTimeout(gapTimer.current)
+      gapTimer.current = setTimeout(() => {
+        // 80ms of silence → gesture is over
+        gestureActive.current = false
+      }, 80)
 
-      // If we already moved this gesture, eat the event
-      if (wheelMovedRef.current) return
+      // If mid-gesture, eat the event
+      if (gestureActive.current) return
 
-      wheelMovedRef.current = true
+      // If cooldown hasn't passed since last move, eat the event
+      const now = Date.now()
+      if (now - lastMoveTime.current < 250) return
+
+      // New gesture — move one page
+      gestureActive.current = true
+      lastMoveTime.current = now
       if (e.deltaY > 0) goToSlide(activeRef.current + 1)
       else if (e.deltaY < 0) goToSlide(activeRef.current - 1)
     }
     window.addEventListener('wheel', onWheel, { passive: false })
     return () => {
       window.removeEventListener('wheel', onWheel)
-      clearTimeout(wheelResetTimer.current)
+      clearTimeout(gapTimer.current)
     }
   }, [goToSlide])
 
