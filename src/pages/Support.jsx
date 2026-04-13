@@ -47,7 +47,7 @@ function formatAmount(raw) {
 }
 
 export default function Support({ onNavigate }) {
-  const entrance = usePageEntrance(4, { staggerMs: 100, initialDelayMs: 50 })
+  const entrance = usePageEntrance(3, { staggerMs: 100, initialDelayMs: 50 })
 
   const [amount, setAmount] = useState('')
   const [firstName, setFirstName] = useState('')
@@ -86,31 +86,10 @@ export default function Support({ onNavigate }) {
       <div style={{
         maxWidth: 780,
         margin: '0 auto',
-        padding: 'clamp(80px, 12vw, 140px) clamp(24px, 5vw, 60px) 60px',
+        padding: '24px clamp(24px, 5vw, 60px) 60px',
       }}>
-        {/* Section 0 — Header */}
+        {/* Section 0 — Intro */}
         <div style={entrance.style(0)}>
-          <h1 style={{
-            fontSize: 'clamp(28px, 4vw, 44px)',
-            fontWeight: 700,
-            color: HEADING_COLOR,
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
-            margin: 0,
-          }}>
-            Support
-          </h1>
-          <div style={{
-            height: 3,
-            background: ACCENT,
-            width: '100%',
-            marginTop: 16,
-            marginBottom: 40,
-          }} />
-        </div>
-
-        {/* Section 1 — Intro */}
-        <div style={entrance.style(1)}>
           <h2 style={{
             fontSize: 'clamp(20px, 2.5vw, 28px)',
             fontWeight: 600,
@@ -134,7 +113,7 @@ export default function Support({ onNavigate }) {
         </div>
 
         {/* Section 2 — The Form */}
-        <div style={entrance.style(2)}>
+        <div style={entrance.style(1)}>
           <form onSubmit={handleSubmit}>
             {/* 2a. Amount */}
             <div style={SECTION_HEADING}>Amount of My/Our Gift</div>
@@ -324,7 +303,7 @@ export default function Support({ onNavigate }) {
       </div>
 
       {/* Section 3 — Footer */}
-      <div style={entrance.style(3)}>
+      <div style={entrance.style(2)}>
         <Footer variant="light" onNavigate={onNavigate} />
       </div>
     </div>
