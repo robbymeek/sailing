@@ -421,8 +421,8 @@ function YearBlock({ item, side, verticalPos, isMobile, factBox, anchor = 'cente
     return (
       <div style={{
         position: 'absolute',
-        left: 48,
-        right: 20,
+        left: 56,
+        right: 28,
         top: verticalPos,
         transform: anchor === 'center' ? 'translateY(-50%)' : 'none',
       }}>
@@ -549,7 +549,7 @@ function HeroSlide({ isMobile, onSeeTeam, onNavigate }) {
       flexDirection: 'column',
       justifyContent: 'center',
       padding: isMobile
-        ? '110px 24px 0 56px'
+        ? '110px 28px 30px 56px'
         : '0 calc(50% + 60px) 0 clamp(48px, 6vw, 100px)',
       justifyContent: isMobile ? 'flex-start' : 'center',
     }}>
@@ -593,7 +593,7 @@ function HeroSlide({ isMobile, onSeeTeam, onNavigate }) {
       <div style={{
         position: 'absolute',
         ...(isMobile
-          ? { bottom: 28, left: 48, right: 16 }
+          ? { bottom: 58, left: 56, right: 28 }
           : { top: '50%', transform: 'translateY(-50%)', left: 'calc(50% + 60px)', right: 'clamp(40px, 5vw, 100px)', maxWidth: 280 }
         ),
       }}>
@@ -700,8 +700,8 @@ function FinalSlide({ days, isMobile }) {
       <div style={{
         position: 'absolute',
         top: isMobile ? '25%' : '30%',
-        left: isMobile ? 48 : undefined,
-        right: isMobile ? 20 : 'calc(50% + 40px)',
+        left: isMobile ? 56 : undefined,
+        right: isMobile ? 28 : 'calc(50% + 40px)',
         textAlign: isMobile ? 'left' : 'right',
       }}>
         <div style={{ fontSize: isMobile ? 'clamp(24px, 6vw, 36px)' : 'clamp(32px, 4vw, 56px)', fontWeight: 700, lineHeight: 1, letterSpacing: '-2px', color: s2027.color, marginBottom: 6 }}>
@@ -716,8 +716,8 @@ function FinalSlide({ days, isMobile }) {
       <div style={{
         position: 'absolute',
         top: isMobile ? '62%' : '65%',
-        left: isMobile ? 48 : 'calc(50% + 60px)',
-        right: isMobile ? 20 : 'clamp(40px, 5vw, 100px)',
+        left: isMobile ? 56 : 'calc(50% + 60px)',
+        right: isMobile ? 28 : 'clamp(40px, 5vw, 100px)',
         transform: 'translateY(-50%)',
       }}>
         <div style={{
@@ -1258,7 +1258,7 @@ export default function Path({ onNavigate }) {
         ...teamEntrance.style(1),
         position: 'relative',
         overflow: 'hidden',
-        padding: '80px 40px 140px',
+        padding: isMobile ? '80px 28px 140px' : '80px 40px 140px',
         minHeight: 'clamp(720px, 94vh, 1040px)',
       }}>
         {/* Background photo */}
@@ -1340,7 +1340,7 @@ export default function Path({ onNavigate }) {
           </div>
 
           {/* Individual Supporters */}
-          <div style={{ maxWidth: 440, margin: '0 auto', textAlign: 'left' }}>
+          <div style={{ maxWidth: 440, margin: '0 auto', textAlign: 'left', padding: isMobile ? '0 16px' : undefined }}>
             {SUPPORTERS.map((s) => (
               <SupporterRow key={s.name} supporter={s} />
             ))}
@@ -1375,7 +1375,7 @@ export default function Path({ onNavigate }) {
       <div style={{ height: 2, background: 'rgba(255,255,255,0.1)', maxWidth: 120, margin: '0 auto' }} />
 
       {/* Thank-you letter */}
-      <div style={{ ...teamEntrance.style(2), maxWidth: 900, margin: '0 auto', padding: '60px 40px 50px' }}>
+      <div style={{ ...teamEntrance.style(2), maxWidth: 900, margin: '0 auto', padding: isMobile ? '60px 28px 50px' : '60px 40px 50px' }}>
         <p style={{ ...TEAM_LABEL, marginBottom: 24 }}>A NOTE FROM ROBBY</p>
         <div style={{ display: 'flex', gap: 40, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <div style={{ flex: '0 0 auto', width: 'clamp(200px, 25vw, 280px)' }}>
