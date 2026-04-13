@@ -3,10 +3,11 @@ import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import Nav from './components/Nav'
 
 // Pages shown in the compact (narrow-viewport) overlay nav.
-const COMPACT_PAGES = ['Home', 'Biography', 'Event Calendar', 'Team', 'Contact', 'Support']
+const COMPACT_PAGES = ['Home', 'Biography', 'Event Calendar', 'Path', 'Team', 'Contact', 'Support']
 import MainView from './pages/MainView'
 import Biography from './pages/Biography'
 import EventCalendar from './pages/EventCalendar'
+import Path from './pages/Path'
 import Team from './pages/Team'
 import Contact from './pages/Contact'
 import Support from './pages/Support'
@@ -16,7 +17,8 @@ const INNER_BG = {
   '/event-calendar': 'rgb(0,0,0)',
   '/team': 'rgb(22,24,28)',
   '/contact': 'rgb(240,240,240)',
-  '/support': 'rgb(12,14,18)',
+  '/path': 'rgb(12,14,18)',
+  '/support': 'rgb(255,255,255)',
 }
 
 const VARIANT_MAP = {
@@ -25,7 +27,8 @@ const VARIANT_MAP = {
   '/event-calendar': 'dark',
   '/team': 'blue',
   '/contact': 'light',
-  '/support': 'dark',
+  '/path': 'dark',
+  '/support': 'light',
 }
 
 const CURRENT_MAP = {
@@ -34,6 +37,7 @@ const CURRENT_MAP = {
   '/event-calendar': 'Event Calendar',
   '/team': 'Team',
   '/contact': 'Contact',
+  '/path': 'Path',
   '/support': 'Support',
 }
 
@@ -43,7 +47,8 @@ function getNavMode(pathname) {
   // Support) are suppressed on / because the bottom-left nav already covers
   // narrow screens — see the isHomeRoute gates below.
   if (pathname === '/') return 'hover'
-  if (pathname === '/support') return 'overlay'
+  if (pathname === '/path') return 'overlay'
+  if (pathname === '/support') return 'static'
   // Contact is a single-viewport page — overlay the nav so the nav's height
   // counts toward the 100dvh and the page can stay exactly one screen tall.
   if (pathname === '/contact') return 'overlay'
@@ -68,6 +73,7 @@ export default function App() {
       'Home': '/',
       'Biography': '/biography',
       'Event Calendar': '/event-calendar',
+      'Path': '/path',
       'Team': '/team',
       'Contact': '/contact',
       'Support': '/support',
@@ -251,7 +257,6 @@ export default function App() {
             current={CURRENT_MAP[location.pathname] || 'Home'}
             onNavigate={go}
             variant={navVariant}
-            plainSupport={isHomeRoute}
           />
         </div>
       )}
@@ -312,9 +317,7 @@ export default function App() {
             display: 'flex', flexDirection: 'column',
             gap: 28, alignItems: 'center',
           }}>
-            {COMPACT_PAGES.map((item) => {
-              const isSupport = item === 'Support'
-              return (
+            {COMPACT_PAGES.map((item) => (
                 <button
                   key={item}
                   onClick={(e) => {
@@ -322,19 +325,17 @@ export default function App() {
                     go(item)
                     setNavMenuOpen(false)
                   }}
-                  className={isSupport ? 'chrome-text' : undefined}
                   style={{
-                    background: isSupport ? undefined : 'none',
+                    background: 'none',
                     border: 'none', cursor: 'pointer',
-                    color: isSupport ? undefined : 'rgba(255,255,255,0.75)',
-                    fontSize: 24, fontWeight: isSupport ? 500 : 400,
+                    color: 'rgba(255,255,255,0.75)',
+                    fontSize: 24, fontWeight: 400,
                     letterSpacing: '-0.6px', padding: '8px 14px',
                   }}
                 >
                   {item}
                 </button>
-              )
-            })}
+              ))}
           </div>
         </div>
       )}
@@ -352,6 +353,7 @@ export default function App() {
           <Route path="/event-calendar" element={<EventCalendar onNavigate={go} />} />
           <Route path="/team" element={<Team onNavigate={go} />} />
           <Route path="/contact" element={<Contact onNavigate={go} />} />
+          <Route path="/path" element={<Path onNavigate={go} />} />
           <Route path="/support" element={<Support onNavigate={go} />} />
         </Routes>
       </div>

@@ -306,8 +306,9 @@ function HomeIntro({ onNavigate, hoverNavOpen, boatSrc, days, hrs, mins, secs })
       >
         {[
           ['Bio', 'Biography'],
-          ['Team', 'Team'],
           ['Events', 'Event Calendar'],
+          ['Path', 'Path'],
+          ['Team', 'Team'],
           ['Contact', 'Contact'],
           ['Support', 'Support'],
         ].map(([label, route]) => (

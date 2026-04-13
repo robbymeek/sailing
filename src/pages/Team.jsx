@@ -311,7 +311,7 @@ export default function Team({ onNavigate }) {
               stays reserved for the single editorial headline above. */}
           <div style={{ marginBottom: 48 }}>
             <button
-              onClick={() => onNavigate('Support')}
+              onClick={() => onNavigate('Path')}
               style={{
                 background: 'none',
                 border: 'none',
@@ -325,7 +325,7 @@ export default function Team({ onNavigate }) {
                 borderBottom: '1px solid rgba(255,255,255,0.45)',
               }}
             >
-              Support the Campaign
+              The Path to LA
             </button>
           </div>
 

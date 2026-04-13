@@ -47,7 +47,7 @@ export default function Contact({ onNavigate }) {
           </a>
         </p>
         <button
-          onClick={() => onNavigate('Support')}
+          onClick={() => onNavigate('Path')}
           style={{
             display: 'inline-block',
             color: 'rgb(25,25,25)',
@@ -60,7 +60,7 @@ export default function Contact({ onNavigate }) {
             fontFamily: 'inherit',
           }}
         >
-          Support the Journey
+          See the Path
         </button>
       </div>
     </div>

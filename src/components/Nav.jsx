@@ -1,12 +1,15 @@
-const PAGES = ['Home', 'Biography', 'Event Calendar', 'Team', 'Contact', 'Support']
+import { useState } from 'react'
+
+const PAGES = ['Home', 'Biography', 'Event Calendar', 'Path', 'Team', 'Contact', 'Support']
 
 const SHORT_LABELS = {
   'Biography': 'Bio',
   'Event Calendar': 'Events',
 }
 
-export default function Nav({ current, onNavigate, variant, excludeItems, plainSupport }) {
+export default function Nav({ current, onNavigate, variant, excludeItems }) {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 600
+  const [hoveredItem, setHoveredItem] = useState(null)
 
   let dim, active
   if (variant === 'red') {
@@ -20,11 +23,6 @@ export default function Nav({ current, onNavigate, variant, excludeItems, plainS
     active = 'rgba(255,255,255,0.6)'
   }
 
-  // On the dark variant, emphasize Support with chrome-shimmer as the single CTA accent.
-  // Pass plainSupport to opt out (e.g. on the home hover nav, where Support
-  // should match the rest of the items visually).
-  const homeSupportCTA = variant === 'dark' && !plainSupport
-
   const visiblePages = excludeItems
     ? PAGES.filter((p) => !excludeItems.includes(p))
     : PAGES
@@ -35,22 +33,18 @@ export default function Nav({ current, onNavigate, variant, excludeItems, plainS
   const contactIncluded = visiblePages.includes('Contact')
 
   const renderButton = (item) => {
-    const isSupport = item === 'Support'
-    const shimmerCTA = isSupport && homeSupportCTA
+    const supportHover = item === 'Support' && hoveredItem === 'Support'
     return (
       <button
         onClick={() => onNavigate(item)}
-        className={shimmerCTA ? 'chrome-text' : undefined}
+        onMouseEnter={() => setHoveredItem(item)}
+        onMouseLeave={() => setHoveredItem(null)}
         style={{
-          // NOTE: leave background unset for shimmerCTA so the chrome-text class's
-          // linear-gradient can paint — background-clip: text needs that gradient as
-          // the background source. Setting `background: 'none'` inline here would
-          // make the text fill transparent with no gradient to clip, rendering it invisible.
-          background: shimmerCTA ? undefined : 'none',
+          background: 'none',
           border: 'none', cursor: 'pointer',
-          color: shimmerCTA ? undefined : (item === current ? active : dim),
+          color: supportHover ? 'rgb(10,85,235)' : (item === current ? active : dim),
           fontSize: 14,
-          fontWeight: shimmerCTA ? 500 : (item === current ? 500 : 400),
+          fontWeight: item === current ? 500 : 400,
           letterSpacing: '-0.3px', padding: '4px 8px',
           transition: 'color 0.4s ease',
         }}

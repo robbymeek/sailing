@@ -9,7 +9,7 @@ export default function Footer({ variant, onNavigate }) {
         display: 'flex', justifyContent: 'center', alignItems: 'center',
         gap: 8, marginBottom: 16, flexWrap: 'wrap',
       }}>
-        {['Home', 'Biography', 'Event Calendar', 'Team'].map((item, i) => (
+        {['Home', 'Biography', 'Event Calendar', 'Path', 'Team'].map((item, i) => (
           <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button
               onClick={() => onNavigate(item)}
@@ -20,7 +20,7 @@ export default function Footer({ variant, onNavigate }) {
             >
               {item}
             </button>
-            {i < 3 && <span style={{ color: tc, fontSize: 12 }}>|</span>}
+            {i < 4 && <span style={{ color: tc, fontSize: 12 }}>|</span>}
           </div>
         ))}
       </div>
