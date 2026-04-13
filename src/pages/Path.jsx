@@ -966,6 +966,10 @@ export default function Path({ onNavigate }) {
       const idx = getSlideFromY(clientY)
       setActiveSlide(idx)
       activeRef.current = idx
+      // Snap boat position to the new slide's stop
+      const target = slideStops[idx]
+      boatPosRef.current = target
+      setBoatPos(target)
       setDragging(false)
       draggingRef.current = false
       setDragTop(null)
