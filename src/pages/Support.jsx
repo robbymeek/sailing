@@ -450,7 +450,6 @@ export default function Support({ onNavigate }) {
   const { days } = useCountdown(new Date('2028-07-14T00:00:00'))
   const frameRef = useRef(null)
   const [activeSlide, setActiveSlide] = useState(0)
-  const cooldownRef = useRef(false)
   const activeRef = useRef(0)
   activeRef.current = activeSlide
 
@@ -459,29 +458,48 @@ export default function Support({ onNavigate }) {
     if (clamped === activeRef.current) return
     setActiveSlide(clamped)
     activeRef.current = clamped
-    cooldownRef.current = true
-    setTimeout(() => { cooldownRef.current = false }, 500)
   }, [])
 
-  // Wheel: one tick = one slide, cooldown blocks momentum
+  // Wheel: any continuous scroll gesture moves exactly one slide.
+  // We track whether we've already moved for this gesture. The gesture
+  // "resets" after 300ms of no wheel events (user lifted fingers / stopped).
+  const wheelMovedRef = useRef(false)
+  const wheelResetTimer = useRef(null)
+
   useEffect(() => {
     function onWheel(e) {
       e.preventDefault()
-      if (cooldownRef.current) return
+
+      // Reset the "settled" timer on every wheel event
+      clearTimeout(wheelResetTimer.current)
+      wheelResetTimer.current = setTimeout(() => {
+        wheelMovedRef.current = false
+      }, 300)
+
+      // If we already moved this gesture, eat the event
+      if (wheelMovedRef.current) return
+
+      wheelMovedRef.current = true
       if (e.deltaY > 0) goToSlide(activeRef.current + 1)
       else if (e.deltaY < 0) goToSlide(activeRef.current - 1)
     }
     window.addEventListener('wheel', onWheel, { passive: false })
-    return () => window.removeEventListener('wheel', onWheel)
+    return () => {
+      window.removeEventListener('wheel', onWheel)
+      clearTimeout(wheelResetTimer.current)
+    }
   }, [goToSlide])
 
   // Touch: swipe up/down
   useEffect(() => {
     let touchStartY = 0
-    function onTouchStart(e) { touchStartY = e.touches[0].clientY }
+    let touchMoved = false
+    function onTouchStart(e) { touchStartY = e.touches[0].clientY; touchMoved = false }
     function onTouchEnd(e) {
+      if (touchMoved) return
       const dy = touchStartY - e.changedTouches[0].clientY
-      if (Math.abs(dy) < 40 || cooldownRef.current) return
+      if (Math.abs(dy) < 40) return
+      touchMoved = true
       if (dy > 0) goToSlide(activeRef.current + 1)
       else goToSlide(activeRef.current - 1)
     }
@@ -553,7 +571,7 @@ export default function Support({ onNavigate }) {
       <div style={{
         position: 'absolute',
         left: spineLeft,
-        top: '10%',
+        top: '15%',
         bottom: '10%',
         width: 1,
         background: 'rgba(255,255,255,0.15)',
@@ -563,7 +581,7 @@ export default function Support({ onNavigate }) {
 
       {/* Ghost sailboat stops */}
       {SLIDES.map((slide, si) => {
-        const stopTop = 10 + (si / (NUM_SLIDES - 1)) * 80
+        const stopTop = 15 + (si / (NUM_SLIDES - 1)) * 75
         const isActive = activeSlide === si
         return (
           <div
@@ -594,7 +612,7 @@ export default function Support({ onNavigate }) {
         style={{
           position: 'absolute',
           left: spineLeft,
-          top: `${10 + (activeSlide / (NUM_SLIDES - 1)) * 80}%`,
+          top: `${15 + (activeSlide / (NUM_SLIDES - 1)) * 75}%`,
           transform: 'translate(-50%, -50%)',
           zIndex: 5,
           transition: 'top 0.5s ease',
