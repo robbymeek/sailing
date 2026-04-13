@@ -264,12 +264,12 @@ function PairSlide({ items, isMobile, slideIndex }) {
 
 function QuadSlide({ items, isMobile }) {
   const positions = isMobile
-    ? [{ top: '8%' }, { top: '30%' }, { top: '52%' }, { top: '76%' }]
+    ? [{ top: '12%' }, { top: '34%' }, { top: '56%' }, { top: '78%' }]
     : [
-        { top: '8%', side: 'left' },
-        { top: '28%', side: 'right' },
-        { top: '50%', side: 'left' },
-        { top: '74%', side: 'right' },
+        { top: '12%', side: 'left' },
+        { top: '32%', side: 'right' },
+        { top: '52%', side: 'left' },
+        { top: '76%', side: 'right' },
       ]
   return (
     <>
