@@ -290,30 +290,41 @@ function HomeIntro({ onNavigate, hoverNavOpen, boatSrc, days, hrs, mins, secs })
         />
       </button>
 
-      {/* Bottom-left persistent nav — always visible after intro */}
+      {/* Bottom persistent nav — always visible after intro */}
       <nav
         aria-label="Primary"
         style={{
           position: 'fixed',
-          bottom: 28, left: 32,
+          bottom: portrait ? 32 : 28,
+          left: portrait ? 0 : 32,
+          right: portrait ? 0 : 'auto',
           display: 'flex', flexDirection: 'column',
-          gap: 10, alignItems: 'flex-start',
+          alignItems: portrait ? 'center' : 'flex-start',
+          gap: portrait ? 10 : 6,
           opacity: uiVisible ? 1 : 0,
           transition: 'opacity 0.6s ease',
           pointerEvents: uiVisible ? 'auto' : 'none',
           zIndex: 20,
         }}
       >
-        {[
-          ['Bio', 'Biography'],
-          ['Events', 'Event Calendar'],
-          ['Path', 'Path'],
-          ['Team', 'Team'],
-          ['Contact', 'Contact'],
-          ['Support', 'Support'],
-        ].map(([label, route]) => (
-          <HomeNavLink key={route} label={label} onClick={() => onNavigate(route)} portrait={portrait} />
-        ))}
+        <div style={{
+          display: 'flex',
+          gap: portrait ? 16 : 20,
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          justifyContent: portrait ? 'center' : 'flex-start',
+        }}>
+          {[
+            ['Bio', 'Biography'],
+            ['Events', 'Event Calendar'],
+            ['Path', 'Path'],
+            ['Team', 'Team'],
+            ['Contact', 'Contact'],
+          ].map(([label, route]) => (
+            <HomeNavLink key={route} label={label} onClick={() => onNavigate(route)} portrait={portrait} />
+          ))}
+        </div>
+        <HomeNavLink label="Support" onClick={() => onNavigate('Support')} portrait={portrait} isSupport />
       </nav>
 
       {/* Top-right countdown corner — clickable, fades in with the nav */}
@@ -368,7 +379,7 @@ function CountdownCorner({ onNavigate, uiVisible, hoverNavOpen, anchorButton, an
 }
 
 // Small stateful nav link: color transitions to royal blue on hover.
-function HomeNavLink({ label, onClick, portrait }) {
+function HomeNavLink({ label, onClick, portrait, isSupport }) {
   const [hover, setHover] = useState(false)
   return (
     <button
@@ -378,11 +389,17 @@ function HomeNavLink({ label, onClick, portrait }) {
       onFocus={() => setHover(true)}
       onBlur={() => setHover(false)}
       style={{
-        background: 'none', border: 'none', padding: 0,
+        background: 'none',
+        border: 'none',
+        borderBottom: isSupport && portrait ? '1px solid rgb(10,85,235)' : 'none',
+        padding: isSupport ? '0 0 2px' : 0,
+        paddingLeft: isSupport && !portrait ? 4 : 0,
         cursor: 'pointer',
         color: hover ? '#1E40FF' : 'rgba(255,255,255,0.75)',
-        fontSize: portrait ? 12 : 13,
-        fontWeight: 400,
+        fontSize: isSupport
+          ? (portrait ? 16 : 15)
+          : (portrait ? 13 : 13),
+        fontWeight: isSupport ? 500 : 400,
         letterSpacing: '-0.2px',
         fontFamily: 'inherit',
         transition: 'color 0.25s ease',
