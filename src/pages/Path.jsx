@@ -977,6 +977,23 @@ export default function Path({ onNavigate }) {
     return () => window.removeEventListener('wheel', onWheel)
   }, [goToSlide])
 
+  // Track whether touch-action: none is active on the frame
+  const [touchLocked, setTouchLocked] = useState(true)
+  const touchLockedRef = useRef(true)
+
+  // When user scrolls back to top, re-engage custom scroll
+  useEffect(() => {
+    if (!isMobile) return
+    function onScroll() {
+      if (window.scrollY === 0 && !touchLockedRef.current) {
+        touchLockedRef.current = true
+        setTouchLocked(true)
+      }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [isMobile])
+
   // Touch: swipe up/down — mirrors the wheel handler for mobile
   useEffect(() => {
     let touchStartY = 0
@@ -1018,7 +1035,13 @@ export default function Path({ onNavigate }) {
       const exitStop = slideStops[slideStops.length - 1]
       if (dir > 0 && activeRef.current >= NUM_SLIDES - 1) {
         if (boatPosRef.current >= exitStop - 0.1) {
-          // Exit reached — let this and future touches scroll natively
+          // Exit reached — unlock touch-action so native scroll works,
+          // nudge 10px to start the scroll, then user takes over
+          if (touchLockedRef.current) {
+            touchLockedRef.current = false
+            setTouchLocked(false)
+            window.scrollBy({ top: 10, behavior: 'smooth' })
+          }
           consumed = false
           return
         }
@@ -1113,7 +1136,7 @@ export default function Path({ onNavigate }) {
         width: '100%',
         overflow: 'hidden',
         background: 'rgb(12,14,18)',
-        touchAction: isMobile ? 'none' : undefined,
+        touchAction: isMobile && touchLocked ? 'none' : undefined,
       }}
     >
       {/* Background photos — one per slide, crossfading */}
