@@ -980,25 +980,29 @@ export default function Path({ onNavigate }) {
   // Touch: swipe up/down — mirrors the wheel handler for mobile
   useEffect(() => {
     let touchStartY = 0
+    let lastTouchY = 0
     let consumed = false // true once this gesture has been claimed by slide nav
 
     function onTouchStart(e) {
       touchStartY = e.touches[0].clientY
+      lastTouchY = touchStartY
       consumed = false
     }
 
     function onTouchMove(e) {
       if (draggingRef.current) return
+      const currentY = e.touches[0].clientY
+      const incrDy = lastTouchY - currentY // incremental: positive = swiping up
+      lastTouchY = currentY
+
       // If page is already scrolled past slides, let browser scroll normally
       if (window.scrollY > 0 && !consumed) return
 
-      const dy = touchStartY - e.touches[0].clientY // positive = swiping up
-      const absDy = Math.abs(dy)
+      // Require a minimum initial movement before hijacking the gesture
+      const totalDy = Math.abs(touchStartY - currentY)
+      if (totalDy < 15 && !consumed) return
 
-      // Require a minimum movement before hijacking
-      if (absDy < 10 && !consumed) return
-
-      const dir = dy > 0 ? 1 : -1 // 1 = forward (down the page), -1 = backward
+      const dir = incrDy > 0 ? 1 : -1
 
       // At first slide swiping backward — block scroll, do nothing
       if (dir < 0 && activeRef.current <= 0 && boatPosRef.current <= slideStops[0]) {
@@ -1010,22 +1014,24 @@ export default function Path({ onNavigate }) {
       const exitStop = slideStops[slideStops.length - 1]
       if (dir > 0 && activeRef.current >= NUM_SLIDES - 1) {
         if (boatPosRef.current >= exitStop - 0.1) {
-          // Boat reached exit — let browser scroll to team section
           return
         }
         e.preventDefault()
         consumed = true
-        const delta = Math.min(absDy * 0.06, 3)
+        // Map finger pixels to spine percentage: spine spans 75% of viewport height
+        const pxToPct = 75 / (window.innerHeight * 0.75)
+        const delta = Math.abs(incrDy) * pxToPct
         const newPos = Math.min(exitStop, boatPosRef.current + delta)
         boatPosRef.current = newPos
         setBoatPos(newPos)
         return
       }
 
-      // Normal slide navigation — prevent scroll, move boat
+      // Normal slide navigation — prevent scroll, move boat smoothly
       e.preventDefault()
       consumed = true
-      const delta = Math.sign(dy) * Math.min(absDy * 0.06, 3)
+      const pxToPct = 75 / (window.innerHeight * 0.75)
+      const delta = incrDy * pxToPct
       const newPos = Math.max(slideStops[0], Math.min(slideStops[slideStops.length - 1], boatPosRef.current + delta))
       boatPosRef.current = newPos
       setBoatPos(newPos)

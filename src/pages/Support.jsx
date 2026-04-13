@@ -68,7 +68,6 @@ export default function Support({ onNavigate }) {
   const [email, setEmail] = useState('')
   const [confirmEmail, setConfirmEmail] = useState('')
   const [honorName, setHonorName] = useState('')
-  const [inMemory, setInMemory] = useState('')
   const [inHonor, setInHonor] = useState('')
   const [message, setMessage] = useState('')
   const [submitHover, setSubmitHover] = useState(false)
@@ -255,16 +254,6 @@ export default function Support({ onNavigate }) {
               />
               <span style={{ ...LABEL_STYLE, marginTop: 4 }}>Recipient Name</span>
             </div>
-
-            <div style={{ ...SECTION_HEADING, fontSize: 13, marginTop: 24 }}>In Memory</div>
-            <textarea
-              value={inMemory}
-              onChange={(e) => setInMemory(e.target.value)}
-              style={{ ...INPUT_STYLE, minHeight: 80, resize: 'vertical' }}
-            />
-            <span style={{ ...LABEL_STYLE, marginTop: 4 }}>
-              Name and address or email of person to be notified of this memorial gift
-            </span>
 
             <div style={{ ...SECTION_HEADING, fontSize: 13, marginTop: 24 }}>In Honor</div>
             <textarea
