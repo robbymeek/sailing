@@ -239,16 +239,31 @@ export default function App() {
       const y = Math.round(rect.top + rect.height / 2)
       // Hide the button so elementFromPoint hits the background
       btn.style.visibility = 'hidden'
-      const el = document.elementFromPoint(x, y)
+      let el = document.elementFromPoint(x, y)
       btn.style.visibility = ''
-      if (!el) return
-      const bg = getComputedStyle(el).backgroundColor
-      const match = bg.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)
-      if (!match) return
-      // Relative luminance (sRGB)
-      const [r, g, b] = [+match[1], +match[2], +match[3]]
+      // Walk up the tree to find the first element with an opaque background
+      let r = 0, g = 0, b = 0, found = false
+      while (el && el !== document.documentElement) {
+        const bg = getComputedStyle(el).backgroundColor
+        const m = bg.match(/rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\)/)
+        if (m) {
+          const alpha = m[4] !== undefined ? parseFloat(m[4]) : 1
+          if (alpha > 0.4) {
+            r = +m[1]; g = +m[2]; b = +m[3]
+            found = true
+            break
+          }
+        }
+        el = el.parentElement
+      }
+      if (!found) {
+        // Fallback: use variant map
+        const v = VARIANT_MAP[location.pathname]
+        setTriggerColor(v === 'light' ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)')
+        return
+      }
       const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-      setTriggerColor(lum > 0.5 ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)')
+      setTriggerColor(lum > 0.45 ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)')
     }
 
     updateTriggerColor()
