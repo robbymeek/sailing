@@ -29,14 +29,6 @@ const FACT_BOXES = {
   '2026': { label: 'NOW', text: 'Full-time Olympic training. Every day is focused on one goal: making the US team for LA 2028.' },
 }
 
-const COSTS = [
-  { label: 'Training', pct: 50 },
-  { label: 'Equipment', pct: 20 },
-  { label: 'Travel', pct: 15 },
-  { label: 'Coaching', pct: 10 },
-  { label: 'Entry Fees', pct: 5 },
-]
-
 const BIO_STATS = [
   ['6x', 'National Champ'],
   ['3x', 'Continental Champ'],
@@ -272,12 +264,12 @@ function PairSlide({ items, isMobile, slideIndex }) {
 
 function QuadSlide({ items, isMobile }) {
   const positions = isMobile
-    ? [{ top: '15%' }, { top: '38%' }, { top: '61%' }, { top: '84%' }]
+    ? [{ top: '18%' }, { top: '38%' }, { top: '62%' }, { top: '84%' }]
     : [
-        { top: '22%', side: 'left' },
+        { top: '18%', side: 'left' },
         { top: '38%', side: 'right' },
         { top: '62%', side: 'left' },
-        { top: '78%', side: 'right' },
+        { top: '80%', side: 'right' },
       ]
   return (
     <>
@@ -304,11 +296,10 @@ function FinalSlide({ days, isMobile }) {
       {/* 2027 — muted, upper left */}
       <div style={{
         position: 'absolute',
-        top: '12%',
+        top: '20%',
         left: isMobile ? 48 : undefined,
         right: isMobile ? 20 : 'calc(50% + 40px)',
         textAlign: isMobile ? 'left' : 'right',
-        transform: 'translateY(-50%)',
       }}>
         <div style={{ fontSize: isMobile ? 'clamp(24px, 6vw, 36px)' : 'clamp(32px, 4vw, 56px)', fontWeight: 700, lineHeight: 1, letterSpacing: '-2px', color: s2027.color, marginBottom: 6 }}>
           2027
@@ -321,9 +312,10 @@ function FinalSlide({ days, isMobile }) {
       {/* 2028 CTA block — centered */}
       <div style={{
         position: 'absolute',
-        top: '38%',
+        top: '50%',
         left: 0,
         right: 0,
+        transform: 'translateY(-50%)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -385,52 +377,6 @@ function FinalSlide({ days, isMobile }) {
           </a>
         </div>
       </div>
-
-      {/* Cost breakdown + closing — bottom section */}
-      <div style={{
-        position: 'absolute',
-        bottom: isMobile ? '3%' : '5%',
-        left: 0,
-        right: 0,
-        textAlign: 'center',
-        padding: isMobile ? '0 20px' : '0 40px',
-      }}>
-        <div style={{ ...LABEL, color: 'rgba(255,255,255,0.25)', marginBottom: 16, fontSize: 10 }}>
-          Where Your Support Goes
-        </div>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          gap: isMobile ? 16 : 'clamp(24px, 3vw, 48px)',
-          flexWrap: 'wrap',
-        }}>
-          {COSTS.map((item) => (
-            <div key={item.label} style={{ textAlign: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
-                <span style={{
-                  fontSize: isMobile ? 'clamp(20px, 5vw, 32px)' : 'clamp(24px, 3vw, 40px)',
-                  fontWeight: 700,
-                  lineHeight: 1,
-                  letterSpacing: '-1px',
-                  color: 'rgba(255,255,255,0.7)',
-                }}>{item.pct}</span>
-                <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.25)', marginLeft: 2 }}>%</span>
-              </div>
-              <div style={{ ...LABEL, fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>{item.label}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{
-          marginTop: 16,
-          fontSize: 'clamp(13px, 1.2vw, 16px)',
-          fontStyle: 'italic',
-          color: 'rgba(255,255,255,0.4)',
-          lineHeight: 1.4,
-        }}>
-          &ldquo;Whether it&rsquo;s financial support, advice, a connection, or simply following along &mdash; it all matters.&rdquo;
-          <span style={{ display: 'block', marginTop: 4, fontStyle: 'normal', fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>&mdash; Robby</span>
-        </div>
-      </div>
     </>
   )
 }
@@ -474,7 +420,7 @@ export default function Support({ onNavigate }) {
       clearTimeout(wheelResetTimer.current)
       wheelResetTimer.current = setTimeout(() => {
         wheelMovedRef.current = false
-      }, 300)
+      }, 150)
 
       // If we already moved this gesture, eat the event
       if (wheelMovedRef.current) return
@@ -592,9 +538,9 @@ export default function Support({ onNavigate }) {
               left: spineLeft,
               top: `${stopTop}%`,
               transform: 'translate(-50%, -50%)',
-              zIndex: isActive ? 5 : 3,
+              zIndex: 10,
               cursor: 'pointer',
-              padding: 8,
+              padding: 16,
               opacity: isActive ? 0 : 1,
               transition: 'opacity 0.4s ease',
               pointerEvents: isActive ? 'none' : 'auto',
@@ -614,7 +560,7 @@ export default function Support({ onNavigate }) {
           left: spineLeft,
           top: `${15 + (activeSlide / (NUM_SLIDES - 1)) * 75}%`,
           transform: 'translate(-50%, -50%)',
-          zIndex: 5,
+          zIndex: 11,
           transition: 'top 0.5s ease',
           pointerEvents: 'none',
         }}
