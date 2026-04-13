@@ -424,14 +424,9 @@ export default function Support({ onNavigate }) {
       }, 80)
 
       if (!gestureActive.current) {
-        // Cooldown: ignore momentum tail-off from previous gesture
-        const now = Date.now()
-        if (now - lastMoveTime.current < 250) return
-
         // New gesture — move one page immediately
         gestureActive.current = true
         lastDirection.current = dir
-        lastMoveTime.current = now
         if (dir > 0) goToSlide(activeRef.current + 1)
         else goToSlide(activeRef.current - 1)
 
