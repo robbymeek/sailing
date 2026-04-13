@@ -977,26 +977,99 @@ export default function Path({ onNavigate }) {
     return () => window.removeEventListener('wheel', onWheel)
   }, [goToSlide])
 
-  // Touch: swipe up/down
+  // Touch: swipe up/down — mirrors the wheel handler for mobile
   useEffect(() => {
     let touchStartY = 0
-    let touchMoved = false
-    function onTouchStart(e) { touchStartY = e.touches[0].clientY; touchMoved = false }
-    function onTouchEnd(e) {
-      if (draggingRef.current) return
-      if (window.scrollY > 0) return
-      if (touchMoved) return
-      const dy = touchStartY - e.changedTouches[0].clientY
-      if (Math.abs(dy) < 40) return
-      touchMoved = true
-      if (dy > 0 && activeRef.current >= NUM_SLIDES - 1) return
-      if (dy > 0) goToSlide(activeRef.current + 1)
-      else goToSlide(activeRef.current - 1)
+    let consumed = false // true once this gesture has been claimed by slide nav
+
+    function onTouchStart(e) {
+      touchStartY = e.touches[0].clientY
+      consumed = false
     }
+
+    function onTouchMove(e) {
+      if (draggingRef.current) return
+      // If page is already scrolled past slides, let browser scroll normally
+      if (window.scrollY > 0 && !consumed) return
+
+      const dy = touchStartY - e.touches[0].clientY // positive = swiping up
+      const absDy = Math.abs(dy)
+
+      // Require a minimum movement before hijacking
+      if (absDy < 10 && !consumed) return
+
+      const dir = dy > 0 ? 1 : -1 // 1 = forward (down the page), -1 = backward
+
+      // At first slide swiping backward — block scroll, do nothing
+      if (dir < 0 && activeRef.current <= 0 && boatPosRef.current <= slideStops[0]) {
+        e.preventDefault()
+        return
+      }
+
+      // On last slide swiping forward — move boat toward exit stop, then release
+      const exitStop = slideStops[slideStops.length - 1]
+      if (dir > 0 && activeRef.current >= NUM_SLIDES - 1) {
+        if (boatPosRef.current >= exitStop - 0.1) {
+          // Boat reached exit — let browser scroll to team section
+          return
+        }
+        e.preventDefault()
+        consumed = true
+        const delta = Math.min(absDy * 0.06, 3)
+        const newPos = Math.min(exitStop, boatPosRef.current + delta)
+        boatPosRef.current = newPos
+        setBoatPos(newPos)
+        return
+      }
+
+      // Normal slide navigation — prevent scroll, move boat
+      e.preventDefault()
+      consumed = true
+      const delta = Math.sign(dy) * Math.min(absDy * 0.06, 3)
+      const newPos = Math.max(slideStops[0], Math.min(slideStops[slideStops.length - 1], boatPosRef.current + delta))
+      boatPosRef.current = newPos
+      setBoatPos(newPos)
+
+      // Snap to nearest stop if close enough
+      for (let i = 0; i < slideStops.length; i++) {
+        if (Math.abs(newPos - slideStops[i]) < SNAP_THRESHOLD) {
+          if (i === slideStops.length - 1 && i >= NUM_SLIDES) {
+            boatPosRef.current = slideStops[i]
+            setBoatPos(slideStops[i])
+            break
+          }
+          if (i !== activeRef.current) {
+            setActiveSlide(i)
+            activeRef.current = i
+            boatPosRef.current = slideStops[i]
+            setBoatPos(slideStops[i])
+          }
+          break
+        }
+      }
+    }
+
+    function onTouchEnd() {
+      if (!consumed) return
+      // Snap boat to the nearest slide stop for a clean landing
+      let closest = 0
+      let minDist = Infinity
+      for (let i = 0; i < NUM_SLIDES; i++) {
+        const d = Math.abs(boatPosRef.current - slideStops[i])
+        if (d < minDist) { minDist = d; closest = i }
+      }
+      if (closest !== activeRef.current) {
+        goToSlide(closest)
+      }
+      consumed = false
+    }
+
     window.addEventListener('touchstart', onTouchStart, { passive: true })
+    window.addEventListener('touchmove', onTouchMove, { passive: false })
     window.addEventListener('touchend', onTouchEnd, { passive: true })
     return () => {
       window.removeEventListener('touchstart', onTouchStart)
+      window.removeEventListener('touchmove', onTouchMove)
       window.removeEventListener('touchend', onTouchEnd)
     }
   }, [goToSlide])
