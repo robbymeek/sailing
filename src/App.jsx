@@ -59,7 +59,7 @@ function getNavMode(pathname) {
 function MobileHome({ onNavigate, hoverNavOpen, bioSectionRef }) {
   return (
     <div>
-      <MainView onNavigate={onNavigate} hoverNavOpen={hoverNavOpen} skipIntro />
+      <MainView onNavigate={onNavigate} hoverNavOpen={hoverNavOpen} />
       <div ref={bioSectionRef}>
         <Biography onNavigate={onNavigate} scrollOffsetRef={bioSectionRef} />
       </div>
@@ -83,11 +83,6 @@ export default function App() {
   const mobileBioRef = useRef(null)
 
   const go = (page) => {
-    // On mobile home, "Biography" scrolls to the embedded bio section
-    if (page === 'Biography' && isMobile && location.pathname === '/') {
-      mobileBioRef.current?.scrollIntoView({ behavior: 'smooth' })
-      return
-    }
     // On mobile home, "Home" scrolls to top
     if (page === 'Home' && isMobile && location.pathname === '/') {
       window.scrollTo({ top: 0, behavior: 'smooth' })
