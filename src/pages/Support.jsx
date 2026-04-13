@@ -89,8 +89,14 @@ export default function Support({ onNavigate }) {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!amount.trim() || !firstName.trim() || !lastName.trim() || !email.trim() || !confirmEmail.trim()) {
-      setFormError('Please fill in all required fields.')
+    const missing = []
+    if (!amount.trim()) missing.push('Amount')
+    if (!firstName.trim()) missing.push('First Name')
+    if (!lastName.trim()) missing.push('Last Name')
+    if (!email.trim()) missing.push('Email')
+    if (!confirmEmail.trim()) missing.push('Confirm Email')
+    if (missing.length > 0) {
+      setFormError(`Please fill in: ${missing.join(', ')}`)
       return
     }
     if (email !== confirmEmail) {
@@ -130,7 +136,67 @@ export default function Support({ onNavigate }) {
         margin: '0 auto',
         padding: `${compactNav ? 64 : 24}px clamp(24px, 5vw, 60px) 60px`,
       }}>
-        {/* Section 0 — Intro */}
+        {/* Section 0 — Intro or Thank You */}
+        {submitted ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '100px 20px 60px',
+          }}>
+            <h2 style={{
+              fontSize: 'clamp(24px, 3.5vw, 36px)',
+              fontWeight: 600,
+              color: ACCENT,
+              margin: '0 0 20px',
+            }}>
+              Thank you for your support.
+            </h2>
+            <p style={{
+              fontSize: 16,
+              lineHeight: 1.7,
+              color: BODY_COLOR,
+              maxWidth: 500,
+              margin: '0 auto 40px',
+            }}>
+              I will be in touch regarding the best payment method for you. Your generosity means a lot on my journey to LA 2028.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+              <button
+                onClick={() => onNavigate('Home')}
+                style={{
+                  padding: '12px 32px',
+                  fontSize: 15,
+                  fontWeight: 600,
+                  color: '#fff',
+                  background: ACCENT,
+                  border: 'none',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                Back to Home
+              </button>
+              <button
+                onClick={() => setSubmitted(false)}
+                style={{
+                  padding: '10px 24px',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: BODY_COLOR,
+                  background: 'none',
+                  border: `1px solid rgba(0,0,0,0.2)`,
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                Back to Support Page
+              </button>
+            </div>
+          </div>
+        ) : (
+        <>
         <div style={entrance.style(0)}>
           <h2 style={{
             fontSize: 'clamp(20px, 2.5vw, 28px)',
@@ -153,32 +219,6 @@ export default function Support({ onNavigate }) {
             highest level.
           </p>
         </div>
-
-        {/* Section 2 — The Form or Thank You */}
-        {submitted ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '60px 20px',
-          }}>
-            <h2 style={{
-              fontSize: 'clamp(22px, 3vw, 32px)',
-              fontWeight: 600,
-              color: ACCENT,
-              margin: '0 0 20px',
-            }}>
-              Thank you for your support.
-            </h2>
-            <p style={{
-              fontSize: 16,
-              lineHeight: 1.7,
-              color: BODY_COLOR,
-              maxWidth: 500,
-              margin: '0 auto',
-            }}>
-              I will be in touch regarding the best payment method for you. Your generosity means the world to this campaign.
-            </p>
-          </div>
-        ) : (
         <div style={entrance.style(1)}>
           <form onSubmit={handleSubmit}>
             {/* 2a. Amount */}
@@ -384,11 +424,10 @@ export default function Support({ onNavigate }) {
             <div>
               <button
                 type="submit"
-                disabled={!isFormValid}
                 onMouseEnter={() => setSubmitHover(true)}
                 onMouseLeave={() => setSubmitHover(false)}
                 style={{
-                  background: !isFormValid ? 'rgba(0,0,0,0.2)' : submitHover ? 'rgb(160,30,30)' : SUBMIT_RED,
+                  background: submitHover ? 'rgb(160,30,30)' : SUBMIT_RED,
                   color: '#fff',
                   border: 'none',
                   padding: '14px 40px',
@@ -406,6 +445,7 @@ export default function Support({ onNavigate }) {
             </div>
           </form>
         </div>
+        </>
         )}
       </div>
 
