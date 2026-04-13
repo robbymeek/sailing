@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import Footer from '../components/Footer'
 import useCountdown from '../hooks/useCountdown'
 
 const BASE = import.meta.env.BASE_URL
@@ -20,19 +19,6 @@ const TIMELINE_DATA = [
   { year: '2027', main: 'World Champs contender', sub: null },
   { year: '2028', main: 'LA Olympics', sub: null },
 ]
-
-const YEAR_PHOTOS = {
-  '2017': 'IMG_5343.jpeg',
-  '2018': 'IMG_0062.JPG',
-  '2019': 'Screen Shot 2022-01-18 at 6.25.56 PM.jpg',
-  '2020': 'IMG_3867.jpeg',
-  '2021': 'IMG_4733.jpeg',
-  '2022': 'IMG_8481.jpeg',
-  '2023': 'IMG_5956.JPG',
-  '2024': 'IMG_5957.JPG',
-  '2025': 'P1233011 (1).JPG',
-  '2026': 'IMG_6285.JPG',
-}
 
 const FACT_BOXES = {
   '2017': { label: 'AGE 9', text: 'Started sailing on Long Island Sound. Fell in love with the speed, the strategy, and the solitude of singlehanded racing.' },
@@ -57,14 +43,15 @@ const BIO_STATS = [
   ['9+', 'Years in ILCA'],
 ]
 
-// Snap pages — grouped year indices + background photo
-const SNAP_PAGES = [
-  { indices: [2, 3, 4, 5], photo: 'IMG_4733.jpeg', type: 'quad' },       // 2019–2022
-  { indices: [6, 7], photo: 'IMG_5956.JPG', type: 'pair' },              // 2023+2024
-  { indices: [8, 9], photo: 'IMG_6285.JPG', type: 'pair' },              // 2025+2026
-  { indices: [10, 11], photo: null, type: 'last' },                       // 2027+2028
+// All slides — hero is slide 0, timeline slides 1-3, final slide 4
+const SLIDES = [
+  { type: 'hero', photo: 'IMG_5343.jpeg', label: 'Intro' },
+  { type: 'quad', indices: [2, 3, 4, 5], photo: 'IMG_4733.jpeg', label: '2019–2022' },
+  { type: 'pair', indices: [6, 7], photo: 'IMG_5956.JPG', label: '2023–2024' },
+  { type: 'pair', indices: [8, 9], photo: 'IMG_6285.JPG', label: '2025–2026' },
+  { type: 'final', indices: [10, 11], photo: null, label: '2027–2028' },
 ]
-const NUM_PAGES = SNAP_PAGES.length
+const NUM_SLIDES = SLIDES.length
 
 const LABEL = {
   fontSize: 12,
@@ -76,7 +63,6 @@ const LABEL = {
 // ---------- Sailboat SVG ----------
 
 function SailboatIcon({ variant = 'default', size = 22 }) {
-  // variant: 'active' (blue), 'ghost' (faint white), 'glow' (red for 2026)
   const scale = size / 22
   let mast, sail, jib, hull, filterStyle
   if (variant === 'active') {
@@ -116,104 +102,7 @@ function SailboatIcon({ variant = 'default', size = 22 }) {
   )
 }
 
-// ---------- Hero section: sits above the timeline, fills viewport below nav ----------
-
-function HeroSection({ isMobile }) {
-  return (
-    <section style={{
-      position: 'relative',
-      width: '100%',
-      minHeight: 'calc(100vh - 60px)',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      overflow: 'hidden',
-      background: 'rgb(12,14,18)',
-    }}>
-      {/* Background photo */}
-      <img
-        src={`${BASE}sailing-photos/IMG_5343.jpeg`}
-        alt=""
-        style={{
-          position: 'absolute',
-          inset: 0,
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          objectPosition: 'center',
-          filter: 'grayscale(0.2) contrast(1.1) brightness(0.65)',
-        }}
-      />
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)' }} />
-
-      <div style={{
-        position: 'relative',
-        zIndex: 1,
-        padding: isMobile ? '0 24px' : '0 clamp(48px, 6vw, 100px)',
-        maxWidth: isMobile ? '100%' : 540,
-        marginLeft: isMobile ? 0 : 'clamp(24px, 4vw, 80px)',
-      }}>
-        <div style={{ ...LABEL, color: 'rgba(255,255,255,0.4)', marginBottom: 16 }}>
-          Support the Campaign
-        </div>
-        <h1 style={{
-          color: '#fff',
-          fontSize: isMobile ? 'clamp(36px, 10vw, 64px)' : 'clamp(40px, 5.5vw, 80px)',
-          fontWeight: 700,
-          lineHeight: 0.95,
-          letterSpacing: '-2px',
-          margin: 0,
-        }}>
-          JOIN THE TEAM.
-        </h1>
-        <p style={{
-          color: 'rgba(255,255,255,0.7)',
-          fontSize: 'clamp(14px, 1.3vw, 18px)',
-          fontWeight: 400,
-          lineHeight: 1.55,
-          maxWidth: 420,
-          marginTop: 16,
-          marginBottom: 0,
-        }}>
-          Campaigning for the 2028 Olympic Games in the ILCA 7. Six national championships, three continental titles, Harvard Team Captain.
-        </p>
-
-        {/* Compact stats row */}
-        <div style={{
-          display: 'flex',
-          gap: isMobile ? 24 : 36,
-          marginTop: 24,
-          flexWrap: 'wrap',
-        }}>
-          {BIO_STATS.map(([n, l]) => (
-            <div key={l}>
-              <span style={{ fontSize: 'clamp(24px, 3vw, 36px)', fontWeight: 700, color: '#fff', letterSpacing: '-1px' }}>{n}</span>
-              <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '1px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginLeft: 8 }}>{l}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Scroll hint */}
-        <div style={{
-          marginTop: 32,
-          fontSize: 12,
-          fontWeight: 400,
-          letterSpacing: '1.5px',
-          textTransform: 'uppercase',
-          color: 'rgba(255,255,255,0.3)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-        }}>
-          Scroll to explore the journey
-          <span style={{ display: 'inline-block', animation: 'scrollHint 2s ease-in-out infinite' }}>↓</span>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-// ---------- Scroll-driven Timeline ----------
+// ---------- Year helpers ----------
 
 function getYearStyle(item) {
   if (item.current) return { color: '#fff', shadow: '0 0 30px rgba(220,40,40,0.35)', milestone: 'rgba(255,255,255,0.9)', sub: 'rgba(255,255,255,0.7)' }
@@ -261,7 +150,6 @@ function YearBlock({ item, side, verticalPos, isMobile, factBox }) {
     )
   }
 
-  // Desktop: position on one side of the spine
   const isLeft = side === 'left'
   const positioning = isLeft
     ? { right: 'calc(50% + 40px)', textAlign: 'right' }
@@ -304,240 +192,76 @@ function YearBlock({ item, side, verticalPos, isMobile, factBox }) {
   )
 }
 
-function TimelineSection({ isMobile, days }) {
-  const stickyRef = useRef(null)
-  const [activePage, setActivePage] = useState(0)
-  const cooldownRef = useRef(false)
-  const activePageRef = useRef(0)
+// ---------- Slide content types ----------
 
-  // Keep ref in sync for use inside event handlers
-  activePageRef.current = activePage
-
-  // Navigate to a page by index
-  const goToPage = useCallback((idx) => {
-    const clamped = Math.max(0, Math.min(NUM_PAGES - 1, idx))
-    if (clamped === activePageRef.current) return
-    setActivePage(clamped)
-    activePageRef.current = clamped
-    // Cooldown prevents momentum from firing multiple pages
-    cooldownRef.current = true
-    setTimeout(() => { cooldownRef.current = false }, 500)
-  }, [])
-
-  // Wheel handler: intercept scroll when the sticky frame is in view,
-  // one tick = one page, with cooldown to block momentum
-  useEffect(() => {
-    const el = stickyRef.current
-    if (!el) return
-
-    function onWheel(e) {
-      // Only intercept when the sticky frame is actually covering the viewport
-      const rect = el.getBoundingClientRect()
-      if (rect.top > 10 || rect.bottom < window.innerHeight - 10) return
-
-      // At first page scrolling up, or last page scrolling down → let normal scroll happen
-      const cur = activePageRef.current
-      if (e.deltaY < 0 && cur === 0) return
-      if (e.deltaY > 0 && cur === NUM_PAGES - 1) return
-
-      e.preventDefault()
-      if (cooldownRef.current) return
-
-      if (e.deltaY > 0) {
-        goToPage(cur + 1)
-      } else if (e.deltaY < 0) {
-        goToPage(cur - 1)
-      }
-    }
-
-    window.addEventListener('wheel', onWheel, { passive: false })
-    return () => window.removeEventListener('wheel', onWheel)
-  }, [goToPage])
-
-  // Touch support: swipe up/down = page forward/back
-  useEffect(() => {
-    const el = stickyRef.current
-    if (!el) return
-    let touchStartY = 0
-
-    function onTouchStart(e) {
-      touchStartY = e.touches[0].clientY
-    }
-    function onTouchEnd(e) {
-      const rect = el.getBoundingClientRect()
-      if (rect.top > 10 || rect.bottom < window.innerHeight - 10) return
-
-      const dy = touchStartY - e.changedTouches[0].clientY
-      const cur = activePageRef.current
-      if (dy < 0 && cur === 0) return
-      if (dy > 0 && cur === NUM_PAGES - 1) return
-
-      if (Math.abs(dy) > 40) {
-        if (cooldownRef.current) return
-        if (dy > 0) goToPage(cur + 1)
-        else goToPage(cur - 1)
-      }
-    }
-
-    el.addEventListener('touchstart', onTouchStart, { passive: true })
-    el.addEventListener('touchend', onTouchEnd, { passive: true })
-    return () => {
-      el.removeEventListener('touchstart', onTouchStart)
-      el.removeEventListener('touchend', onTouchEnd)
-    }
-  }, [goToPage])
-
-  const spineLeft = isMobile ? 24 : '50%'
-  const activePageData = SNAP_PAGES[activePage]
-  const hasYears2026 = activePageData.indices.some(i => TIMELINE_DATA[i]?.current)
-
-  // Build ghost titles from page indices
-  const pageTitle = (pi) => {
-    const years = SNAP_PAGES[pi].indices.map(i => TIMELINE_DATA[i].year)
-    return years.length <= 2 ? years.join('–') : `${years[0]}–${years[years.length - 1]}`
-  }
-
+function HeroSlide({ isMobile }) {
   return (
-    <div
-      ref={stickyRef}
-      style={{
-        position: 'relative',
-        height: '100vh',
-        width: '100%',
-        overflow: 'hidden',
-        background: 'rgb(12,14,18)',
-      }}
-    >
-        {/* Background photos — one per page, crossfading */}
-        {SNAP_PAGES.map((page, pi) => {
-          if (!page.photo) return null
-          return (
-            <img
-              key={pi}
-              src={`${BASE}sailing-photos/${page.photo}`}
-              alt=""
-              loading={pi < 2 ? 'eager' : 'lazy'}
-              decoding="async"
-              style={{
-                position: 'absolute',
-                inset: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                objectPosition: 'center',
-                filter: 'grayscale(0.2) contrast(1.1) brightness(0.65)',
-                opacity: activePage === pi ? 1 : 0,
-                transition: 'opacity 0.8s ease',
-                willChange: 'opacity',
-                zIndex: 0,
-              }}
-            />
-          )
-        })}
-
-        {/* Dark overlay */}
-        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1 }} />
-
-        {/* Spine line */}
-        <div style={{
-          position: 'absolute',
-          left: spineLeft,
-          top: '10%',
-          bottom: '10%',
-          width: 1,
-          background: 'rgba(255,255,255,0.15)',
-          transform: isMobile ? 'none' : 'translateX(-0.5px)',
-          zIndex: 2,
-        }} />
-
-        {/* Ghost sailboat stops — one per page */}
-        {SNAP_PAGES.map((_, pi) => {
-          const stopTop = 10 + (pi / (NUM_PAGES - 1)) * 80
-          const isActive = activePage === pi
-          return (
-            <div
-              key={`ghost-${pi}`}
-              onClick={() => goToPage(pi)}
-              style={{
-                position: 'absolute',
-                left: spineLeft,
-                top: `${stopTop}%`,
-                transform: 'translate(-50%, -50%)',
-                zIndex: isActive ? 5 : 3,
-                cursor: 'pointer',
-                padding: 8,
-                opacity: isActive ? 0 : 1,
-                transition: 'opacity 0.4s ease',
-                pointerEvents: isActive ? 'none' : 'auto',
-              }}
-              title={pageTitle(pi)}
-            >
-              <SailboatIcon variant="ghost" size={16} />
+    <div style={{
+      position: 'absolute',
+      inset: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      padding: isMobile ? '60px 24px 0' : '0 clamp(48px, 6vw, 100px)',
+    }}>
+      <div style={{
+        maxWidth: isMobile ? '100%' : 540,
+        marginLeft: isMobile ? 0 : 'clamp(24px, 4vw, 80px)',
+      }}>
+        <div style={{ ...LABEL, color: 'rgba(255,255,255,0.4)', marginBottom: 16 }}>
+          Support the Campaign
+        </div>
+        <h1 style={{
+          color: '#fff',
+          fontSize: isMobile ? 'clamp(36px, 10vw, 64px)' : 'clamp(40px, 5.5vw, 80px)',
+          fontWeight: 700,
+          lineHeight: 0.95,
+          letterSpacing: '-2px',
+          margin: 0,
+        }}>
+          JOIN THE TEAM.
+        </h1>
+        <p style={{
+          color: 'rgba(255,255,255,0.7)',
+          fontSize: 'clamp(14px, 1.3vw, 18px)',
+          fontWeight: 400,
+          lineHeight: 1.55,
+          maxWidth: 420,
+          marginTop: 16,
+          marginBottom: 0,
+        }}>
+          Campaigning for the 2028 Olympic Games in the ILCA 7. Six national championships, three continental titles, Harvard Team Captain.
+        </p>
+        <div style={{ display: 'flex', gap: isMobile ? 24 : 36, marginTop: 24, flexWrap: 'wrap' }}>
+          {BIO_STATS.map(([n, l]) => (
+            <div key={l}>
+              <span style={{ fontSize: 'clamp(24px, 3vw, 36px)', fontWeight: 700, color: '#fff', letterSpacing: '-1px' }}>{n}</span>
+              <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '1px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginLeft: 8 }}>{l}</span>
             </div>
-          )
-        })}
-
-        {/* Active sailboat indicator */}
-        <div
-          className="sail-bob"
-          style={{
-            position: 'absolute',
-            left: spineLeft,
-            top: `${10 + (activePage / (NUM_PAGES - 1)) * 80}%`,
-            transform: 'translate(-50%, -50%)',
-            zIndex: 5,
-            transition: 'top 0.5s ease',
-            pointerEvents: 'none',
-          }}
-        >
-          <SailboatIcon variant={hasYears2026 ? 'glow' : 'active'} />
+          ))}
         </div>
-
-        {/* Page content — each page shows two years */}
-        <div style={{ position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none' }}>
-          {SNAP_PAGES.map((page, pi) => {
-            const isActive = activePage === pi
-
-            return (
-              <div key={pi} style={{
-                position: 'absolute',
-                inset: 0,
-                opacity: isActive ? 1 : 0,
-                transform: isActive ? 'translateY(0)' : 'translateY(8px)',
-                transition: 'opacity 0.5s ease, transform 0.5s ease',
-                pointerEvents: isActive ? 'auto' : 'none',
-              }}>
-                {page.type === 'last' ? (
-                  <LastPageContent
-                    year2027={TIMELINE_DATA[page.indices[0]]}
-                    days={days}
-                    isMobile={isMobile}
-                  />
-                ) : page.type === 'quad' ? (
-                  <QuadPageContent
-                    items={page.indices.map(i => TIMELINE_DATA[i])}
-                    isMobile={isMobile}
-                    pageIndex={pi}
-                  />
-                ) : (
-                  <PairPageContent
-                    items={[TIMELINE_DATA[page.indices[0]], TIMELINE_DATA[page.indices[1]]]}
-                    isMobile={isMobile}
-                    pageIndex={pi}
-                  />
-                )}
-              </div>
-            )
-          })}
+        <div style={{
+          marginTop: 32,
+          fontSize: 12,
+          fontWeight: 400,
+          letterSpacing: '1.5px',
+          textTransform: 'uppercase',
+          color: 'rgba(255,255,255,0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}>
+          Scroll to explore the journey
+          <span style={{ display: 'inline-block', animation: 'scrollHint 2s ease-in-out infinite' }}>↓</span>
         </div>
+      </div>
     </div>
   )
 }
 
-// Pair page: 2 years, first top-left / second bottom-right (alternates by pageIndex)
-function PairPageContent({ items, isMobile, pageIndex }) {
-  const firstSide = pageIndex % 2 === 0 ? 'left' : 'right'
-  const secondSide = pageIndex % 2 === 0 ? 'right' : 'left'
+function PairSlide({ items, isMobile, slideIndex }) {
+  const firstSide = slideIndex % 2 === 0 ? 'left' : 'right'
+  const secondSide = slideIndex % 2 === 0 ? 'right' : 'left'
   return (
     <>
       <YearBlock item={items[0]} side={firstSide} verticalPos="33%" isMobile={isMobile} factBox={FACT_BOXES[items[0].year]} />
@@ -546,9 +270,7 @@ function PairPageContent({ items, isMobile, pageIndex }) {
   )
 }
 
-// Quad page: 4 years arranged in a grid pattern
-function QuadPageContent({ items, isMobile, pageIndex }) {
-  // 4 positions: top-left, top-right, bottom-left, bottom-right
+function QuadSlide({ items, isMobile }) {
   const positions = isMobile
     ? [{ top: '15%' }, { top: '38%' }, { top: '61%' }, { top: '84%' }]
     : [
@@ -557,7 +279,6 @@ function QuadPageContent({ items, isMobile, pageIndex }) {
         { top: '62%', side: 'left' },
         { top: '78%', side: 'right' },
       ]
-
   return (
     <>
       {items.map((item, i) => (
@@ -574,41 +295,42 @@ function QuadPageContent({ items, isMobile, pageIndex }) {
   )
 }
 
-function LastPageContent({ year2027, days, isMobile }) {
-  const s2027 = getYearStyle(year2027)
+function FinalSlide({ days, isMobile }) {
+  const [ctaHover, setCtaHover] = useState(false)
+  const s2027 = getYearStyle(TIMELINE_DATA[10])
+
   return (
     <>
-      {/* 2027 — muted, upper portion */}
+      {/* 2027 — muted, upper left */}
       <div style={{
         position: 'absolute',
-        top: '22%',
+        top: '12%',
         left: isMobile ? 48 : undefined,
         right: isMobile ? 20 : 'calc(50% + 40px)',
         textAlign: isMobile ? 'left' : 'right',
         transform: 'translateY(-50%)',
       }}>
-        <div style={{ fontSize: isMobile ? 'clamp(28px, 7vw, 44px)' : 'clamp(40px, 5.5vw, 80px)', fontWeight: 700, lineHeight: 1, letterSpacing: '-2px', color: s2027.color, marginBottom: 8 }}>
-          {year2027.year}
+        <div style={{ fontSize: isMobile ? 'clamp(24px, 6vw, 36px)' : 'clamp(32px, 4vw, 56px)', fontWeight: 700, lineHeight: 1, letterSpacing: '-2px', color: s2027.color, marginBottom: 6 }}>
+          2027
         </div>
-        <div style={{ fontSize: 'clamp(14px, 1.2vw, 18px)', fontWeight: 400, color: s2027.milestone, lineHeight: 1.5 }}>
-          {year2027.main}
+        <div style={{ fontSize: 'clamp(13px, 1.1vw, 16px)', fontWeight: 400, color: s2027.milestone, lineHeight: 1.5 }}>
+          World Champs contender
         </div>
       </div>
 
-      {/* 2028 — centered CTA */}
+      {/* 2028 CTA block — centered */}
       <div style={{
         position: 'absolute',
-        top: '60%',
+        top: '38%',
         left: 0,
         right: 0,
-        transform: 'translateY(-50%)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         padding: isMobile ? '0 24px' : 0,
       }}>
         <div style={{
-          fontSize: isMobile ? 'clamp(56px, 14vw, 100px)' : 'clamp(72px, 13vw, 200px)',
+          fontSize: isMobile ? 'clamp(48px, 12vw, 80px)' : 'clamp(60px, 10vw, 140px)',
           fontWeight: 700,
           lineHeight: 1,
           letterSpacing: '-3px',
@@ -617,154 +339,103 @@ function LastPageContent({ year2027, days, isMobile }) {
         }}>
           2028
         </div>
-        <div style={{ ...LABEL, color: 'rgba(255,255,255,0.5)', marginTop: 20, textAlign: 'center' }}>
+        <div style={{ ...LABEL, color: 'rgba(255,255,255,0.5)', marginTop: 14, textAlign: 'center' }}>
           LA Olympics
         </div>
-        <div style={{ marginTop: 28, display: 'flex', alignItems: 'baseline', gap: 14 }}>
-          <span style={{ fontSize: 'clamp(32px, 4.5vw, 64px)', fontWeight: 700, color: '#fff', lineHeight: 1, letterSpacing: '-1px' }}>{days}</span>
+        <div style={{ marginTop: 20, display: 'flex', alignItems: 'baseline', gap: 14 }}>
+          <span style={{ fontSize: 'clamp(28px, 4vw, 52px)', fontWeight: 700, color: '#fff', lineHeight: 1, letterSpacing: '-1px' }}>{days}</span>
           <span style={{ ...LABEL, fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>Days</span>
         </div>
-        <CTABlock isMobile={isMobile} />
+        <div style={{ marginTop: 32, textAlign: 'center' }}>
+          <a
+            href="mailto:robbymeek+LA2028@gmail.com?subject=Supporting%20Your%20Olympic%20Campaign"
+            onMouseEnter={() => setCtaHover(true)}
+            onMouseLeave={() => setCtaHover(false)}
+            style={{
+              display: 'inline-block',
+              fontSize: 'clamp(18px, 2.2vw, 30px)',
+              fontWeight: 500,
+              color: ctaHover ? '#fff' : 'rgba(255,255,255,0.92)',
+              textDecoration: 'none',
+              borderBottomStyle: 'solid',
+              borderBottomWidth: ctaHover ? 3 : 2,
+              borderBottomColor: 'rgb(220,40,40)',
+              paddingBottom: 6,
+              transition: 'color 0.2s ease, border-bottom-width 0.2s ease',
+              letterSpacing: '-0.3px',
+              pointerEvents: 'auto',
+            }}
+          >
+            EMAIL ROBBY &rarr;
+          </a>
+        </div>
+        <div style={{ marginTop: 16, textAlign: 'center' }}>
+          <a
+            href="mailto:robbymeek+LA2028@gmail.com?subject=Connecting"
+            style={{
+              fontSize: 13,
+              fontStyle: 'italic',
+              color: 'rgba(255,255,255,0.5)',
+              textDecoration: 'underline',
+              textUnderlineOffset: '3px',
+              pointerEvents: 'auto',
+            }}
+          >
+            or reach out about anything else
+          </a>
+        </div>
       </div>
-    </>
-  )
-}
 
-function CTABlock({ isMobile }) {
-  const [ctaHover, setCtaHover] = useState(false)
-  return (
-    <>
-      <div style={{ marginTop: 48, textAlign: 'center' }}>
-        <a
-          href="mailto:robbymeek+LA2028@gmail.com?subject=Supporting%20Your%20Olympic%20Campaign"
-          onMouseEnter={() => setCtaHover(true)}
-          onMouseLeave={() => setCtaHover(false)}
-          style={{
-            display: 'inline-block',
-            fontSize: 'clamp(20px, 2.5vw, 36px)',
-            fontWeight: 500,
-            color: ctaHover ? '#fff' : 'rgba(255,255,255,0.92)',
-            textDecoration: 'none',
-            borderBottomStyle: 'solid',
-            borderBottomWidth: ctaHover ? 3 : 2,
-            borderBottomColor: 'rgb(220,40,40)',
-            paddingBottom: 6,
-            transition: 'color 0.2s ease, border-bottom-width 0.2s ease',
-            letterSpacing: '-0.3px',
-            pointerEvents: 'auto',
-          }}
-        >
-          EMAIL ROBBY &rarr;
-        </a>
-      </div>
-      <div style={{ marginTop: 24, textAlign: 'center' }}>
-        <a
-          href="mailto:robbymeek+LA2028@gmail.com?subject=Connecting"
-          style={{
-            fontSize: 13,
-            fontStyle: 'italic',
-            color: 'rgba(255,255,255,0.5)',
-            textDecoration: 'underline',
-            textUnderlineOffset: '3px',
-            pointerEvents: 'auto',
-          }}
-        >
-          or reach out about anything else
-        </a>
-      </div>
-    </>
-  )
-}
-
-// ---------- Cost Breakdown ----------
-
-function CostBreakdown({ isMobile }) {
-  return (
-    <section style={{
-      background: 'rgba(255,255,255,0.03)',
-      padding: 'clamp(60px, 10vh, 120px) clamp(24px, 5vw, 80px)',
-    }}>
+      {/* Cost breakdown + closing — bottom section */}
       <div style={{
-        ...LABEL,
-        color: 'rgba(255,255,255,0.35)',
+        position: 'absolute',
+        bottom: isMobile ? '3%' : '5%',
+        left: 0,
+        right: 0,
         textAlign: 'center',
-        marginBottom: 'clamp(40px, 6vh, 64px)',
+        padding: isMobile ? '0 20px' : '0 40px',
       }}>
-        Where Your Support Goes
-      </div>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        gap: isMobile ? 'clamp(16px, 4vw, 32px)' : 'clamp(32px, 4vw, 64px)',
-        flexWrap: 'wrap',
-        maxWidth: 1000,
-        margin: '0 auto',
-      }}>
-        {COSTS.map((item) => (
-          <div key={item.label} style={{
-            textAlign: 'center',
-            minWidth: isMobile ? 'calc(45% - 16px)' : 'auto',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
-              <span style={{
-                fontSize: isMobile ? 'clamp(40px, 10vw, 72px)' : 'clamp(48px, 7vw, 100px)',
-                fontWeight: 700,
-                lineHeight: 0.9,
-                letterSpacing: '-2px',
-                color: '#fff',
-              }}>{item.pct}</span>
-              <span style={{
-                fontSize: 'clamp(14px, 1.5vw, 22px)',
-                fontWeight: 500,
-                color: 'rgba(255,255,255,0.3)',
-                marginLeft: 4,
-                marginTop: '0.08em',
-              }}>%</span>
+        <div style={{ ...LABEL, color: 'rgba(255,255,255,0.25)', marginBottom: 16, fontSize: 10 }}>
+          Where Your Support Goes
+        </div>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          gap: isMobile ? 16 : 'clamp(24px, 3vw, 48px)',
+          flexWrap: 'wrap',
+        }}>
+          {COSTS.map((item) => (
+            <div key={item.label} style={{ textAlign: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
+                <span style={{
+                  fontSize: isMobile ? 'clamp(20px, 5vw, 32px)' : 'clamp(24px, 3vw, 40px)',
+                  fontWeight: 700,
+                  lineHeight: 1,
+                  letterSpacing: '-1px',
+                  color: 'rgba(255,255,255,0.7)',
+                }}>{item.pct}</span>
+                <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.25)', marginLeft: 2 }}>%</span>
+              </div>
+              <div style={{ ...LABEL, fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>{item.label}</div>
             </div>
-            <div style={{
-              ...LABEL,
-              fontSize: 11,
-              color: 'rgba(255,255,255,0.4)',
-              marginTop: 8,
-            }}>{item.label}</div>
-          </div>
-        ))}
+          ))}
+        </div>
+        <div style={{
+          marginTop: 16,
+          fontSize: 'clamp(13px, 1.2vw, 16px)',
+          fontStyle: 'italic',
+          color: 'rgba(255,255,255,0.4)',
+          lineHeight: 1.4,
+        }}>
+          &ldquo;Whether it&rsquo;s financial support, advice, a connection, or simply following along &mdash; it all matters.&rdquo;
+          <span style={{ display: 'block', marginTop: 4, fontStyle: 'normal', fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>&mdash; Robby</span>
+        </div>
       </div>
-    </section>
+    </>
   )
 }
 
-// ---------- Close ----------
-
-function CloseSection() {
-  return (
-    <div style={{ textAlign: 'center', maxWidth: 600, margin: '0 auto', padding: 'clamp(40px, 6vh, 80px) 20px' }}>
-      <div style={{
-        fontSize: 'clamp(20px, 2.4vw, 32px)',
-        fontWeight: 400,
-        fontStyle: 'italic',
-        color: 'rgba(255,255,255,0.85)',
-        lineHeight: 1.45,
-        marginBottom: 16,
-      }}>
-        &ldquo;Whether it&rsquo;s financial support, advice, a connection, or simply following along &mdash; it all matters.&rdquo;
-      </div>
-      <div style={{ ...LABEL, color: 'rgba(255,255,255,0.4)', marginBottom: 'clamp(32px, 4vh, 56px)' }}>
-        &mdash; Robby
-      </div>
-      <div style={{
-        fontSize: 'clamp(18px, 2.2vw, 28px)',
-        fontWeight: 400,
-        color: 'rgba(255,255,255,0.6)',
-        lineHeight: 1.4,
-      }}>
-        Thank you for being part of this.
-      </div>
-    </div>
-  )
-}
-
-// ---------- Page ----------
+// ---------- Main component ----------
 
 export default function Support({ onNavigate }) {
   const [isMobile, setIsMobile] = useState(
@@ -777,14 +448,192 @@ export default function Support({ onNavigate }) {
   }, [])
 
   const { days } = useCountdown(new Date('2028-07-14T00:00:00'))
+  const frameRef = useRef(null)
+  const [activeSlide, setActiveSlide] = useState(0)
+  const cooldownRef = useRef(false)
+  const activeRef = useRef(0)
+  activeRef.current = activeSlide
+
+  const goToSlide = useCallback((idx) => {
+    const clamped = Math.max(0, Math.min(NUM_SLIDES - 1, idx))
+    if (clamped === activeRef.current) return
+    setActiveSlide(clamped)
+    activeRef.current = clamped
+    cooldownRef.current = true
+    setTimeout(() => { cooldownRef.current = false }, 500)
+  }, [])
+
+  // Wheel: one tick = one slide, cooldown blocks momentum
+  useEffect(() => {
+    function onWheel(e) {
+      e.preventDefault()
+      if (cooldownRef.current) return
+      if (e.deltaY > 0) goToSlide(activeRef.current + 1)
+      else if (e.deltaY < 0) goToSlide(activeRef.current - 1)
+    }
+    window.addEventListener('wheel', onWheel, { passive: false })
+    return () => window.removeEventListener('wheel', onWheel)
+  }, [goToSlide])
+
+  // Touch: swipe up/down
+  useEffect(() => {
+    let touchStartY = 0
+    function onTouchStart(e) { touchStartY = e.touches[0].clientY }
+    function onTouchEnd(e) {
+      const dy = touchStartY - e.changedTouches[0].clientY
+      if (Math.abs(dy) < 40 || cooldownRef.current) return
+      if (dy > 0) goToSlide(activeRef.current + 1)
+      else goToSlide(activeRef.current - 1)
+    }
+    window.addEventListener('touchstart', onTouchStart, { passive: true })
+    window.addEventListener('touchend', onTouchEnd, { passive: true })
+    return () => {
+      window.removeEventListener('touchstart', onTouchStart)
+      window.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [goToSlide])
+
+  // Keyboard: arrow keys
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); goToSlide(activeRef.current + 1) }
+      if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); goToSlide(activeRef.current - 1) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [goToSlide])
+
+  const spineLeft = isMobile ? 24 : '50%'
+  const hasYears2026 = SLIDES[activeSlide].indices
+    ? SLIDES[activeSlide].indices.some(i => TIMELINE_DATA[i]?.current)
+    : false
 
   return (
-    <div style={{ minHeight: '100vh', background: 'rgb(12,14,18)' }}>
-      <HeroSection isMobile={isMobile} />
-      <TimelineSection isMobile={isMobile} days={days} />
-      <CostBreakdown isMobile={isMobile} />
-      <CloseSection />
-      <Footer variant="dark" onNavigate={onNavigate} />
+    <div
+      ref={frameRef}
+      style={{
+        position: 'relative',
+        height: '100dvh',
+        width: '100%',
+        overflow: 'hidden',
+        background: 'rgb(12,14,18)',
+      }}
+    >
+      {/* Background photos — one per slide, crossfading */}
+      {SLIDES.map((slide, si) => {
+        if (!slide.photo) return null
+        return (
+          <img
+            key={si}
+            src={`${BASE}sailing-photos/${slide.photo}`}
+            alt=""
+            loading={si < 2 ? 'eager' : 'lazy'}
+            decoding="async"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              objectPosition: 'center',
+              filter: 'grayscale(0.2) contrast(1.1) brightness(0.65)',
+              opacity: activeSlide === si ? 1 : 0,
+              transition: 'opacity 0.8s ease',
+              willChange: 'opacity',
+              zIndex: 0,
+            }}
+          />
+        )
+      })}
+
+      {/* Dark overlay */}
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1 }} />
+
+      {/* Spine line */}
+      <div style={{
+        position: 'absolute',
+        left: spineLeft,
+        top: '10%',
+        bottom: '10%',
+        width: 1,
+        background: 'rgba(255,255,255,0.15)',
+        transform: isMobile ? 'none' : 'translateX(-0.5px)',
+        zIndex: 2,
+      }} />
+
+      {/* Ghost sailboat stops */}
+      {SLIDES.map((slide, si) => {
+        const stopTop = 10 + (si / (NUM_SLIDES - 1)) * 80
+        const isActive = activeSlide === si
+        return (
+          <div
+            key={`ghost-${si}`}
+            onClick={() => goToSlide(si)}
+            style={{
+              position: 'absolute',
+              left: spineLeft,
+              top: `${stopTop}%`,
+              transform: 'translate(-50%, -50%)',
+              zIndex: isActive ? 5 : 3,
+              cursor: 'pointer',
+              padding: 8,
+              opacity: isActive ? 0 : 1,
+              transition: 'opacity 0.4s ease',
+              pointerEvents: isActive ? 'none' : 'auto',
+            }}
+            title={slide.label}
+          >
+            <SailboatIcon variant="ghost" size={16} />
+          </div>
+        )
+      })}
+
+      {/* Active sailboat */}
+      <div
+        className="sail-bob"
+        style={{
+          position: 'absolute',
+          left: spineLeft,
+          top: `${10 + (activeSlide / (NUM_SLIDES - 1)) * 80}%`,
+          transform: 'translate(-50%, -50%)',
+          zIndex: 5,
+          transition: 'top 0.5s ease',
+          pointerEvents: 'none',
+        }}
+      >
+        <SailboatIcon variant={hasYears2026 ? 'glow' : 'active'} />
+      </div>
+
+      {/* Slide content */}
+      <div style={{ position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none' }}>
+        {SLIDES.map((slide, si) => {
+          const isActive = activeSlide === si
+          return (
+            <div key={si} style={{
+              position: 'absolute',
+              inset: 0,
+              opacity: isActive ? 1 : 0,
+              transform: isActive ? 'translateY(0)' : 'translateY(8px)',
+              transition: 'opacity 0.5s ease, transform 0.5s ease',
+              pointerEvents: isActive ? 'auto' : 'none',
+            }}>
+              {slide.type === 'hero' ? (
+                <HeroSlide isMobile={isMobile} />
+              ) : slide.type === 'final' ? (
+                <FinalSlide days={days} isMobile={isMobile} />
+              ) : slide.type === 'quad' ? (
+                <QuadSlide items={slide.indices.map(i => TIMELINE_DATA[i])} isMobile={isMobile} />
+              ) : (
+                <PairSlide
+                  items={[TIMELINE_DATA[slide.indices[0]], TIMELINE_DATA[slide.indices[1]]]}
+                  isMobile={isMobile}
+                  slideIndex={si}
+                />
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

@@ -43,7 +43,7 @@ function getNavMode(pathname) {
   // Support) are suppressed on / because the bottom-left nav already covers
   // narrow screens — see the isHomeRoute gates below.
   if (pathname === '/') return 'hover'
-  if (pathname === '/support') return 'static'
+  if (pathname === '/support') return 'overlay'
   // Contact is a single-viewport page — overlay the nav so the nav's height
   // counts toward the 100dvh and the page can stay exactly one screen tall.
   if (pathname === '/contact') return 'overlay'
