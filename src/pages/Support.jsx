@@ -402,46 +402,56 @@ export default function Support({ onNavigate }) {
     activeRef.current = clamped
   }, [])
 
-  // Wheel: one scroll gesture = one page, no matter how long.
-  // Two separate scrolls = two pages.
-  //
-  // How it works:
-  // - On the FIRST wheel event of a gesture, move one page.
-  // - Ignore all further events until there's an 80ms gap (gesture ended).
-  // - After the gap, enforce a 250ms cooldown so trackpad momentum
-  //   tail-off doesn't accidentally start a new gesture.
-  const lastMoveTime = useRef(0)
+  // Wheel: one scroll gesture = one page immediately.
+  // If the user is STILL scrolling after 500ms, advance another page.
+  // Two separate quick scrolls both register.
   const gestureActive = useRef(false)
   const gapTimer = useRef(null)
+  const continueTimer = useRef(null)
+  const lastDirection = useRef(0)
+  const lastMoveTime = useRef(0)
 
   useEffect(() => {
     function onWheel(e) {
       e.preventDefault()
+      const dir = e.deltaY > 0 ? 1 : -1
 
-      // Every event resets the gap timer
+      // Every event resets the gap timer (detects gesture end)
       clearTimeout(gapTimer.current)
       gapTimer.current = setTimeout(() => {
-        // 80ms of silence → gesture is over
         gestureActive.current = false
+        clearTimeout(continueTimer.current)
       }, 80)
 
-      // If mid-gesture, eat the event
-      if (gestureActive.current) return
+      if (!gestureActive.current) {
+        // Cooldown: ignore momentum tail-off from previous gesture
+        const now = Date.now()
+        if (now - lastMoveTime.current < 250) return
 
-      // If cooldown hasn't passed since last move, eat the event
-      const now = Date.now()
-      if (now - lastMoveTime.current < 250) return
+        // New gesture — move one page immediately
+        gestureActive.current = true
+        lastDirection.current = dir
+        lastMoveTime.current = now
+        if (dir > 0) goToSlide(activeRef.current + 1)
+        else goToSlide(activeRef.current - 1)
 
-      // New gesture — move one page
-      gestureActive.current = true
-      lastMoveTime.current = now
-      if (e.deltaY > 0) goToSlide(activeRef.current + 1)
-      else if (e.deltaY < 0) goToSlide(activeRef.current - 1)
+        // Set up the continue timer: if still scrolling after 500ms, advance again
+        clearTimeout(continueTimer.current)
+        continueTimer.current = setTimeout(() => {
+          // Only fire if gesture is still active
+          if (gestureActive.current) {
+            lastMoveTime.current = Date.now()
+            if (lastDirection.current > 0) goToSlide(activeRef.current + 1)
+            else goToSlide(activeRef.current - 1)
+          }
+        }, 500)
+      }
     }
     window.addEventListener('wheel', onWheel, { passive: false })
     return () => {
       window.removeEventListener('wheel', onWheel)
       clearTimeout(gapTimer.current)
+      clearTimeout(continueTimer.current)
     }
   }, [goToSlide])
 
