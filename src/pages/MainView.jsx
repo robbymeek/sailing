@@ -290,41 +290,61 @@ function HomeIntro({ onNavigate, hoverNavOpen, boatSrc, days, hrs, mins, secs })
         />
       </button>
 
-      {/* Bottom persistent nav — always visible after intro */}
+      {/* Bottom-left persistent nav — always visible after intro */}
       <nav
         aria-label="Primary"
         style={{
           position: 'fixed',
-          bottom: portrait ? 32 : 28,
-          left: portrait ? 0 : 32,
-          right: portrait ? 0 : 'auto',
+          bottom: 32,
+          left: 32,
           display: 'flex', flexDirection: 'column',
-          alignItems: portrait ? 'center' : 'flex-start',
-          gap: portrait ? 10 : 6,
+          alignItems: 'flex-start',
+          gap: 20,
           opacity: uiVisible ? 1 : 0,
           transition: 'opacity 0.6s ease',
           pointerEvents: uiVisible ? 'auto' : 'none',
           zIndex: 20,
+          maxWidth: 380,
         }}
       >
+        {/* Nav row with dot separators */}
         <div style={{
           display: 'flex',
-          gap: portrait ? 16 : 20,
           alignItems: 'center',
+          gap: 0,
           flexWrap: 'wrap',
-          justifyContent: portrait ? 'center' : 'flex-start',
         }}>
           {[
-            ['Bio', 'Biography'],
+            ['Biography', 'Biography'],
             ['Events', 'Event Calendar'],
             ['Path', 'Path'],
             ['Team', 'Team'],
             ['Contact', 'Contact'],
-          ].map(([label, route]) => (
-            <HomeNavLink key={route} label={label} onClick={() => onNavigate(route)} portrait={portrait} />
+          ].map(([label, route], i, arr) => (
+            <span key={route} style={{ display: 'inline-flex', alignItems: 'center' }}>
+              <HomeNavLink label={label} onClick={() => onNavigate(route)} />
+              {i < arr.length - 1 && (
+                <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 8, margin: '0 10px', userSelect: 'none' }}>●</span>
+              )}
+            </span>
           ))}
         </div>
-        <HomeNavLink label="Support" onClick={() => onNavigate('Support')} portrait={portrait} isSupport />
+
+        {/* SUPPORT → */}
+        <HomeNavLink label="SUPPORT →" onClick={() => onNavigate('Support')} isSupport />
+
+        {/* Blurb */}
+        <p style={{
+          color: 'rgba(255,255,255,0.4)',
+          fontSize: 11,
+          lineHeight: 1.5,
+          margin: 0,
+          fontWeight: 400,
+          letterSpacing: '-0.1px',
+          maxWidth: 320,
+        }}>
+          Robby Meek is a sailor for the US Sailing Team attending Harvard University working to compete and excel at the 2028 Olympic Games.
+        </p>
       </nav>
 
       {/* Top-right countdown corner — clickable, fades in with the nav */}
@@ -379,7 +399,7 @@ function CountdownCorner({ onNavigate, uiVisible, hoverNavOpen, anchorButton, an
 }
 
 // Small stateful nav link: color transitions to royal blue on hover.
-function HomeNavLink({ label, onClick, portrait, isSupport }) {
+function HomeNavLink({ label, onClick, isSupport }) {
   const [hover, setHover] = useState(false)
   return (
     <button
@@ -391,16 +411,12 @@ function HomeNavLink({ label, onClick, portrait, isSupport }) {
       style={{
         background: 'none',
         border: 'none',
-        borderBottom: isSupport && portrait ? '1px solid rgb(10,85,235)' : 'none',
-        padding: isSupport ? '0 0 2px' : 0,
-        paddingLeft: isSupport && !portrait ? 4 : 0,
+        padding: 0,
         cursor: 'pointer',
         color: hover ? '#1E40FF' : 'rgba(255,255,255,0.75)',
-        fontSize: isSupport
-          ? (portrait ? 16 : 15)
-          : (portrait ? 13 : 13),
+        fontSize: isSupport ? 14 : 13,
         fontWeight: isSupport ? 500 : 400,
-        letterSpacing: '-0.2px',
+        letterSpacing: isSupport ? '1px' : '-0.2px',
         fontFamily: 'inherit',
         transition: 'color 0.25s ease',
       }}

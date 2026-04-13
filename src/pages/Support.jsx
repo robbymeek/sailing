@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import usePageEntrance from '../hooks/usePageEntrance'
 import Footer from '../components/Footer'
 
@@ -49,6 +49,14 @@ function formatAmount(raw) {
 export default function Support({ onNavigate }) {
   const entrance = usePageEntrance(3, { staggerMs: 100, initialDelayMs: 50 })
 
+  // Add top padding when the compact hamburger menu replaces the static nav
+  const [compactNav, setCompactNav] = useState(window.innerWidth <= 900)
+  useEffect(() => {
+    const h = () => setCompactNav(window.innerWidth <= 900)
+    window.addEventListener('resize', h)
+    return () => window.removeEventListener('resize', h)
+  }, [])
+
   const [amount, setAmount] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -86,7 +94,7 @@ export default function Support({ onNavigate }) {
       <div style={{
         maxWidth: 780,
         margin: '0 auto',
-        padding: '24px clamp(24px, 5vw, 60px) 60px',
+        padding: `${compactNav ? 64 : 24}px clamp(24px, 5vw, 60px) 60px`,
       }}>
         {/* Section 0 — Intro */}
         <div style={entrance.style(0)}>
