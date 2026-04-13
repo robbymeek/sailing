@@ -222,16 +222,45 @@ export default function App() {
 
   const navVariant = getVariant(location.pathname)
 
-  // Variant-aware color for the fixed hamburger trigger that lives outside
-  // the regular Nav wrapper (so it needs its own color logic).
-  let triggerColor
-  if (navVariant === 'light') {
-    triggerColor = 'rgba(0,0,0,0.6)'
-  } else if (navVariant === 'red') {
-    triggerColor = 'rgba(40,5,5,0.7)'
-  } else {
-    triggerColor = 'rgba(255,255,255,0.7)'
-  }
+  // Dynamic hamburger color: sample the background behind the button and
+  // pick black or white for maximum contrast. Polls on scroll + resize so
+  // it reacts to scrolling through light/dark sections.
+  const hamburgerRef = useRef(null)
+  const [triggerColor, setTriggerColor] = useState('rgba(255,255,255,0.7)')
+
+  useEffect(() => {
+    if (!navOverflowing || isHomeRoute) return
+
+    function updateTriggerColor() {
+      const btn = hamburgerRef.current
+      if (!btn) return
+      const rect = btn.getBoundingClientRect()
+      const x = Math.round(rect.left + rect.width / 2)
+      const y = Math.round(rect.top + rect.height / 2)
+      // Hide the button so elementFromPoint hits the background
+      btn.style.visibility = 'hidden'
+      const el = document.elementFromPoint(x, y)
+      btn.style.visibility = ''
+      if (!el) return
+      const bg = getComputedStyle(el).backgroundColor
+      const match = bg.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)
+      if (!match) return
+      // Relative luminance (sRGB)
+      const [r, g, b] = [+match[1], +match[2], +match[3]]
+      const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+      setTriggerColor(lum > 0.5 ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)')
+    }
+
+    updateTriggerColor()
+    window.addEventListener('scroll', updateTriggerColor, { passive: true })
+    window.addEventListener('resize', updateTriggerColor)
+    const interval = setInterval(updateTriggerColor, 400)
+    return () => {
+      window.removeEventListener('scroll', updateTriggerColor)
+      window.removeEventListener('resize', updateTriggerColor)
+      clearInterval(interval)
+    }
+  }, [navOverflowing, isHomeRoute, location.pathname])
 
   return (
     <div
@@ -279,6 +308,7 @@ export default function App() {
           the bottom-left nav baked into MainView covers narrow screens. */}
       {!isHomeRoute && navOverflowing && (
         <button
+          ref={hamburgerRef}
           onClick={() => setNavMenuOpen((o) => !o)}
           aria-label={navMenuOpen ? 'Close menu' : 'Open menu'}
           style={{

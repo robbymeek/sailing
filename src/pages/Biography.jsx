@@ -237,6 +237,15 @@ export default function Biography({ onNavigate }) {
   const ilcaRef = useRef(null)
   const eventsRef = useRef(null)
 
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' && window.innerWidth < 700
+  )
+  useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 700)
+    window.addEventListener('resize', h)
+    return () => window.removeEventListener('resize', h)
+  }, [])
+
   const olympic = useCountdown(new Date('2028-07-14T00:00:00'))
   const nextEvent = useCountdown(new Date('2026-05-16T00:00:00'))
 
@@ -584,6 +593,57 @@ export default function Biography({ onNavigate }) {
           <EventModal event={selectedEvent} onClose={() => setSelectedEvent(null)} />
         )}
       </div>
+
+      {/* ===== MOBILE NAV BUTTONS — between events and press ===== */}
+      {isMobile && (
+        <div style={{
+          background: 'rgb(12,14,18)',
+          padding: '48px 24px',
+          textAlign: 'center',
+        }}>
+          <p style={{
+            color: 'rgba(255,255,255,0.5)',
+            fontSize: 12,
+            letterSpacing: '1.5px',
+            textTransform: 'uppercase',
+            marginBottom: 28,
+          }}>
+            Explore more
+          </p>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+            maxWidth: 280,
+            margin: '0 auto',
+          }}>
+            {[
+              { label: 'Path & Team', page: 'Path' },
+              { label: 'Contact', page: 'Contact' },
+              { label: 'Support', page: 'Support' },
+            ].map(({ label, page }) => (
+              <button
+                key={page}
+                onClick={() => onNavigate(page)}
+                style={{
+                  padding: '14px 24px',
+                  fontSize: 15,
+                  fontWeight: 500,
+                  letterSpacing: '0.5px',
+                  color: '#fff',
+                  background: 'rgba(255,255,255,0.08)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  transition: 'background 0.2s ease, border-color 0.2s ease',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ===== PRESS + FOOTER — black section ===== */}
       <div style={{ background: 'rgb(0,0,0)', position: 'relative', zIndex: 5 }}>
