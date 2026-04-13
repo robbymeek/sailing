@@ -420,10 +420,14 @@ export default function Support({ onNavigate }) {
       clearTimeout(gapTimer.current)
       gapTimer.current = setTimeout(() => {
         gestureActive.current = false
+        lastMoveTime.current = Date.now()
         clearTimeout(continueTimer.current)
-      }, 80)
+      }, 120)
 
       if (!gestureActive.current) {
+        // 50ms cooldown: blocks momentum tail-off from previous gesture
+        if (Date.now() - lastMoveTime.current < 50) return
+
         // New gesture — move one page immediately
         gestureActive.current = true
         lastDirection.current = dir
