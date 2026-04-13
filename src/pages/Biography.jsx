@@ -41,6 +41,7 @@ const PRESS = [
   { t: 'Robby Meek feed this week. Congrats goes out to the sophomore!', u: 'https://www.threads.com/@harvardsailing/post/DAEgzXRvfyN' },
   { t: 'Robby Meek - 2022 West Marine US Open Sailing Series', u: 'https://www.sail-world.com/photo/345661' },
   { t: 'No. 1 Sailing Wins 2025 ICSA Open Team Race National Championship', u: 'https://gocrimson.com/news/2025/4/26/no-1-sailing-wins-2025-icsa-open-team-race-national-championship.aspx' },
+  { t: 'Olympic Class Racing Season Opens With Eyes on LA', u: 'https://www.sailingworld.com/racing/olympic-class-racing-season-opens-with-eyes-on-la/' },
 ]
 
 const EVENTS = [
