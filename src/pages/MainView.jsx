@@ -10,7 +10,7 @@ const BOAT_SIZE = 200
 // to /. No storage APIs — this lives for the tab's lifetime only.
 let introHasPlayed = false
 
-export default function MainView({ onNavigate, hoverNavOpen }) {
+export default function MainView({ onNavigate, hoverNavOpen, skipIntro }) {
   const target = new Date('2028-07-14T00:00:00')
   const { days, hrs, mins, secs } = useCountdown(target)
 
@@ -18,6 +18,7 @@ export default function MainView({ onNavigate, hoverNavOpen }) {
     <HomeIntro
       onNavigate={onNavigate}
       hoverNavOpen={hoverNavOpen}
+      skipIntro={skipIntro}
       boatSrc={`${BASE}[0001-0250].gif`}
       days={days}
       hrs={hrs}
@@ -30,7 +31,7 @@ export default function MainView({ onNavigate, hoverNavOpen }) {
 // ---------- Home intro + rest-state component ----------
 // All cinematic state and timers live here so MainView stays a thin
 // shell. Kept in the same file per the original brief.
-function HomeIntro({ onNavigate, hoverNavOpen, boatSrc, days, hrs, mins, secs }) {
+function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, boatSrc, days, hrs, mins, secs }) {
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -53,7 +54,7 @@ function HomeIntro({ onNavigate, hoverNavOpen, boatSrc, days, hrs, mins, secs })
   // Initial skip check: on the very first mount, respect the module-level
   // played flag + reduced-motion. On explicit replay (boat click) we bypass
   // this via replayNonce > 0 so the intro runs regardless.
-  const skipIntro = introHasPlayed || prefersReducedMotion
+  const skipIntro = forceSkip || introHasPlayed || prefersReducedMotion
 
   // phase drives the blue→black overlay; separate booleans drive boat/UI fades
   // so their timing isn't locked to the overlay transition.

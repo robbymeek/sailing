@@ -229,7 +229,7 @@ function EventModal({ event, onClose }) {
   )
 }
 
-export default function Biography({ onNavigate }) {
+export default function Biography({ onNavigate, scrollOffsetRef }) {
   const [selectedEvent, setSelectedEvent] = useState(null)
   const imageRef = useRef(null)
   const text1Ref = useRef(null)
@@ -250,10 +250,16 @@ export default function Biography({ onNavigate }) {
   const nextEvent = useCountdown(new Date('2026-05-16T00:00:00'))
 
   // Parallax: text moves faster than image, image moves faster than page
+  // When embedded (scrollOffsetRef), subtract the container's top so
+  // parallax starts from zero when the biography section scrolls into view.
   useEffect(() => {
     let rafId
     const update = () => {
-      const y = window.scrollY
+      let y = window.scrollY
+      if (scrollOffsetRef?.current) {
+        const rect = scrollOffsetRef.current.getBoundingClientRect()
+        y = Math.max(0, -rect.top)
+      }
       if (imageRef.current) {
         imageRef.current.style.transform = `translateY(-${y * 0.3}px)`
       }
@@ -270,7 +276,7 @@ export default function Biography({ onNavigate }) {
     }
     rafId = requestAnimationFrame(update)
     return () => cancelAnimationFrame(rafId)
-  }, [])
+  }, [scrollOffsetRef])
 
 
   return (

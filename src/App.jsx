@@ -55,6 +55,18 @@ function getNavMode(pathname) {
   return 'static'
 }
 
+// On mobile, the home route renders MainView + Biography as one scrollable page.
+function MobileHome({ onNavigate, hoverNavOpen, bioSectionRef }) {
+  return (
+    <div>
+      <MainView onNavigate={onNavigate} hoverNavOpen={hoverNavOpen} skipIntro />
+      <div ref={bioSectionRef}>
+        <Biography onNavigate={onNavigate} scrollOffsetRef={bioSectionRef} />
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -68,7 +80,19 @@ export default function App() {
     return VARIANT_MAP[pathname] || 'dark'
   }
 
+  const mobileBioRef = useRef(null)
+
   const go = (page) => {
+    // On mobile home, "Biography" scrolls to the embedded bio section
+    if (page === 'Biography' && isMobile && location.pathname === '/') {
+      mobileBioRef.current?.scrollIntoView({ behavior: 'smooth' })
+      return
+    }
+    // On mobile home, "Home" scrolls to top
+    if (page === 'Home' && isMobile && location.pathname === '/') {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
     const routes = {
       'Home': '/',
       'Biography': '/biography',
@@ -80,18 +104,6 @@ export default function App() {
     }
     navigate(routes[page] || '/')
   }
-
-  // Mobile visitors landing on home → redirect to biography
-  useEffect(() => {
-    if (
-      location.pathname === '/' &&
-      typeof window !== 'undefined' &&
-      window.innerWidth < 700 &&
-      /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-    ) {
-      navigate('/biography', { replace: true })
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Exit/enter animation state
   const [displayLocation, setDisplayLocation] = useState(location)
@@ -128,10 +140,12 @@ export default function App() {
   const navPath = isExiting ? displayLocation.pathname : location.pathname
   const navMode = getNavMode(navPath)
 
-  // Preload Biography + Event Calendar on mobile for instant transitions
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 900)
+  // Mobile detection for combined home+biography and compact nav
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' && window.innerWidth < 700
+  )
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth <= 900)
+    const onResize = () => setIsMobile(window.innerWidth < 700)
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
@@ -229,7 +243,7 @@ export default function App() {
   const [triggerColor, setTriggerColor] = useState('rgba(255,255,255,0.7)')
 
   useEffect(() => {
-    if (!navOverflowing || isHomeRoute) return
+    if (!navOverflowing || (isHomeRoute && !isMobile)) return
 
     function updateTriggerColor() {
       const btn = hamburgerRef.current
@@ -321,7 +335,7 @@ export default function App() {
           animates to an X when the overlay is open. Lives outside any transform
           or opacity wrapper so it stays put on scroll. Skipped on home —
           the bottom-left nav baked into MainView covers narrow screens. */}
-      {!isHomeRoute && navOverflowing && (
+      {(!isHomeRoute || isMobile) && navOverflowing && (
         <button
           ref={hamburgerRef}
           onClick={() => setNavMenuOpen((o) => !o)}
@@ -355,7 +369,7 @@ export default function App() {
       )}
 
       {/* Compact-mode overlay: full-viewport backdrop + vertical stack. */}
-      {!isHomeRoute && navOverflowing && (
+      {(!isHomeRoute || isMobile) && navOverflowing && (
         <div
           onClick={() => setNavMenuOpen(false)}
           role="dialog"
@@ -409,7 +423,13 @@ export default function App() {
         onTransitionEnd={handleExitComplete}
       >
         <Routes location={displayLocation}>
-          <Route path="/" element={<MainView onNavigate={go} hoverNavOpen={hoverNav} />} />
+          <Route path="/" element={
+            isMobile ? (
+              <MobileHome onNavigate={go} hoverNavOpen={hoverNav} bioSectionRef={mobileBioRef} />
+            ) : (
+              <MainView onNavigate={go} hoverNavOpen={hoverNav} />
+            )
+          } />
           <Route path="/biography" element={<Biography onNavigate={go} />} />
           <Route path="/event-calendar" element={<EventCalendar onNavigate={go} />} />
           <Route path="/team" element={<Team onNavigate={go} />} />
