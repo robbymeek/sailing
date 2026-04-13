@@ -317,9 +317,9 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
           flexWrap: 'wrap',
         }}>
           {[
-            ['Biography', 'Biography'],
-            ['Path & Team', 'Path'],
-            ['Contact', 'Contact'],
+            ['BIOGRAPHY', 'Biography'],
+            ['PATH & TEAM', 'Path'],
+            ['CONTACT', 'Contact'],
           ].map(([label, route], i, arr) => (
             <span key={route} style={{ display: 'inline-flex', alignItems: 'center' }}>
               <HomeNavLink label={label} onClick={() => onNavigate(route)} />
