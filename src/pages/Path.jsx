@@ -890,7 +890,7 @@ export default function Path({ onNavigate }) {
   // 5 slide stops + 1 exit stop (half-gap past the last slide)
   const baseStops = SLIDES.map((_, si) => 15 + (si / (NUM_SLIDES - 1)) * 75)
   const normalGap = baseStops[1] - baseStops[0]
-  const slideStops = [...baseStops, baseStops[baseStops.length - 1] + normalGap / 2]
+  const slideStops = [...baseStops, baseStops[baseStops.length - 1] + normalGap * 0.2]
   const [boatPos, setBoatPos] = useState(slideStops[0])
   const boatPosRef = useRef(slideStops[0])
   const SNAP_THRESHOLD = 1.5 // percentage points — ~10px on a 700px viewport
@@ -1014,15 +1014,17 @@ export default function Path({ onNavigate }) {
         return
       }
 
-      // On last slide swiping forward — move boat toward exit stop, then release
+      // On last slide swiping forward — move boat toward exit stop, then scroll to team
       const exitStop = slideStops[slideStops.length - 1]
       if (dir > 0 && activeRef.current >= NUM_SLIDES - 1) {
         if (boatPosRef.current >= exitStop - 0.1) {
+          // Exit reached — scroll to team section
+          teamSectionRef.current?.scrollIntoView({ behavior: 'smooth' })
+          consumed = false
           return
         }
         e.preventDefault()
         consumed = true
-        // Map finger pixels to spine percentage: spine spans 75% of viewport height
         const pxToPct = 75 / (window.innerHeight * 0.75)
         const delta = Math.abs(incrDy) * pxToPct
         const newPos = Math.min(exitStop, boatPosRef.current + delta)
