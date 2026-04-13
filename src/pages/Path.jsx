@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import useCountdown from '../hooks/useCountdown'
+import usePageEntrance from '../hooks/usePageEntrance'
+import Footer from '../components/Footer'
 
 const BASE = import.meta.env.BASE_URL
 
@@ -52,17 +54,326 @@ const LABEL = {
   textTransform: 'uppercase',
 }
 
+// ---------- Team data ----------
+
+const TEAM_ACCENT = 'rgb(10,85,235)'
+const TEAM_LABEL = {
+  color: 'rgb(117,117,117)',
+  fontSize: 12,
+  fontWeight: 400,
+  letterSpacing: '-0.48px',
+  textTransform: 'uppercase',
+  margin: '0 0 6px',
+}
+const TEAM_META = {
+  color: 'rgba(255,255,255,0.72)',
+  fontSize: 15,
+  fontWeight: 400,
+  lineHeight: 1.8,
+}
+
+const SPONSORS = [
+  {
+    name: 'AA ENT',
+    photo: 'sponsor-aaent.jpg',
+    logo: 'AAENT-Logo.png',
+    url: 'https://aaentmd.com/',
+    desc: 'Leading ENT and facial plastic surgery practice providing world-class care.',
+  },
+  {
+    name: 'US Sailing Team',
+    photo: 'sponsor-ussailing.jpg',
+    logo: 'us-sailing-team-logo.png',
+    url: 'https://www.ussailing.org/teams/ussailingteam/',
+    desc: 'The national sailing team representing the United States at the Olympic Games.',
+  },
+  {
+    name: 'Sailing Foundation of NY',
+    photo: 'sponsor-sfny.jpg',
+    logo: 'sfny-logo.png',
+    url: 'https://sfny.org/',
+    desc: 'Supporting competitive sailors and maritime education across the country.',
+  },
+  {
+    name: 'Annapolis Yacht Club',
+    photo: 'sponsor-ayc.jpg',
+    logo: null,
+    url: 'https://www.annapolisyc.com/',
+    desc: 'Historic yacht club in Annapolis, Maryland. Where the journey started.',
+  },
+]
+
+const SUPPORTERS = [
+  { name: 'AA ENT', url: 'https://aaentmd.com/' },
+  { name: 'US Sailing Team', url: 'https://www.ussailing.org/teams/ussailingteam/' },
+  { name: 'Sailing Foundation of NY', url: 'https://sfny.org/' },
+  { name: 'Annapolis Yacht Club', url: 'https://www.annapolisyc.com/' },
+  { name: 'Charter Financial Group', url: 'https://www.charterfinancialgroup.com/' },
+  { name: 'The Strom Family' },
+  { name: 'The Ziskind Family' },
+  { name: 'The Callahan Family' },
+  { name: 'Parabh Gill' },
+]
+
+const EMPTY_SLOTS = 4
+
+function SponsorCard({ sponsor, hovered, locked, onHover, onLeave, onClick }) {
+  const revealed = hovered || locked
+  return (
+    <div
+      onMouseEnter={onHover}
+      onMouseLeave={onLeave}
+      onClick={onClick}
+      style={{
+        position: 'relative',
+        overflow: 'hidden',
+        display: 'block',
+        flexGrow: 1,
+        flexBasis: 0,
+        flexShrink: 1,
+        minWidth: 0,
+        height: '100%',
+        cursor: 'pointer',
+        border: '8px solid rgb(0,0,0)',
+        boxSizing: 'border-box',
+      }}
+    >
+      <img
+        src={`${BASE}${sponsor.photo}`}
+        alt={sponsor.name}
+        style={{
+          width: '100%', height: '100%',
+          objectFit: 'cover',
+          transition: 'transform 0.6s ease, filter 0.6s ease',
+          transform: revealed ? 'scale(1.06)' : 'scale(1)',
+          filter: revealed ? 'brightness(0.25)' : 'grayscale(0.15) brightness(0.55)',
+          display: 'block',
+        }}
+      />
+      {/* Blue overlay when revealed */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: TEAM_ACCENT,
+        opacity: revealed ? 0.85 : 0,
+        transition: 'opacity 0.5s ease',
+        pointerEvents: 'none',
+      }} />
+      {/* Resting state: centered title over darkened photo */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        opacity: revealed ? 0 : 1,
+        transition: 'opacity 0.4s ease',
+        pointerEvents: 'none',
+      }}>
+        <p style={{
+          color: '#fff',
+          fontSize: 'clamp(16px, 1.8vw, 24px)',
+          fontWeight: 400,
+          fontFamily: '"Didot", "Bodoni 72", "Bodoni MT", "Playfair Display", Georgia, serif',
+          letterSpacing: '0.03em',
+          textAlign: 'center',
+          margin: 0,
+          textShadow: '0 2px 12px rgba(0,0,0,0.6)',
+        }}>
+          {sponsor.name}
+        </p>
+      </div>
+      {/* Revealed state: logo + name + description */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        padding: '40px 32px',
+        opacity: revealed ? 1 : 0,
+        transform: revealed ? 'translateY(0)' : 'translateY(12px)',
+        transition: 'opacity 0.5s ease, transform 0.5s ease',
+        pointerEvents: 'none',
+      }}>
+        {sponsor.logo && (
+          <img
+            src={`${BASE}${sponsor.logo}`}
+            alt=""
+            style={{
+              maxWidth: 180, maxHeight: 72, objectFit: 'contain',
+              marginBottom: 22,
+              filter: 'brightness(0) invert(1)',
+            }}
+          />
+        )}
+        <p style={{
+          color: '#fff', fontSize: 17, fontWeight: 500,
+          letterSpacing: '-0.3px',
+          margin: sponsor.logo ? 0 : '0 0 10px', textAlign: 'center',
+        }}>{sponsor.name}</p>
+        <p style={{
+          color: 'rgba(255,255,255,0.95)', fontSize: 13,
+          textAlign: 'center', lineHeight: 1.65, margin: '12px 0 0',
+          maxWidth: 340,
+        }}>{sponsor.desc}</p>
+      </div>
+    </div>
+  )
+}
+
+function SupporterRow({ supporter }) {
+  const [hovered, setHovered] = useState(false)
+  const row = (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 14,
+      padding: '14px 0',
+      borderBottom: '1px solid rgba(255,255,255,0.14)',
+    }}>
+      <span style={{
+        width: 6, height: 6,
+        background: TEAM_ACCENT,
+        opacity: supporter.url ? (hovered ? 1 : 0.9) : 0.9,
+        flexShrink: 0,
+        transition: 'opacity 0.25s ease',
+      }} />
+      <span style={{
+        fontSize: 14,
+        fontWeight: 500,
+        letterSpacing: '-0.2px',
+        color: '#fff',
+        opacity: supporter.url && hovered ? 1 : 0.95,
+        transition: 'opacity 0.25s ease',
+      }}>
+        {supporter.name}
+      </span>
+    </div>
+  )
+
+  if (supporter.url) {
+    return (
+      <a
+        href={supporter.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{ textDecoration: 'none', display: 'block' }}
+      >
+        {row}
+      </a>
+    )
+  }
+  return row
+}
+
+function SponsorRow({ sponsors, hoveredSponsor, setHoveredSponsor, entrance }) {
+  const [layout, setLayout] = useState('full')
+  const [lockedIdx, setLockedIdx] = useState(0)
+
+  useEffect(() => {
+    const check = () => {
+      const w = window.innerWidth
+      if (w < 500) setLayout('one')
+      else if (w < 900) setLayout('two')
+      else setLayout('full')
+    }
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  function handleClick(i, sponsor) {
+    if (lockedIdx === i) {
+      // Already locked on this card — navigate to URL
+      window.open(sponsor.url, '_blank', 'noopener,noreferrer')
+    } else {
+      // Lock this card (always keep one locked)
+      setLockedIdx(i)
+    }
+  }
+
+
+  if (layout === 'full') {
+    const baseH = 'clamp(266px, 39vh, 392px)'
+    const tallH = 'clamp(376px, 55vh, 502px)'
+    return (
+      <div data-sponsor-row style={{
+        ...entrance.style(0),
+        display: 'flex',
+        alignItems: 'center',
+        width: '100%',
+        padding: '55px 0',
+        background: 'rgb(0,0,0)',
+      }}>
+        {sponsors.map((s, i) => {
+          // When hovering a different card, suppress the locked card's revealed state
+          const isActive = hoveredSponsor !== null ? hoveredSponsor === i : lockedIdx === i
+          return (
+            <div key={s.name} style={{
+              flexGrow: isActive ? 1.76 : 1,
+              flexBasis: 0,
+              flexShrink: 1,
+              minWidth: 0,
+              height: isActive ? tallH : baseH,
+              transition: 'flex-grow 0.6s cubic-bezier(0.22, 1, 0.36, 1), height 0.6s cubic-bezier(0.22, 1, 0.36, 1)',
+            }}>
+              <SponsorCard
+                sponsor={s}
+                hovered={hoveredSponsor === i}
+                locked={lockedIdx === i && hoveredSponsor === null}
+                onHover={() => setHoveredSponsor(i)}
+                onLeave={() => { setHoveredSponsor(null); setLockedIdx(i) }}
+                onClick={(e) => { e.stopPropagation(); handleClick(i, s) }}
+              />
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
+  const cardWidth = layout === 'one' ? 'calc(80vw)' : 'calc(45vw)'
+  return (
+    <div data-sponsor-row style={{
+      ...entrance.style(0),
+      overflowX: 'auto',
+      overflowY: 'hidden',
+      WebkitOverflowScrolling: 'touch',
+      scrollSnapType: 'x mandatory',
+      display: 'flex',
+      height: 'clamp(266px, 39vh, 392px)',
+    }}>
+      {sponsors.map((s, i) => (
+        <div
+          key={s.name}
+          style={{
+            flex: `0 0 ${cardWidth}`,
+            height: '100%',
+            scrollSnapAlign: 'start',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <SponsorCard
+            sponsor={s}
+            hovered={hoveredSponsor === i}
+            locked={lockedIdx === i && hoveredSponsor === null}
+            onHover={() => setHoveredSponsor(i)}
+            onLeave={() => { setHoveredSponsor(null); setLockedIdx(i) }}
+            onClick={(e) => { e.stopPropagation(); handleClick(i, s) }}
+          />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ---------- Sailboat SVG ----------
 
 function SailboatIcon({ variant = 'default', size = 22 }) {
   const scale = size / 22
   let mast, sail, jib, hull, filterStyle
   if (variant === 'active') {
-    mast = 'rgba(80,160,255,0.95)'
-    sail = 'rgba(60,140,255,0.8)'
-    jib = 'rgba(80,160,255,0.6)'
-    hull = 'rgba(100,180,255,0.9)'
-    filterStyle = 'drop-shadow(0 0 6px rgba(60,140,255,0.5))'
+    mast = 'rgba(120,190,255,1)'
+    sail = 'rgba(100,175,255,0.95)'
+    jib = 'rgba(120,190,255,0.8)'
+    hull = 'rgba(140,200,255,1)'
+    filterStyle = 'drop-shadow(0 0 8px rgba(80,160,255,0.6))'
   } else if (variant === 'glow') {
     mast = 'rgba(255,255,255,0.95)'
     sail = 'rgba(255,255,255,0.8)'
@@ -186,7 +497,50 @@ function YearBlock({ item, side, verticalPos, isMobile, factBox, anchor = 'cente
 
 // ---------- Slide content types ----------
 
-function HeroSlide({ isMobile }) {
+function YourNameSlot({ onNavigate, isMobile }) {
+  const [hovered, setHovered] = useState(false)
+  const [pressed, setPressed] = useState(false)
+  return (
+    <div
+      onClick={() => onNavigate('Support')}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => { setHovered(false); setPressed(false) }}
+      onMouseDown={() => setPressed(true)}
+      onMouseUp={() => setPressed(false)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: isMobile ? 8 : 12,
+        padding: isMobile ? '4px 0' : '8px 0',
+        borderBottom: `1px solid rgba(255,255,255,${isMobile ? 0.06 : 0.08})`,
+        cursor: 'pointer',
+        pointerEvents: 'auto',
+        transform: pressed ? 'scale(0.97)' : 'scale(1)',
+        transition: 'transform 0.1s ease',
+      }}
+    >
+      <span style={{
+        width: isMobile ? 4 : 5, height: isMobile ? 4 : 5,
+        border: hovered ? '1px solid rgb(10,85,235)' : '1px solid rgba(255,255,255,0.3)',
+        background: hovered ? 'rgb(10,85,235)' : 'transparent',
+        flexShrink: 0,
+        transition: 'background 0.2s ease, border-color 0.2s ease',
+      }} />
+      <span style={{
+        fontSize: isMobile ? 10 : 13,
+        fontWeight: hovered ? 500 : 400,
+        letterSpacing: '-0.2px',
+        fontStyle: 'italic',
+        color: hovered ? 'rgb(10,85,235)' : 'rgba(255,255,255,0.38)',
+        transition: 'color 0.2s ease',
+      }}>
+        Your Name
+      </span>
+    </div>
+  )
+}
+
+function HeroSlide({ isMobile, onSeeTeam, onNavigate }) {
   return (
     <div style={{
       position: 'absolute',
@@ -195,15 +549,13 @@ function HeroSlide({ isMobile }) {
       flexDirection: 'column',
       justifyContent: 'center',
       padding: isMobile
-        ? '60px 24px 0 48px'
+        ? '110px 24px 0 56px'
         : '0 calc(50% + 60px) 0 clamp(48px, 6vw, 100px)',
+      justifyContent: isMobile ? 'flex-start' : 'center',
     }}>
       <div style={{
         maxWidth: isMobile ? '100%' : undefined,
       }}>
-        <div style={{ ...LABEL, color: 'rgba(255,255,255,0.4)', marginBottom: 16 }}>
-          Support the Campaign
-        </div>
         <h1 style={{
           color: '#fff',
           fontSize: isMobile ? 'clamp(36px, 10vw, 64px)' : 'clamp(40px, 5.5vw, 80px)',
@@ -214,17 +566,6 @@ function HeroSlide({ isMobile }) {
         }}>
           JOIN THE TEAM.
         </h1>
-        <p style={{
-          color: 'rgba(255,255,255,0.7)',
-          fontSize: 'clamp(14px, 1.3vw, 18px)',
-          fontWeight: 400,
-          lineHeight: 1.55,
-          maxWidth: 420,
-          marginTop: 16,
-          marginBottom: 0,
-        }}>
-          Campaigning for the 2028 Olympic Games in the ILCA 7. Six national championships, three continental titles, Harvard Team Captain.
-        </p>
         <div style={{ display: 'flex', gap: isMobile ? 24 : 36, marginTop: 24, flexWrap: 'wrap' }}>
           {BIO_STATS.map(([n, l]) => (
             <div key={l}>
@@ -239,7 +580,7 @@ function HeroSlide({ isMobile }) {
           fontWeight: 400,
           letterSpacing: '1.5px',
           textTransform: 'uppercase',
-          color: 'rgba(255,255,255,0.3)',
+          color: 'rgba(255,255,255,0.6)',
           display: 'flex',
           alignItems: 'center',
           gap: 8,
@@ -247,6 +588,66 @@ function HeroSlide({ isMobile }) {
           Scroll to explore the journey
           <span style={{ display: 'inline-block', animation: 'scrollHint 2s ease-in-out infinite' }}>↓</span>
         </div>
+      </div>
+      {/* Team list — right side of spine on desktop, bottom grid on mobile */}
+      <div style={{
+        position: 'absolute',
+        ...(isMobile
+          ? { bottom: 28, left: 48, right: 16 }
+          : { top: '50%', transform: 'translateY(-50%)', left: 'calc(50% + 60px)', right: 'clamp(40px, 5vw, 100px)', maxWidth: 280 }
+        ),
+      }}>
+        <div style={isMobile ? {
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          columnGap: 12,
+        } : undefined}>
+          {SUPPORTERS.map((s) => (
+            <div key={s.name} style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: isMobile ? 8 : 12,
+              padding: isMobile ? '4px 0' : '8px 0',
+              borderBottom: `1px solid rgba(255,255,255,${isMobile ? 0.06 : 0.08})`,
+            }}>
+              <span style={{
+                width: isMobile ? 4 : 5, height: isMobile ? 4 : 5,
+                background: 'rgb(10,85,235)',
+                opacity: 0.9,
+                flexShrink: 0,
+              }} />
+              <span style={{
+                fontSize: isMobile ? 10 : 13,
+                fontWeight: 500,
+                letterSpacing: '-0.2px',
+                color: isMobile ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.85)',
+              }}>
+                {s.name}
+              </span>
+            </div>
+          ))}
+          <YourNameSlot onNavigate={onNavigate} isMobile={isMobile} />
+        </div>
+        <button
+          onClick={onSeeTeam}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#fff',
+            fontSize: isMobile ? 11 : 13,
+            fontWeight: 400,
+            letterSpacing: '-0.2px',
+            textDecoration: 'underline',
+            textUnderlineOffset: 3,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            padding: 0,
+            marginTop: isMobile ? 16 : 20,
+            pointerEvents: 'auto',
+          }}
+        >
+          See the full team &darr;
+        </button>
       </div>
     </div>
   )
@@ -265,7 +666,7 @@ function PairSlide({ items, isMobile, slideIndex }) {
 
 function QuadSlide({ items, isMobile }) {
   const positions = isMobile
-    ? [{ top: '5%' }, { top: '28%' }, { top: '51%' }, { top: '76%' }]
+    ? [{ top: '14%' }, { top: '33%' }, { top: '52%' }, { top: '71%' }]
     : [
         { top: '12%', side: 'left' },
         { top: '32%', side: 'right' },
@@ -396,6 +797,9 @@ export default function Path({ onNavigate }) {
   }, [])
 
   const { days } = useCountdown(new Date('2028-07-14T00:00:00'))
+  const [hoveredSponsor, setHoveredSponsor] = useState(null)
+  const teamEntrance = usePageEntrance(3, { staggerMs: 100, initialDelayMs: 50 })
+  const teamSectionRef = useRef(null)
   const frameRef = useRef(null)
   const [activeSlide, setActiveSlide] = useState(0)
   const activeRef = useRef(0)
@@ -406,58 +810,171 @@ export default function Path({ onNavigate }) {
     if (clamped === activeRef.current) return
     setActiveSlide(clamped)
     activeRef.current = clamped
+    if (clamped === NUM_SLIDES - 1) arrivedAtLastSlide.current = Date.now()
   }, [])
 
-  // Wheel: one scroll gesture = one page immediately.
-  // If the user is STILL scrolling after 500ms, advance another page.
-  // Two separate quick scrolls both register.
-  const gestureActive = useRef(false)
-  const gapTimer = useRef(null)
-  const continueTimer = useRef(null)
-  const lastDirection = useRef(0)
-  const lastMoveTime = useRef(0)
+  // Draggable sailboat along the spine
+  const [dragging, setDragging] = useState(false)
+  const [dragTop, setDragTop] = useState(null)
+  const draggingRef = useRef(false)
+
+  const getSlideFromY = useCallback((clientY) => {
+    const frame = frameRef.current
+    if (!frame) return activeRef.current
+    const rect = frame.getBoundingClientRect()
+    const pct = ((clientY - rect.top) / rect.height) * 100
+    // Spine runs from 15% to 90%, stops are evenly spaced
+    const t = Math.max(0, Math.min(1, (pct - 15) / 75))
+    return Math.round(t * (NUM_SLIDES - 1))
+  }, [])
+
+  const onDragStart = useCallback((e) => {
+    if (window.scrollY > 0) return
+    e.preventDefault()
+    setDragging(true)
+    draggingRef.current = true
+    const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY
+    const frame = frameRef.current
+    if (frame) {
+      const rect = frame.getBoundingClientRect()
+      const pct = ((clientY - rect.top) / rect.height) * 100
+      setDragTop(Math.max(15, Math.min(90, pct)))
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!dragging) return
+
+    function onMove(e) {
+      const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY
+      const frame = frameRef.current
+      if (!frame) return
+      const rect = frame.getBoundingClientRect()
+      const pct = ((clientY - rect.top) / rect.height) * 100
+      const clamped = Math.max(15, Math.min(90, pct))
+      setDragTop(clamped)
+      // Live-update the slide as you drag
+      const idx = getSlideFromY(clientY)
+      if (idx !== activeRef.current) {
+        setActiveSlide(idx)
+        activeRef.current = idx
+      }
+    }
+
+    function onEnd(e) {
+      const clientY = e.type === 'touchend'
+        ? e.changedTouches[0].clientY
+        : e.clientY
+      const idx = getSlideFromY(clientY)
+      setActiveSlide(idx)
+      activeRef.current = idx
+      setDragging(false)
+      draggingRef.current = false
+      setDragTop(null)
+    }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onEnd)
+    window.addEventListener('touchmove', onMove, { passive: false })
+    window.addEventListener('touchend', onEnd)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onEnd)
+      window.removeEventListener('touchmove', onMove)
+      window.removeEventListener('touchend', onEnd)
+    }
+  }, [dragging, getSlideFromY])
+
+  // Continuous sailboat position along the spine (15% to 90%)
+  // The boat moves smoothly with scroll, snaps to a stop when close enough.
+  // 5 slide stops + 1 exit stop (half-gap past the last slide)
+  const baseStops = SLIDES.map((_, si) => 15 + (si / (NUM_SLIDES - 1)) * 75)
+  const normalGap = baseStops[1] - baseStops[0]
+  const slideStops = [...baseStops, baseStops[baseStops.length - 1] + normalGap / 2]
+  const [boatPos, setBoatPos] = useState(slideStops[0])
+  const boatPosRef = useRef(slideStops[0])
+  const SNAP_THRESHOLD = 1.5 // percentage points — ~10px on a 700px viewport
+  const arrivedAtLastSlide = useRef(0)
+  const reenteredSlides = useRef(0)
+
+  // Snap boat to current slide stop (used when slide changes via click/drag/touch)
+  useEffect(() => {
+    if (!draggingRef.current) {
+      const target = slideStops[activeSlide]
+      setBoatPos(target)
+      boatPosRef.current = target
+    }
+  }, [activeSlide])
 
   useEffect(() => {
     function onWheel(e) {
-      e.preventDefault()
+      // Page is scrolled past slides — let browser handle normally
+      if (window.scrollY > 0) {
+        // Reset boat to the last slide stop so it's ready when we re-enter
+        const lastSlideStop = slideStops[NUM_SLIDES - 1]
+        if (boatPosRef.current !== lastSlideStop) {
+          boatPosRef.current = lastSlideStop
+          setBoatPos(lastSlideStop)
+        }
+        return
+      }
+
+
       const dir = e.deltaY > 0 ? 1 : -1
+      const lastStop = slideStops[NUM_SLIDES - 1]
 
-      // Every event resets the gap timer (detects gesture end)
-      clearTimeout(gapTimer.current)
-      gapTimer.current = setTimeout(() => {
-        gestureActive.current = false
-        lastMoveTime.current = Date.now()
-        clearTimeout(continueTimer.current)
-      }, 120)
+      // On last slide scrolling down — boat needs to reach the exit stop before scrolling through
+      const exitStop = slideStops[slideStops.length - 1]
+      if (dir > 0 && activeRef.current >= NUM_SLIDES - 1) {
+        if (boatPosRef.current >= exitStop - 0.1) {
+          // Boat is at the exit stop — let scroll through
+          return
+        }
+        // Move boat toward exit stop
+        e.preventDefault()
+        const delta = Math.min(Math.abs(e.deltaY) * 0.04, 2.5)
+        const newPos = Math.min(exitStop, boatPosRef.current + delta)
+        boatPosRef.current = newPos
+        setBoatPos(newPos)
+        return
+      }
 
-      if (!gestureActive.current) {
-        // 50ms cooldown: blocks momentum tail-off from previous gesture
-        if (Date.now() - lastMoveTime.current < 50) return
+      // At first slide scrolling up — do nothing
+      if (dir < 0 && activeRef.current <= 0 && boatPosRef.current <= slideStops[0]) {
+        e.preventDefault()
+        return
+      }
 
-        // New gesture — move one page immediately
-        gestureActive.current = true
-        lastDirection.current = dir
-        if (dir > 0) goToSlide(activeRef.current + 1)
-        else goToSlide(activeRef.current - 1)
+      e.preventDefault()
 
-        // Set up the continue timer: if still scrolling after 500ms, advance again
-        clearTimeout(continueTimer.current)
-        continueTimer.current = setTimeout(() => {
-          // Only fire if gesture is still active
-          if (gestureActive.current) {
-            lastMoveTime.current = Date.now()
-            if (lastDirection.current > 0) goToSlide(activeRef.current + 1)
-            else goToSlide(activeRef.current - 1)
+      // Move the boat continuously based on scroll delta
+      // Normalize deltaY: trackpad gives small values, mouse wheel gives ~100
+      const delta = Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY) * 0.04, 2.5)
+      const newPos = Math.max(slideStops[0], Math.min(slideStops[slideStops.length - 1], boatPosRef.current + delta))
+      boatPosRef.current = newPos
+      setBoatPos(newPos)
+
+      // Check if we're close enough to a stop to snap
+      for (let i = 0; i < slideStops.length; i++) {
+        if (Math.abs(newPos - slideStops[i]) < SNAP_THRESHOLD) {
+          // The 6th stop (exit stop) — don't change slides, just let scroll through
+          if (i === slideStops.length - 1 && i >= NUM_SLIDES) {
+            boatPosRef.current = slideStops[i]
+            setBoatPos(slideStops[i])
+            break
           }
-        }, 1000)
+          if (i !== activeRef.current) {
+            setActiveSlide(i)
+            activeRef.current = i
+            boatPosRef.current = slideStops[i]
+            setBoatPos(slideStops[i])
+          }
+          break
+        }
       }
     }
     window.addEventListener('wheel', onWheel, { passive: false })
-    return () => {
-      window.removeEventListener('wheel', onWheel)
-      clearTimeout(gapTimer.current)
-      clearTimeout(continueTimer.current)
-    }
+    return () => window.removeEventListener('wheel', onWheel)
   }, [goToSlide])
 
   // Touch: swipe up/down
@@ -466,10 +983,13 @@ export default function Path({ onNavigate }) {
     let touchMoved = false
     function onTouchStart(e) { touchStartY = e.touches[0].clientY; touchMoved = false }
     function onTouchEnd(e) {
+      if (draggingRef.current) return
+      if (window.scrollY > 0) return
       if (touchMoved) return
       const dy = touchStartY - e.changedTouches[0].clientY
       if (Math.abs(dy) < 40) return
       touchMoved = true
+      if (dy > 0 && activeRef.current >= NUM_SLIDES - 1) return
       if (dy > 0) goToSlide(activeRef.current + 1)
       else goToSlide(activeRef.current - 1)
     }
@@ -484,6 +1004,8 @@ export default function Path({ onNavigate }) {
   // Keyboard: arrow keys
   useEffect(() => {
     function onKey(e) {
+      if (window.scrollY > 0) return
+      if ((e.key === 'ArrowDown' || e.key === 'ArrowRight') && activeRef.current >= NUM_SLIDES - 1) return
       if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); goToSlide(activeRef.current + 1) }
       if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); goToSlide(activeRef.current - 1) }
     }
@@ -497,6 +1019,7 @@ export default function Path({ onNavigate }) {
     : false
 
   return (
+    <div style={{ background: 'rgb(12,14,18)' }}>
     <div
       ref={frameRef}
       style={{
@@ -524,7 +1047,7 @@ export default function Path({ onNavigate }) {
               height: '100%',
               objectFit: 'cover',
               objectPosition: 'center',
-              filter: 'grayscale(0.2) contrast(1.1) brightness(0.65)',
+              filter: si === 0 ? 'grayscale(0.2) contrast(1.1) brightness(0.4)' : 'grayscale(0.2) contrast(1.1) brightness(0.65)',
               opacity: activeSlide === si ? 1 : 0,
               transition: 'opacity 0.8s ease',
               willChange: 'opacity',
@@ -542,7 +1065,7 @@ export default function Path({ onNavigate }) {
         position: 'absolute',
         left: spineLeft,
         top: '15%',
-        bottom: '10%',
+        bottom: '5%',
         width: 1,
         background: 'rgba(255,255,255,0.15)',
         transform: isMobile ? 'none' : 'translateX(-0.5px)',
@@ -576,20 +1099,28 @@ export default function Path({ onNavigate }) {
         )
       })}
 
-      {/* Active sailboat */}
+      {/* Active sailboat — draggable */}
       <div
-        className="sail-bob"
+        className={dragging ? undefined : 'sail-bob'}
+        onMouseDown={onDragStart}
+        onTouchStart={onDragStart}
         style={{
           position: 'absolute',
           left: spineLeft,
-          top: `${15 + (activeSlide / (NUM_SLIDES - 1)) * 75}%`,
+          top: dragging && dragTop !== null
+            ? `${dragTop}%`
+            : `${boatPos}%`,
           transform: 'translate(-50%, -50%)',
           zIndex: 11,
-          transition: 'top 0.5s ease',
-          pointerEvents: 'none',
+          transition: dragging ? 'none' : (boatPos === slideStops[activeSlide] ? 'top 0.3s ease' : 'none'),
+          pointerEvents: 'auto',
+          cursor: dragging ? 'grabbing' : 'grab',
+          padding: 10,
+          touchAction: 'none',
+          userSelect: 'none',
         }}
       >
-        <SailboatIcon variant={hasYears2026 ? 'glow' : 'active'} />
+        <SailboatIcon variant={hasYears2026 ? 'glow' : 'active'} size={30} />
       </div>
 
       {/* Slide content */}
@@ -606,7 +1137,7 @@ export default function Path({ onNavigate }) {
               pointerEvents: isActive ? 'auto' : 'none',
             }}>
               {slide.type === 'hero' ? (
-                <HeroSlide isMobile={isMobile} />
+                <HeroSlide isMobile={isMobile} onNavigate={onNavigate} onSeeTeam={() => teamSectionRef.current?.scrollIntoView({ behavior: 'smooth' })} />
               ) : slide.type === 'final' ? (
                 <FinalSlide days={days} isMobile={isMobile} />
               ) : slide.type === 'quad' ? (
@@ -622,6 +1153,188 @@ export default function Path({ onNavigate }) {
           )
         })}
       </div>
+    </div>
+
+    {/* ===== TEAM SECTION — scrollable below slides ===== */}
+    <div ref={teamSectionRef} style={{ background: 'rgb(22,24,28)' }}>
+
+      {/* Sponsor card panels — responsive: 1+peek / 2+peek / all 4 */}
+      <SponsorRow
+        sponsors={SPONSORS}
+        hoveredSponsor={hoveredSponsor}
+        setHoveredSponsor={setHoveredSponsor}
+        entrance={teamEntrance}
+      />
+
+      {/* "The Team" editorial section */}
+      <div style={{
+        ...teamEntrance.style(1),
+        position: 'relative',
+        overflow: 'hidden',
+        padding: '80px 40px 140px',
+        minHeight: 'clamp(720px, 94vh, 1040px)',
+      }}>
+        {/* Background photo */}
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+          <img
+            src={`${BASE}IMG_5957 2.JPG`}
+            alt=""
+            style={{
+              width: '100%', height: '100%',
+              objectFit: 'cover',
+              objectPosition: 'center 20%',
+              filter: 'grayscale(1) contrast(1.55) brightness(0.5)',
+              transform: 'scale(1.14)',
+            }}
+          />
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'rgba(0,0,0,0.62)',
+          }} />
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'rgba(10,85,235,0.14)',
+          }} />
+        </div>
+
+        {/* Foreground content */}
+        <div style={{
+          position: 'relative',
+          zIndex: 1,
+          maxWidth: 1100,
+          margin: '0 auto',
+          textAlign: 'center',
+        }}>
+          <h1
+            className="chrome-text"
+            style={{
+              fontFamily: '"Didot", "Bodoni 72", "Bodoni MT", "Playfair Display", Georgia, serif',
+              fontSize: 'clamp(44px, 7vw, 104px)',
+              fontWeight: 500,
+              textTransform: 'uppercase',
+              letterSpacing: '0.035em',
+              lineHeight: 1,
+              margin: '0 0 14px',
+            }}
+          >
+            The Team
+          </h1>
+
+          <p style={{
+            color: 'rgba(255,255,255,0.88)',
+            fontSize: 'clamp(15px, 1.4vw, 18px)',
+            fontWeight: 400,
+            lineHeight: 1.7,
+            letterSpacing: '-0.2px',
+            maxWidth: 620,
+            margin: '0 auto 34px',
+          }}>
+            The sponsors, families, and supporters who make this Olympic campaign possible.
+          </p>
+
+          <div style={{ marginBottom: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+            <button
+              onClick={() => onNavigate('Support')}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '6px 0',
+                fontSize: 15,
+                fontWeight: 500,
+                letterSpacing: '-0.3px',
+                fontFamily: 'inherit',
+                color: '#fff',
+                borderBottom: '1px solid rgba(255,255,255,0.45)',
+              }}
+            >
+              Join the Team
+            </button>
+          </div>
+
+          {/* Individual Supporters */}
+          <div style={{ maxWidth: 440, margin: '0 auto', textAlign: 'left' }}>
+            {SUPPORTERS.map((s) => (
+              <SupporterRow key={s.name} supporter={s} />
+            ))}
+            {Array.from({ length: EMPTY_SLOTS }).map((_, i) => (
+              <div key={`empty-${i}`} style={{
+                display: 'flex', alignItems: 'center', gap: 14,
+                padding: '14px 0',
+                borderBottom: '1px solid rgba(255,255,255,0.14)',
+              }}>
+                <span style={{
+                  width: 6, height: 6,
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  background: 'transparent',
+                  flexShrink: 0,
+                }} />
+                <span style={{
+                  fontSize: 14,
+                  fontWeight: 400,
+                  letterSpacing: '-0.2px',
+                  fontStyle: 'italic',
+                  color: 'rgba(255,255,255,0.38)',
+                }}>
+                  Your Name
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Thin divider */}
+      <div style={{ height: 2, background: 'rgba(255,255,255,0.1)', maxWidth: 120, margin: '0 auto' }} />
+
+      {/* Thank-you letter */}
+      <div style={{ ...teamEntrance.style(2), maxWidth: 900, margin: '0 auto', padding: '60px 40px 50px' }}>
+        <p style={{ ...TEAM_LABEL, marginBottom: 24 }}>A NOTE FROM ROBBY</p>
+        <div style={{ display: 'flex', gap: 40, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <div style={{ flex: '0 0 auto', width: 'clamp(200px, 25vw, 280px)' }}>
+            <img
+              src={`${BASE}IMG_5958.JPG`}
+              alt=""
+              style={{ width: '100%', objectFit: 'cover', display: 'block' }}
+            />
+            <div style={{ height: 2, background: TEAM_ACCENT }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 280 }}>
+            <p style={{ ...TEAM_META, marginBottom: 16 }}>
+              I wanted to take a moment to express my deepest gratitude for any and all guidance and support throughout my Olympic sailing journey. Belief in me has meant more than words can say, and it has been one of the driving forces behind every step I have taken on this path.
+            </p>
+            <p style={{ ...TEAM_META, marginBottom: 16 }}>
+              Some of you have been with me since the very beginning, learning to sail on the Chesapeake Bay, to racing for the United States on the world stage. Whether it was encouragement after a tough regatta, advice on a difficult decision, or simply the confidence that someone believed in what I was working toward, those moments have shaped who I am as a sailor and as a person.
+            </p>
+            <p style={{ ...TEAM_META, marginBottom: 16 }}>
+              As I look ahead to this chapter of dedicating myself full-time to the LA 2028 Olympic campaign, I will carry forward everything I learn. The discipline, the resilience, the joy of competition, and the understanding that no great achievement is ever accomplished alone.
+            </p>
+            <p style={{ ...TEAM_META, marginBottom: 20 }}>
+              Thank you for being part of this journey. I am incredibly fortunate to have people in my corner, and I promise to continue working every day.
+            </p>
+            <p style={{
+              color: 'rgba(255,255,255,0.85)',
+              fontSize: 14,
+              lineHeight: 1.8,
+              fontStyle: 'italic',
+              marginBottom: 4,
+            }}>
+              With my sincerest thanks and appreciation,
+            </p>
+            <p style={{
+              color: 'rgba(255,255,255,0.85)',
+              fontSize: 14,
+              lineHeight: 1.8,
+              fontStyle: 'italic',
+            }}>
+              Robby
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <Footer variant="dark" onNavigate={onNavigate} />
+    </div>
     </div>
   )
 }
