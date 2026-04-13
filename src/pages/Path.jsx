@@ -977,6 +977,23 @@ export default function Path({ onNavigate }) {
     return () => window.removeEventListener('wheel', onWheel)
   }, [goToSlide])
 
+  // Track whether native scroll is active (boat at exit stop, page scrolling to team)
+  const [touchLocked, setTouchLocked] = useState(true)
+  const touchLockedRef = useRef(true)
+
+  // When scrolling back up to the top, re-engage custom scroll mode
+  useEffect(() => {
+    if (!isMobile) return
+    function onScroll() {
+      if (window.scrollY === 0 && !touchLockedRef.current) {
+        touchLockedRef.current = true
+        setTouchLocked(true)
+      }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [isMobile])
+
   // Touch: swipe up/down — mirrors the wheel handler for mobile
   useEffect(() => {
     let touchStartY = 0
@@ -999,6 +1016,9 @@ export default function Path({ onNavigate }) {
       const incrDy = lastTouchY - currentY // incremental: positive = swiping up
       lastTouchY = currentY
 
+      // If native scroll mode is active, let the browser handle it
+      if (!touchLockedRef.current) return
+
       // If page is already scrolled past slides, let browser scroll normally
       if (window.scrollY > 0 && !consumed) return
 
@@ -1014,12 +1034,13 @@ export default function Path({ onNavigate }) {
         return
       }
 
-      // On last slide swiping forward — move boat toward exit stop, then scroll to team
+      // On last slide swiping forward — move boat toward exit stop, then release to native scroll
       const exitStop = slideStops[slideStops.length - 1]
       if (dir > 0 && activeRef.current >= NUM_SLIDES - 1) {
         if (boatPosRef.current >= exitStop - 0.1) {
-          // Exit reached — scroll to team section
-          teamSectionRef.current?.scrollIntoView({ behavior: 'smooth' })
+          // Exit reached — release to native scrolling
+          touchLockedRef.current = false
+          setTouchLocked(false)
           consumed = false
           return
         }
@@ -1114,7 +1135,7 @@ export default function Path({ onNavigate }) {
         width: '100%',
         overflow: 'hidden',
         background: 'rgb(12,14,18)',
-        touchAction: isMobile ? 'none' : undefined,
+        touchAction: isMobile && touchLocked ? 'none' : undefined,
       }}
     >
       {/* Background photos — one per slide, crossfading */}
