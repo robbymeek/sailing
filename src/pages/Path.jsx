@@ -982,14 +982,18 @@ export default function Path({ onNavigate }) {
     let touchStartY = 0
     let lastTouchY = 0
     let consumed = false // true once this gesture has been claimed by slide nav
+    let startedInFrame = false // only intercept touches that began in the slides frame
 
     function onTouchStart(e) {
+      const frame = frameRef.current
+      startedInFrame = frame && frame.contains(e.target)
       touchStartY = e.touches[0].clientY
       lastTouchY = touchStartY
       consumed = false
     }
 
     function onTouchMove(e) {
+      if (!startedInFrame) return
       if (draggingRef.current) return
       const currentY = e.touches[0].clientY
       const incrDy = lastTouchY - currentY // incremental: positive = swiping up
@@ -998,9 +1002,9 @@ export default function Path({ onNavigate }) {
       // If page is already scrolled past slides, let browser scroll normally
       if (window.scrollY > 0 && !consumed) return
 
-      // Require a minimum initial movement before hijacking the gesture
+      // Small dead zone to avoid hijacking taps
       const totalDy = Math.abs(touchStartY - currentY)
-      if (totalDy < 15 && !consumed) return
+      if (totalDy < 5 && !consumed) return
 
       const dir = incrDy > 0 ? 1 : -1
 
@@ -1103,10 +1107,12 @@ export default function Path({ onNavigate }) {
       ref={frameRef}
       style={{
         position: 'relative',
-        height: '100dvh',
+        height: isMobile ? '100svh' : '100dvh',
+        minHeight: isMobile ? '100vh' : undefined,
         width: '100%',
         overflow: 'hidden',
         background: 'rgb(12,14,18)',
+        touchAction: isMobile ? 'none' : undefined,
       }}
     >
       {/* Background photos — one per slide, crossfading */}
