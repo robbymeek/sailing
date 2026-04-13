@@ -593,7 +593,7 @@ function HeroSlide({ isMobile, onSeeTeam, onNavigate }) {
       <div style={{
         position: 'absolute',
         ...(isMobile
-          ? { bottom: 58, left: 56, right: 28 }
+          ? { bottom: 108, left: 56, right: 28 }
           : { top: '50%', transform: 'translateY(-50%)', left: 'calc(50% + 60px)', right: 'clamp(40px, 5vw, 100px)', maxWidth: 280 }
         ),
       }}>
