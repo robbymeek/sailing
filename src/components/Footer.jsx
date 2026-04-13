@@ -9,18 +9,24 @@ export default function Footer({ variant, onNavigate }) {
         display: 'flex', justifyContent: 'center', alignItems: 'center',
         gap: 8, marginBottom: 16, flexWrap: 'wrap',
       }}>
-        {['Home', 'Biography', 'Event Calendar', 'Path', 'Team'].map((item, i) => (
-          <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {[
+          ['Home', 'Home'],
+          ['Biography', 'Biography'],
+          ['Path', 'Path & Team'],
+          ['Contact', 'Contact'],
+          ['Support', 'Support'],
+        ].map(([key, label], i, arr) => (
+          <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button
-              onClick={() => onNavigate(item)}
+              onClick={() => onNavigate(key)}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 color: tc, fontSize: 12,
               }}
             >
-              {item}
+              {label}
             </button>
-            {i < 4 && <span style={{ color: tc, fontSize: 12 }}>|</span>}
+            {i < arr.length - 1 && <span style={{ color: tc, fontSize: 12 }}>|</span>}
           </div>
         ))}
       </div>
@@ -30,7 +36,7 @@ export default function Footer({ variant, onNavigate }) {
       <p style={{ color: tc, fontSize: 10, margin: '4px 0' }}>
         Regarding sponsorships or other inquiries.{' '}
         <button
-          onClick={() => onNavigate('Team')}
+          onClick={() => onNavigate('Support')}
           style={{
             background: 'none', border: 'none', color: tc,
             textDecoration: 'underline', cursor: 'pointer', fontSize: 10,

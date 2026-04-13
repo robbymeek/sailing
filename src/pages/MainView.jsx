@@ -316,15 +316,13 @@ function HomeIntro({ onNavigate, hoverNavOpen, boatSrc, days, hrs, mins, secs })
         }}>
           {[
             ['Biography', 'Biography'],
-            ['Events', 'Event Calendar'],
-            ['Path', 'Path'],
-            ['Team', 'Team'],
+            ['Path & Team', 'Path'],
             ['Contact', 'Contact'],
           ].map(([label, route], i, arr) => (
             <span key={route} style={{ display: 'inline-flex', alignItems: 'center' }}>
               <HomeNavLink label={label} onClick={() => onNavigate(route)} />
               {i < arr.length - 1 && (
-                <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 8, margin: '0 10px', userSelect: 'none' }}>●</span>
+                <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 8, margin: '0 16px', userSelect: 'none' }}>●</span>
               )}
             </span>
           ))}

@@ -3,7 +3,7 @@ import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import Nav from './components/Nav'
 
 // Pages shown in the compact (narrow-viewport) overlay nav.
-const COMPACT_PAGES = ['Home', 'Biography', 'Event Calendar', 'Path', 'Team', 'Contact', 'Support']
+const COMPACT_PAGES = ['Home', 'Biography', 'Path', 'Contact', 'Support']
 import MainView from './pages/MainView'
 import Biography from './pages/Biography'
 import EventCalendar from './pages/EventCalendar'
@@ -336,7 +336,7 @@ export default function App() {
                     letterSpacing: '-0.6px', padding: '8px 14px',
                   }}
                 >
-                  {item}
+                  {{'Path': 'Path & Team'}[item] || item}
                 </button>
               )
             })}

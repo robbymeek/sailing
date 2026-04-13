@@ -1,14 +1,12 @@
 import { useState } from 'react'
 
-const PAGES = ['Home', 'Biography', 'Event Calendar', 'Path', 'Team', 'Contact', 'Support']
+const PAGES = ['Home', 'Biography', 'Path', 'Contact', 'Support']
 
 const SHORT_LABELS = {
-  'Biography': 'Bio',
-  'Event Calendar': 'Events',
+  'Path': 'Path & Team',
 }
 
 export default function Nav({ current, onNavigate, variant, excludeItems }) {
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 600
   const [hoveredItem, setHoveredItem] = useState(null)
 
   let dim, active
@@ -49,7 +47,7 @@ export default function Nav({ current, onNavigate, variant, excludeItems }) {
           transition: 'color 0.4s ease',
         }}
       >
-        {isMobile && SHORT_LABELS[item] ? SHORT_LABELS[item] : item}
+        {SHORT_LABELS[item] || item}
       </button>
     )
   }
