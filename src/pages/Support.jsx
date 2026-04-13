@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
+import emailjs from '@emailjs/browser'
 import usePageEntrance from '../hooks/usePageEntrance'
 import Footer from '../components/Footer'
 
@@ -81,6 +82,8 @@ export default function Support({ onNavigate }) {
   const [wantUpdates, setWantUpdates] = useState(false)
   const [wantTeam, setWantTeam] = useState(false)
   const [formError, setFormError] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+  const [sending, setSending] = useState(false)
 
   const isFormValid = amount.trim() && firstName.trim() && lastName.trim() && email.trim() && confirmEmail.trim()
 
@@ -95,21 +98,29 @@ export default function Support({ onNavigate }) {
       return
     }
     setFormError('')
-    const subject = encodeURIComponent(`Support Contribution - ${firstName} ${lastName}`)
-    const body = encodeURIComponent(
-      [
-        `Amount: ${amount}`,
-        `Name: ${firstName} ${lastName}`,
-        `Address: ${street}${addressLine2 ? ', ' + addressLine2 : ''}, ${city}, ${stateProv} ${zip}`,
-        `Email: ${email}`,
-        giftMessage ? `Message with gift: ${giftMessage}` : '',
-        honorName ? `In honor of: ${honorName}` : '',
-        message ? `Message to recipient: ${message}` : '',
-        wantUpdates ? 'Would like to receive email updates about the campaign.' : '',
-        wantTeam ? 'Would like to be listed on the Team section of the site.' : '',
-      ].filter(Boolean).join('\n')
-    )
-    window.location.href = `mailto:robbymeek+LA2028@gmail.com?subject=${subject}&body=${body}`
+    setSending(true)
+
+    const addressParts = [street, addressLine2, city, stateProv, zip].filter(Boolean).join(', ')
+
+    emailjs.send('service_s7dk8yy', 'template_5t39h3v', {
+      amount,
+      name: `${firstName} ${lastName}`,
+      email,
+      address: addressParts || 'Not provided',
+      gift_message: giftMessage || 'None',
+      honor_name: honorName || 'None',
+      honor_message: message || 'None',
+      want_updates: wantUpdates ? 'Yes' : 'No',
+      want_team: wantTeam ? 'Yes' : 'No',
+    }, '636z9Q0NhEM5Cu6AB')
+      .then(() => {
+        setSubmitted(true)
+        setSending(false)
+      })
+      .catch(() => {
+        setFormError('Something went wrong. Please try again.')
+        setSending(false)
+      })
   }
 
   return (
@@ -143,7 +154,31 @@ export default function Support({ onNavigate }) {
           </p>
         </div>
 
-        {/* Section 2 — The Form */}
+        {/* Section 2 — The Form or Thank You */}
+        {submitted ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '60px 20px',
+          }}>
+            <h2 style={{
+              fontSize: 'clamp(22px, 3vw, 32px)',
+              fontWeight: 600,
+              color: ACCENT,
+              margin: '0 0 20px',
+            }}>
+              Thank you for your support.
+            </h2>
+            <p style={{
+              fontSize: 16,
+              lineHeight: 1.7,
+              color: BODY_COLOR,
+              maxWidth: 500,
+              margin: '0 auto',
+            }}>
+              I will be in touch regarding the best payment method for you. Your generosity means the world to this campaign.
+            </p>
+          </div>
+        ) : (
         <div style={entrance.style(1)}>
           <form onSubmit={handleSubmit}>
             {/* 2a. Amount */}
@@ -366,11 +401,12 @@ export default function Support({ onNavigate }) {
                   transition: 'background 0.2s ease',
                 }}
               >
-                Submit
+                {sending ? 'Sending...' : 'Submit'}
               </button>
             </div>
           </form>
         </div>
+        )}
       </div>
 
       {/* Section 3 — Footer */}
