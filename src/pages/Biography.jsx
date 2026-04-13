@@ -23,7 +23,7 @@ const REGATTAS = [
     current: true,
   },
   {
-    date: 'JUL', month: 'JUL',
+    date: '20 JUL', month: 'JUL',
     status: 'UPCOMING',
     name: 'San Pedro OCR',
     league: 'Olympic Classes',
