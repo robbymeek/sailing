@@ -10,7 +10,7 @@ const BOAT_SIZE = 200
 // to /. No storage APIs — this lives for the tab's lifetime only.
 let introHasPlayed = false
 
-export default function MainView({ onNavigate, hoverNavOpen, skipIntro }) {
+export default function MainView({ onNavigate, hoverNavOpen, skipIntro, embedded }) {
   const target = new Date('2028-07-14T00:00:00')
   const { days, hrs, mins, secs } = useCountdown(target)
 
@@ -19,6 +19,7 @@ export default function MainView({ onNavigate, hoverNavOpen, skipIntro }) {
       onNavigate={onNavigate}
       hoverNavOpen={hoverNavOpen}
       skipIntro={skipIntro}
+      embedded={embedded}
       boatSrc={`${BASE}[0001-0250].gif`}
       days={days}
       hrs={hrs}
@@ -31,7 +32,7 @@ export default function MainView({ onNavigate, hoverNavOpen, skipIntro }) {
 // ---------- Home intro + rest-state component ----------
 // All cinematic state and timers live here so MainView stays a thin
 // shell. Kept in the same file per the original brief.
-function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, boatSrc, days, hrs, mins, secs }) {
+function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, boatSrc, days, hrs, mins, secs }) {
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -295,7 +296,7 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, boatSrc, da
       <nav
         aria-label="Primary"
         style={{
-          position: 'fixed',
+          position: embedded ? 'absolute' : 'fixed',
           bottom: 32,
           left: 32,
           display: 'flex', flexDirection: 'column',
@@ -352,6 +353,7 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, boatSrc, da
           onNavigate={onNavigate}
           uiVisible={uiVisible}
           hoverNavOpen={hoverNavOpen}
+          embedded={embedded}
           anchorButton={anchorButton}
           anchorValue={anchorValue}
           anchorMeta={anchorMeta}
@@ -364,11 +366,11 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, boatSrc, da
 
 // Top-right countdown corner — LA 2028 hovers royal blue and click-throughs
 // to Event Calendar. The countdown line below is a non-interactive sibling.
-function CountdownCorner({ onNavigate, uiVisible, hoverNavOpen, anchorButton, anchorValue, anchorMeta, countdownText }) {
+function CountdownCorner({ onNavigate, uiVisible, hoverNavOpen, embedded, anchorButton, anchorValue, anchorMeta, countdownText }) {
   const [hover, setHover] = useState(false)
   return (
     <div style={{
-      position: 'fixed',
+      position: embedded ? 'absolute' : 'fixed',
       top: hoverNavOpen ? 72 : 32,
       right: 32,
       textAlign: 'right',

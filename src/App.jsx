@@ -59,7 +59,7 @@ function getNavMode(pathname) {
 function MobileHome({ onNavigate, hoverNavOpen, bioSectionRef }) {
   return (
     <div>
-      <MainView onNavigate={onNavigate} hoverNavOpen={hoverNavOpen} />
+      <MainView onNavigate={onNavigate} hoverNavOpen={hoverNavOpen} embedded />
       <div ref={bioSectionRef}>
         <Biography onNavigate={onNavigate} scrollOffsetRef={bioSectionRef} />
       </div>
