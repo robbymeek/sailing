@@ -444,7 +444,7 @@ export default function Support({ onNavigate }) {
             if (lastDirection.current > 0) goToSlide(activeRef.current + 1)
             else goToSlide(activeRef.current - 1)
           }
-        }, 500)
+        }, 1000)
       }
     }
     window.addEventListener('wheel', onWheel, { passive: false })
