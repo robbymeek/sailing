@@ -293,10 +293,10 @@ function FinalSlide({ days, isMobile }) {
 
   return (
     <>
-      {/* 2027 — muted, upper left */}
+      {/* 2027 — left side, upper area */}
       <div style={{
         position: 'absolute',
-        top: '20%',
+        top: '30%',
         left: isMobile ? 48 : undefined,
         right: isMobile ? 20 : 'calc(50% + 40px)',
         textAlign: isMobile ? 'left' : 'right',
@@ -309,43 +309,38 @@ function FinalSlide({ days, isMobile }) {
         </div>
       </div>
 
-      {/* 2028 CTA block — centered */}
+      {/* 2028 + CTA — right side, well clear of the spine */}
       <div style={{
         position: 'absolute',
-        top: '50%',
-        left: 0,
-        right: 0,
+        top: isMobile ? '55%' : '65%',
+        left: isMobile ? 48 : 'calc(50% + 60px)',
+        right: isMobile ? 20 : 'clamp(40px, 5vw, 100px)',
         transform: 'translateY(-50%)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        padding: isMobile ? '0 24px' : 0,
       }}>
         <div style={{
-          fontSize: isMobile ? 'clamp(48px, 12vw, 80px)' : 'clamp(60px, 10vw, 140px)',
+          fontSize: isMobile ? 'clamp(48px, 12vw, 80px)' : 'clamp(60px, 8vw, 120px)',
           fontWeight: 700,
           lineHeight: 1,
           letterSpacing: '-3px',
           color: '#fff',
-          textAlign: 'center',
         }}>
           2028
         </div>
-        <div style={{ ...LABEL, color: 'rgba(255,255,255,0.5)', marginTop: 14, textAlign: 'center' }}>
+        <div style={{ ...LABEL, color: 'rgba(255,255,255,0.5)', marginTop: 10 }}>
           LA Olympics
         </div>
-        <div style={{ marginTop: 20, display: 'flex', alignItems: 'baseline', gap: 14 }}>
-          <span style={{ fontSize: 'clamp(28px, 4vw, 52px)', fontWeight: 700, color: '#fff', lineHeight: 1, letterSpacing: '-1px' }}>{days}</span>
-          <span style={{ ...LABEL, fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>Days</span>
+        <div style={{ marginTop: 16, display: 'flex', alignItems: 'baseline', gap: 10 }}>
+          <span style={{ fontSize: 'clamp(24px, 3.5vw, 44px)', fontWeight: 700, color: '#fff', lineHeight: 1, letterSpacing: '-1px' }}>{days}</span>
+          <span style={{ ...LABEL, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Days</span>
         </div>
-        <div style={{ marginTop: 32, textAlign: 'center' }}>
+        <div style={{ marginTop: 28 }}>
           <a
             href="mailto:robbymeek+LA2028@gmail.com?subject=Supporting%20Your%20Olympic%20Campaign"
             onMouseEnter={() => setCtaHover(true)}
             onMouseLeave={() => setCtaHover(false)}
             style={{
               display: 'inline-block',
-              fontSize: 'clamp(18px, 2.2vw, 30px)',
+              fontSize: 'clamp(16px, 2vw, 26px)',
               fontWeight: 500,
               color: ctaHover ? '#fff' : 'rgba(255,255,255,0.92)',
               textDecoration: 'none',
@@ -361,7 +356,7 @@ function FinalSlide({ days, isMobile }) {
             EMAIL ROBBY &rarr;
           </a>
         </div>
-        <div style={{ marginTop: 16, textAlign: 'center' }}>
+        <div style={{ marginTop: 14 }}>
           <a
             href="mailto:robbymeek+LA2028@gmail.com?subject=Connecting"
             style={{
