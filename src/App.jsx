@@ -81,6 +81,18 @@ export default function App() {
     navigate(routes[page] || '/')
   }
 
+  // Mobile visitors landing on home → redirect to biography
+  useEffect(() => {
+    if (
+      location.pathname === '/' &&
+      typeof window !== 'undefined' &&
+      window.innerWidth < 700 &&
+      /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+    ) {
+      navigate('/biography', { replace: true })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Exit/enter animation state
   const [displayLocation, setDisplayLocation] = useState(location)
   const [transitionStage, setTransitionStage] = useState('entered')
