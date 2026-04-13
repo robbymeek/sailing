@@ -160,6 +160,12 @@ button {
   animation: sailBob 3s ease-in-out infinite;
 }
 
+/* Support form focus */
+.support-input:focus {
+  border-color: rgb(10,85,235) !important;
+  box-shadow: 0 0 0 2px rgba(10,85,235,0.1);
+}
+
 /* Marquee animation */
 @keyframes marquee {
   0% { transform: translateX(0); }

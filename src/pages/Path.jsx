@@ -11,7 +11,7 @@ const TIMELINE_DATA = [
   { year: '2017', main: 'Started racing', sub: null, past: true },
   { year: '2018', main: 'First Youth Champs', sub: null, past: true },
   { year: '2019', main: '5th at HS Nationals', sub: ['Freshman year'], past: true },
-  { year: '2020', main: 'Covid', sub: null, past: true },
+  { year: '2020', main: 'Trained mainly in the Waszp, ILCA, and two-person Dinghies', sub: null, past: true },
   { year: '2021', main: 'HS National Champion', sub: ['Orange Bowl Champion', '9th at Youth Worlds', 'North American Champion'], past: true },
   { year: '2022', main: 'HS National Champion', sub: ['5th at Youth Worlds'], past: true },
   { year: '2023', main: 'Harvard Sailing', sub: ['North American Champion'], past: true },
@@ -261,6 +261,101 @@ function SupporterRow({ supporter }) {
   return row
 }
 
+function YourNameInput({ onNavigate }) {
+  const [editing, setEditing] = useState(false)
+  const [name, setName] = useState('')
+  const inputRef = useRef(null)
+
+  const submit = () => {
+    if (name.trim()) {
+      onNavigate('Support', { prefillName: name.trim() })
+    }
+  }
+
+  if (!editing) {
+    return (
+      <div
+        onClick={() => setEditing(true)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 14,
+          padding: '14px 0',
+          borderBottom: '1px solid rgba(255,255,255,0.14)',
+          cursor: 'pointer',
+        }}
+      >
+        <span style={{
+          width: 6, height: 6,
+          border: '1px solid rgba(255,255,255,0.3)',
+          background: 'transparent',
+          flexShrink: 0,
+        }} />
+        <span style={{
+          fontSize: 14,
+          fontWeight: 400,
+          letterSpacing: '-0.2px',
+          fontStyle: 'italic',
+          color: 'rgba(255,255,255,0.38)',
+        }}>
+          Your Name
+        </span>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 10,
+      padding: '10px 0',
+      borderBottom: '1px solid rgba(255,255,255,0.14)',
+    }}>
+      <span style={{
+        width: 6, height: 6,
+        border: '1px solid rgba(255,255,255,0.5)',
+        background: 'transparent',
+        flexShrink: 0,
+      }} />
+      <input
+        ref={inputRef}
+        autoFocus
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') submit() }}
+        onBlur={() => { if (!name.trim()) { setEditing(false); setName('') } }}
+        placeholder="Enter your name"
+        style={{
+          flex: 1,
+          background: 'none',
+          border: 'none',
+          borderBottom: '1px solid rgba(255,255,255,0.3)',
+          outline: 'none',
+          color: '#fff',
+          fontSize: 14,
+          fontWeight: 400,
+          letterSpacing: '-0.2px',
+          fontFamily: 'inherit',
+          padding: '4px 0',
+        }}
+      />
+      <button
+        onClick={submit}
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: name.trim() ? 'pointer' : 'default',
+          color: name.trim() ? '#fff' : 'rgba(255,255,255,0.2)',
+          fontSize: 18,
+          padding: '0 4px',
+          fontFamily: 'inherit',
+          transition: 'color 0.2s ease',
+        }}
+        aria-label="Go to support"
+      >
+        →
+      </button>
+    </div>
+  )
+}
+
 function SponsorRow({ sponsors, hoveredSponsor, setHoveredSponsor, entrance }) {
   const [layout, setLayout] = useState('full')
   const [lockedIdx, setLockedIdx] = useState(0)
@@ -291,14 +386,17 @@ function SponsorRow({ sponsors, hoveredSponsor, setHoveredSponsor, entrance }) {
   if (layout === 'full') {
     const baseH = 'clamp(266px, 39vh, 392px)'
     const tallH = 'clamp(376px, 55vh, 502px)'
+    // Fixed container height = tallH + 20px padding (10 top + 10 bottom)
     return (
       <div data-sponsor-row style={{
         ...entrance.style(0),
         display: 'flex',
         alignItems: 'center',
         width: '100%',
-        padding: '55px 0',
+        height: `calc(${tallH} + 20px)`,
+        padding: '10px 0',
         background: 'rgb(0,0,0)',
+        overflow: 'hidden',
       }}>
         {sponsors.map((s, i) => {
           // When hovering a different card, suppress the locked card's revealed state
@@ -690,7 +788,7 @@ function QuadSlide({ items, isMobile }) {
   )
 }
 
-function FinalSlide({ days, isMobile }) {
+function FinalSlide({ days, isMobile, onNavigate }) {
   const [ctaHover, setCtaHover] = useState(false)
   const s2027 = getYearStyle(TIMELINE_DATA[10])
 
@@ -1248,7 +1346,7 @@ export default function Path({ onNavigate }) {
               {slide.type === 'hero' ? (
                 <HeroSlide isMobile={isMobile} onNavigate={onNavigate} onSeeTeam={() => teamSectionRef.current?.scrollIntoView({ behavior: 'smooth' })} />
               ) : slide.type === 'final' ? (
-                <FinalSlide days={days} isMobile={isMobile} />
+                <FinalSlide days={days} isMobile={isMobile} onNavigate={onNavigate} />
               ) : slide.type === 'quad' ? (
                 <QuadSlide items={slide.indices.map(i => TIMELINE_DATA[i])} isMobile={isMobile} />
               ) : (
@@ -1367,27 +1465,7 @@ export default function Path({ onNavigate }) {
               <SupporterRow key={s.name} supporter={s} />
             ))}
             {Array.from({ length: EMPTY_SLOTS }).map((_, i) => (
-              <div key={`empty-${i}`} style={{
-                display: 'flex', alignItems: 'center', gap: 14,
-                padding: '14px 0',
-                borderBottom: '1px solid rgba(255,255,255,0.14)',
-              }}>
-                <span style={{
-                  width: 6, height: 6,
-                  border: '1px solid rgba(255,255,255,0.3)',
-                  background: 'transparent',
-                  flexShrink: 0,
-                }} />
-                <span style={{
-                  fontSize: 14,
-                  fontWeight: 400,
-                  letterSpacing: '-0.2px',
-                  fontStyle: 'italic',
-                  color: 'rgba(255,255,255,0.38)',
-                }}>
-                  Your Name
-                </span>
-              </div>
+              <YourNameInput key={`empty-${i}`} onNavigate={onNavigate} />
             ))}
           </div>
         </div>

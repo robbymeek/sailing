@@ -28,22 +28,12 @@ export default function Contact({ onNavigate }) {
         }}>
           Annapolis, Maryland
         </p>
-        <p style={{ color: 'rgb(55,55,55)', fontSize: 14, margin: '0 0 10px' }}>
-          Sailing:{' '}
+        <p style={{ color: 'rgb(55,55,55)', fontSize: 14, margin: '0 0 40px' }}>
           <a
             href="mailto:robbymeek+LA2028@gmail.com"
             style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: '3px' }}
           >
             robbymeek+LA2028@gmail.com
-          </a>
-        </p>
-        <p style={{ color: 'rgb(55,55,55)', fontSize: 14, margin: '0 0 40px' }}>
-          Personal:{' '}
-          <a
-            href="mailto:robbymeek@gmail.com"
-            style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: '3px' }}
-          >
-            robbymeek@gmail.com
           </a>
         </p>
       </div>

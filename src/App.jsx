@@ -18,7 +18,7 @@ const INNER_BG = {
   '/team': 'rgb(22,24,28)',
   '/contact': 'rgb(240,240,240)',
   '/path': 'rgb(12,14,18)',
-  '/support': 'rgb(255,255,255)',
+  '/support': 'rgb(240,240,240)',
 }
 
 const VARIANT_MAP = {
@@ -82,7 +82,7 @@ export default function App() {
 
   const mobileBioRef = useRef(null)
 
-  const go = (page) => {
+  const go = (page, state) => {
     // On mobile home, "Home" scrolls to top
     if (page === 'Home' && isMobile && location.pathname === '/') {
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -97,7 +97,7 @@ export default function App() {
       'Contact': '/contact',
       'Support': '/support',
     }
-    navigate(routes[page] || '/')
+    navigate(routes[page] || '/', { state })
   }
 
   // Exit/enter animation state

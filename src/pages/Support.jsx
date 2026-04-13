@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import usePageEntrance from '../hooks/usePageEntrance'
 import Footer from '../components/Footer'
 
-const PAGE_BG = '#fff'
+const PAGE_BG = 'rgb(240,240,240)'
 const HEADING_COLOR = 'rgb(20,60,160)'
 const ACCENT = 'rgb(10,85,235)'
 const BODY_COLOR = 'rgba(0,0,0,0.75)'
@@ -14,10 +15,12 @@ const INPUT_STYLE = {
   padding: '10px 12px',
   fontSize: 15,
   border: '1px solid #ccc',
-  borderRadius: 0,
+  borderRadius: 4,
   boxSizing: 'border-box',
   fontFamily: 'inherit',
   outline: 'none',
+  background: '#fff',
+  transition: 'border-color 0.2s ease',
 }
 
 const LABEL_STYLE = {
@@ -47,6 +50,7 @@ function formatAmount(raw) {
 }
 
 export default function Support({ onNavigate }) {
+  const location = useLocation()
   const entrance = usePageEntrance(3, { staggerMs: 100, initialDelayMs: 50 })
 
   // Add top padding when the compact hamburger menu replaces the static nav
@@ -57,9 +61,11 @@ export default function Support({ onNavigate }) {
     return () => window.removeEventListener('resize', h)
   }, [])
 
+  // Pre-fill name from router state (e.g. from Path page "Your Name" slots)
+  const prefill = location.state?.prefillName || ''
   const [amount, setAmount] = useState('')
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
+  const [firstName, setFirstName] = useState(prefill.split(' ')[0] || '')
+  const [lastName, setLastName] = useState(prefill.split(' ').slice(1).join(' ') || '')
   const [street, setStreet] = useState('')
   const [addressLine2, setAddressLine2] = useState('')
   const [city, setCity] = useState('')
@@ -72,9 +78,23 @@ export default function Support({ onNavigate }) {
   const [giftMessage, setGiftMessage] = useState('')
   const [message, setMessage] = useState('')
   const [submitHover, setSubmitHover] = useState(false)
+  const [wantUpdates, setWantUpdates] = useState(false)
+  const [wantTeam, setWantTeam] = useState(false)
+  const [formError, setFormError] = useState('')
+
+  const isFormValid = amount.trim() && firstName.trim() && lastName.trim() && email.trim() && confirmEmail.trim()
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    if (!amount.trim() || !firstName.trim() || !lastName.trim() || !email.trim() || !confirmEmail.trim()) {
+      setFormError('Please fill in all required fields.')
+      return
+    }
+    if (email !== confirmEmail) {
+      setFormError('Email addresses do not match.')
+      return
+    }
+    setFormError('')
     const subject = encodeURIComponent(`Support Contribution - ${firstName} ${lastName}`)
     const body = encodeURIComponent(
       [
@@ -82,8 +102,11 @@ export default function Support({ onNavigate }) {
         `Name: ${firstName} ${lastName}`,
         `Address: ${street}${addressLine2 ? ', ' + addressLine2 : ''}, ${city}, ${stateProv} ${zip}`,
         `Email: ${email}`,
-        honorName ? `In honor/memory of: ${honorName}` : '',
-        message ? `Message: ${message}` : '',
+        giftMessage ? `Message with gift: ${giftMessage}` : '',
+        honorName ? `In honor of: ${honorName}` : '',
+        message ? `Message to recipient: ${message}` : '',
+        wantUpdates ? 'Would like to receive email updates about the campaign.' : '',
+        wantTeam ? 'Would like to be listed on the Team section of the site.' : '',
       ].filter(Boolean).join('\n')
     )
     window.location.href = `mailto:robbymeek+LA2028@gmail.com?subject=${subject}&body=${body}`
@@ -127,10 +150,11 @@ export default function Support({ onNavigate }) {
             <div style={SECTION_HEADING}>Amount of My/Our Gift</div>
             <div style={{ maxWidth: 300 }}>
               <input
+                className="support-input"
                 type="text"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                placeholder="$"
+                placeholder="Amount"
                 style={INPUT_STYLE}
               />
             </div>
@@ -146,6 +170,7 @@ export default function Support({ onNavigate }) {
 
             <div style={{ marginTop: 16 }}>
               <textarea
+                className="support-input"
                 value={giftMessage}
                 onChange={(e) => setGiftMessage(e.target.value)}
                 placeholder="Add a message with your gift..."
@@ -159,18 +184,22 @@ export default function Support({ onNavigate }) {
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
               <div style={{ flex: '1 1 200px' }}>
                 <input
+                  className="support-input"
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="Required"
                   style={INPUT_STYLE}
                 />
                 <span style={{ ...LABEL_STYLE, marginTop: 4 }}>First</span>
               </div>
               <div style={{ flex: '1 1 200px' }}>
                 <input
+                  className="support-input"
                   type="text"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Required"
                   style={INPUT_STYLE}
                 />
                 <span style={{ ...LABEL_STYLE, marginTop: 4 }}>Last</span>
@@ -178,53 +207,55 @@ export default function Support({ onNavigate }) {
             </div>
 
             {/* 2c. Address */}
-            <div style={SECTION_HEADING}>Address</div>
-            <div style={{ marginBottom: 12 }}>
+            <div style={SECTION_HEADING}>Address <span style={{ fontWeight: 400, color: 'rgba(0,0,0,0.35)', textTransform: 'none' }}>(optional)</span></div>
+            <div style={{
+              background: '#fff',
+              border: '1px solid #ccc',
+              borderRadius: 4,
+              padding: '16px 16px 12px',
+            }}>
               <input
+                className="support-input"
                 type="text"
                 value={street}
                 onChange={(e) => setStreet(e.target.value)}
-                style={INPUT_STYLE}
+                placeholder="Street Address"
+                style={{ ...INPUT_STYLE, border: 'none', borderBottom: '1px solid #e0e0e0', borderRadius: 0, background: 'transparent', padding: '8px 0' }}
               />
-              <span style={{ ...LABEL_STYLE, marginTop: 4 }}>Street Address</span>
-            </div>
-            <div style={{ marginBottom: 12 }}>
               <input
+                className="support-input"
                 type="text"
                 value={addressLine2}
                 onChange={(e) => setAddressLine2(e.target.value)}
-                style={INPUT_STYLE}
+                placeholder="Address Line 2"
+                style={{ ...INPUT_STYLE, border: 'none', borderBottom: '1px solid #e0e0e0', borderRadius: 0, background: 'transparent', padding: '8px 0' }}
               />
-              <span style={{ ...LABEL_STYLE, marginTop: 4 }}>Address Line 2</span>
-            </div>
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 12 }}>
-              <div style={{ flex: '1 1 200px' }}>
+              <div style={{ display: 'flex', gap: 16 }}>
                 <input
+                  className="support-input"
                   type="text"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  style={INPUT_STYLE}
+                  placeholder="City"
+                  style={{ ...INPUT_STYLE, flex: 1, border: 'none', borderBottom: '1px solid #e0e0e0', borderRadius: 0, background: 'transparent', padding: '8px 0' }}
                 />
-                <span style={{ ...LABEL_STYLE, marginTop: 4 }}>City</span>
-              </div>
-              <div style={{ flex: '1 1 200px' }}>
                 <input
+                  className="support-input"
                   type="text"
                   value={stateProv}
                   onChange={(e) => setStateProv(e.target.value)}
-                  style={INPUT_STYLE}
+                  placeholder="State / Province"
+                  style={{ ...INPUT_STYLE, flex: 1, border: 'none', borderBottom: '1px solid #e0e0e0', borderRadius: 0, background: 'transparent', padding: '8px 0' }}
                 />
-                <span style={{ ...LABEL_STYLE, marginTop: 4 }}>State / Province</span>
               </div>
-            </div>
-            <div style={{ maxWidth: 300 }}>
               <input
+                className="support-input"
                 type="text"
                 value={zip}
                 onChange={(e) => setZip(e.target.value)}
-                style={INPUT_STYLE}
+                placeholder="Postal / Zip Code"
+                style={{ ...INPUT_STYLE, border: 'none', borderRadius: 0, background: 'transparent', padding: '8px 0', maxWidth: 200 }}
               />
-              <span style={{ ...LABEL_STYLE, marginTop: 4 }}>Postal / Zip Code</span>
             </div>
 
             {/* 2d. Email */}
@@ -232,18 +263,22 @@ export default function Support({ onNavigate }) {
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
               <div style={{ flex: '1 1 200px' }}>
                 <input
+                  className="support-input"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Required"
                   style={INPUT_STYLE}
                 />
                 <span style={{ ...LABEL_STYLE, marginTop: 4 }}>Enter Email</span>
               </div>
               <div style={{ flex: '1 1 200px' }}>
                 <input
+                  className="support-input"
                   type="email"
                   value={confirmEmail}
                   onChange={(e) => setConfirmEmail(e.target.value)}
+                  placeholder="Required"
                   style={INPUT_STYLE}
                 />
                 <span style={{ ...LABEL_STYLE, marginTop: 4 }}>Confirm Email</span>
@@ -251,36 +286,74 @@ export default function Support({ onNavigate }) {
             </div>
 
             {/* 2e. Optional - In Honor */}
-            <div style={SECTION_HEADING}>Optional - In Honor</div>
-            <p style={{ fontSize: 13, color: MUTED, marginBottom: 16, marginTop: 0 }}>
-              If you would like to honor an individual through your gift,
-              please provide the recipient's name.
-            </p>
-            <div style={{ maxWidth: 300, marginBottom: 16 }}>
+            <div style={SECTION_HEADING}>In Honor <span style={{ fontWeight: 400, color: 'rgba(0,0,0,0.35)', textTransform: 'none' }}>(optional)</span></div>
+            <div style={{
+              background: '#fff',
+              border: '1px solid #ccc',
+              borderRadius: 4,
+              padding: '16px 16px 12px',
+            }}>
+              <p style={{ fontSize: 13, color: MUTED, margin: '0 0 12px' }}>
+                If you would like to honor an individual through your gift,
+                please provide the recipient's name.
+              </p>
               <input
+                className="support-input"
                 type="text"
                 value={honorName}
                 onChange={(e) => setHonorName(e.target.value)}
-                style={INPUT_STYLE}
+                placeholder="Recipient Name"
+                style={{ ...INPUT_STYLE, border: 'none', borderBottom: '1px solid #e0e0e0', borderRadius: 0, background: 'transparent', padding: '8px 0' }}
               />
-              <span style={{ ...LABEL_STYLE, marginTop: 4 }}>Recipient Name</span>
+              <textarea
+                className="support-input"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Message to Recipient"
+                style={{ ...INPUT_STYLE, border: 'none', borderRadius: 0, background: 'transparent', padding: '8px 0', minHeight: 70, resize: 'vertical', marginTop: 4 }}
+              />
             </div>
 
-            <div style={{ ...SECTION_HEADING, fontSize: 13, marginTop: 24 }}>Message to Recipient</div>
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              style={{ ...INPUT_STYLE, minHeight: 100, resize: 'vertical' }}
-            />
+            {/* 2f. Preferences */}
+            <div style={{ marginTop: 32, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={wantUpdates}
+                  onChange={(e) => setWantUpdates(e.target.checked)}
+                  style={{ marginTop: 3, accentColor: ACCENT }}
+                />
+                <span style={{ fontSize: 14, color: BODY_COLOR, lineHeight: 1.5 }}>
+                  I would like to receive email updates about the campaign
+                </span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={wantTeam}
+                  onChange={(e) => setWantTeam(e.target.checked)}
+                  style={{ marginTop: 3, accentColor: ACCENT }}
+                />
+                <span style={{ fontSize: 14, color: BODY_COLOR, lineHeight: 1.5 }}>
+                  I would like to be considered for the Team section of the site
+                </span>
+              </label>
+            </div>
 
-            {/* 2f. Submit */}
+            {/* 2g. Submit */}
+            {formError && (
+              <p style={{ color: SUBMIT_RED, fontSize: 13, marginTop: 16, marginBottom: 0 }}>
+                {formError}
+              </p>
+            )}
             <div>
               <button
                 type="submit"
+                disabled={!isFormValid}
                 onMouseEnter={() => setSubmitHover(true)}
                 onMouseLeave={() => setSubmitHover(false)}
                 style={{
-                  background: submitHover ? 'rgb(160,30,30)' : SUBMIT_RED,
+                  background: !isFormValid ? 'rgba(0,0,0,0.2)' : submitHover ? 'rgb(160,30,30)' : SUBMIT_RED,
                   color: '#fff',
                   border: 'none',
                   padding: '14px 40px',
