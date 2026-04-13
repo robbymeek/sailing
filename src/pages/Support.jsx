@@ -2,47 +2,93 @@ import { useState } from 'react'
 import usePageEntrance from '../hooks/usePageEntrance'
 import Footer from '../components/Footer'
 
+const PAGE_BG = '#fff'
 const HEADING_COLOR = 'rgb(20,60,160)'
 const ACCENT = 'rgb(10,85,235)'
 const BODY_COLOR = 'rgba(0,0,0,0.75)'
 const MUTED = 'rgba(0,0,0,0.5)'
+const SUBMIT_RED = 'rgb(180,40,40)'
 
-const SUPPORT_WAYS = [
-  {
-    title: 'Financial Support',
-    desc: 'Direct contribution to the campaign fund — training, travel, equipment, and competition entry fees.',
-    mailto: true,
-  },
-  {
-    title: 'Equipment & Gear',
-    desc: 'Sponsorship of sailing equipment, boat maintenance, sails, and technical gear.',
-  },
-  {
-    title: 'Travel & Housing',
-    desc: 'Help with travel logistics and housing for international regattas and training camps.',
-  },
-  {
-    title: 'Professional Services',
-    desc: 'Coaching, training analysis, sports medicine, nutrition, and mental performance.',
-  },
-  {
-    title: 'Spread the Word',
-    desc: 'Share the campaign with your network — every connection helps.',
-  },
-]
+const INPUT_STYLE = {
+  width: '100%',
+  padding: '10px 12px',
+  fontSize: 15,
+  border: '1px solid #ccc',
+  borderRadius: 0,
+  boxSizing: 'border-box',
+  fontFamily: 'inherit',
+  outline: 'none',
+}
+
+const LABEL_STYLE = {
+  fontSize: 13,
+  fontWeight: 600,
+  color: 'rgba(0,0,0,0.6)',
+  marginBottom: 4,
+  display: 'block',
+}
+
+const SECTION_HEADING = {
+  fontSize: 14,
+  fontWeight: 700,
+  color: 'rgba(0,0,0,0.8)',
+  textTransform: 'uppercase',
+  marginBottom: 12,
+  marginTop: 32,
+}
+
+function formatAmount(raw) {
+  if (!raw) return '$0.00'
+  const stripped = raw.replace(/[^0-9.]/g, '')
+  if (!stripped) return '$0.00'
+  const num = parseFloat(stripped)
+  if (isNaN(num)) return '$0.00'
+  return '$' + num.toFixed(2)
+}
 
 export default function Support({ onNavigate }) {
-  const entrance = usePageEntrance(5, { staggerMs: 100, initialDelayMs: 50 })
-  const [ctaHover, setCtaHover] = useState(false)
+  const entrance = usePageEntrance(4, { staggerMs: 100, initialDelayMs: 50 })
+
+  const [amount, setAmount] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [street, setStreet] = useState('')
+  const [addressLine2, setAddressLine2] = useState('')
+  const [city, setCity] = useState('')
+  const [stateProv, setStateProv] = useState('')
+  const [zip, setZip] = useState('')
+  const [email, setEmail] = useState('')
+  const [confirmEmail, setConfirmEmail] = useState('')
+  const [honorName, setHonorName] = useState('')
+  const [inMemory, setInMemory] = useState('')
+  const [inHonor, setInHonor] = useState('')
+  const [message, setMessage] = useState('')
+  const [submitHover, setSubmitHover] = useState(false)
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    const subject = encodeURIComponent(`Support Contribution - ${firstName} ${lastName}`)
+    const body = encodeURIComponent(
+      [
+        `Amount: ${amount}`,
+        `Name: ${firstName} ${lastName}`,
+        `Address: ${street}${addressLine2 ? ', ' + addressLine2 : ''}, ${city}, ${stateProv} ${zip}`,
+        `Email: ${email}`,
+        honorName ? `In honor/memory of: ${honorName}` : '',
+        message ? `Message: ${message}` : '',
+      ].filter(Boolean).join('\n')
+    )
+    window.location.href = `mailto:robbymeek+LA2028@gmail.com?subject=${subject}&body=${body}`
+  }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fff' }}>
+    <div style={{ minHeight: '100vh', background: PAGE_BG }}>
       <div style={{
-        maxWidth: 760,
+        maxWidth: 780,
         margin: '0 auto',
         padding: 'clamp(80px, 12vw, 140px) clamp(24px, 5vw, 60px) 60px',
       }}>
-        {/* Header */}
+        {/* Section 0 — Header */}
         <div style={entrance.style(0)}>
           <h1 style={{
             fontSize: 'clamp(28px, 4vw, 44px)',
@@ -63,7 +109,7 @@ export default function Support({ onNavigate }) {
           }} />
         </div>
 
-        {/* Intro */}
+        {/* Section 1 — Intro */}
         <div style={entrance.style(1)}>
           <h2 style={{
             fontSize: 'clamp(20px, 2.5vw, 28px)',
@@ -80,100 +126,205 @@ export default function Support({ onNavigate }) {
             maxWidth: 720,
             margin: '0 0 48px',
           }}>
-            Your support makes this Olympic campaign possible. Whether through financial
-            contributions, equipment partnerships, or professional expertise — every form
-            of support helps close the gap between where I am and where I need to be.
-            Contributions go directly toward training, travel, equipment, and competition
-            entry fees.
+            Your support makes this Olympic campaign possible. By contributing, you
+            directly fund training, travel, equipment, coaching, and competition entry
+            fees — everything it takes to compete at the highest level. Every
+            contribution, no matter the size, brings this goal closer to reality.
           </p>
         </div>
 
-        {/* Ways to support */}
+        {/* Section 2 — The Form */}
         <div style={entrance.style(2)}>
-          <h3 style={{
-            fontSize: 'clamp(18px, 2vw, 22px)',
-            fontWeight: 600,
-            color: HEADING_COLOR,
-            margin: '0 0 24px',
-          }}>
-            How to Support
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginBottom: 48 }}>
-            {SUPPORT_WAYS.map((item) => (
-              <div key={item.title} style={{
-                padding: '16px 20px',
-                border: '1px solid rgba(0,0,0,0.08)',
-                borderRadius: 6,
-                borderLeft: `3px solid ${ACCENT}`,
-              }}>
-                <div style={{
-                  fontSize: 16,
-                  fontWeight: 600,
-                  color: HEADING_COLOR,
-                  marginBottom: 4,
-                }}>
-                  {item.title}
-                </div>
-                <div style={{
-                  fontSize: 14,
-                  color: 'rgba(0,0,0,0.65)',
-                  lineHeight: 1.5,
-                }}>
-                  {item.desc}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+          <form onSubmit={handleSubmit}>
+            {/* 2a. Amount */}
+            <div style={SECTION_HEADING}>Amount of My/Our Gift</div>
+            <div style={{ maxWidth: 300 }}>
+              <input
+                type="text"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="$"
+                style={INPUT_STYLE}
+              />
+            </div>
+            <div style={{ fontSize: 13, color: MUTED, fontStyle: 'italic', marginTop: 8 }}>
+              I/we would like to make a difference in this Olympic campaign.
+            </div>
+            <div style={{ marginTop: 12, display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span style={LABEL_STYLE}>Total Gift</span>
+              <span style={{ color: 'rgb(40,160,80)', fontSize: 16, fontWeight: 600 }}>
+                {formatAmount(amount)}
+              </span>
+            </div>
 
-        {/* Contact CTA */}
-        <div style={entrance.style(3)}>
-          <h3 style={{
-            fontSize: 'clamp(18px, 2vw, 22px)',
-            fontWeight: 600,
-            color: HEADING_COLOR,
-            margin: '0 0 16px',
-          }}>
-            Get In Touch
-          </h3>
-          <p style={{
-            fontSize: 15,
-            color: BODY_COLOR,
-            margin: '0 0 20px',
-            lineHeight: 1.6,
-          }}>
-            Reach out directly to discuss how you can support the campaign.
-          </p>
-          <a
-            href="mailto:robbymeek+LA2028@gmail.com?subject=Supporting%20Your%20Olympic%20Campaign"
-            onMouseEnter={() => setCtaHover(true)}
-            onMouseLeave={() => setCtaHover(false)}
-            style={{
-              display: 'inline-block',
-              background: ctaHover ? 'rgb(8,70,200)' : ACCENT,
-              color: '#fff',
-              padding: '12px 32px',
-              borderRadius: 4,
-              fontSize: 15,
-              fontWeight: 500,
-              textDecoration: 'none',
-              transition: 'background 0.2s ease',
-            }}
-          >
-            robbymeek+LA2028@gmail.com
-          </a>
-          <p style={{
-            fontSize: 13,
-            color: MUTED,
-            marginTop: 12,
-          }}>
-            All inquiries are welcome. Robby personally reads every message.
-          </p>
+            {/* 2b. Name */}
+            <div style={SECTION_HEADING}>Name</div>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 200px' }}>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  style={INPUT_STYLE}
+                />
+                <span style={{ ...LABEL_STYLE, marginTop: 4 }}>First</span>
+              </div>
+              <div style={{ flex: '1 1 200px' }}>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  style={INPUT_STYLE}
+                />
+                <span style={{ ...LABEL_STYLE, marginTop: 4 }}>Last</span>
+              </div>
+            </div>
+
+            {/* 2c. Address */}
+            <div style={SECTION_HEADING}>Address</div>
+            <div style={{ marginBottom: 12 }}>
+              <input
+                type="text"
+                value={street}
+                onChange={(e) => setStreet(e.target.value)}
+                style={INPUT_STYLE}
+              />
+              <span style={{ ...LABEL_STYLE, marginTop: 4 }}>Street Address</span>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <input
+                type="text"
+                value={addressLine2}
+                onChange={(e) => setAddressLine2(e.target.value)}
+                style={INPUT_STYLE}
+              />
+              <span style={{ ...LABEL_STYLE, marginTop: 4 }}>Address Line 2</span>
+            </div>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 12 }}>
+              <div style={{ flex: '1 1 200px' }}>
+                <input
+                  type="text"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  style={INPUT_STYLE}
+                />
+                <span style={{ ...LABEL_STYLE, marginTop: 4 }}>City</span>
+              </div>
+              <div style={{ flex: '1 1 200px' }}>
+                <input
+                  type="text"
+                  value={stateProv}
+                  onChange={(e) => setStateProv(e.target.value)}
+                  style={INPUT_STYLE}
+                />
+                <span style={{ ...LABEL_STYLE, marginTop: 4 }}>State / Province</span>
+              </div>
+            </div>
+            <div style={{ maxWidth: 300 }}>
+              <input
+                type="text"
+                value={zip}
+                onChange={(e) => setZip(e.target.value)}
+                style={INPUT_STYLE}
+              />
+              <span style={{ ...LABEL_STYLE, marginTop: 4 }}>Postal / Zip Code</span>
+            </div>
+
+            {/* 2d. Email */}
+            <div style={SECTION_HEADING}>Email</div>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 200px' }}>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  style={INPUT_STYLE}
+                />
+                <span style={{ ...LABEL_STYLE, marginTop: 4 }}>Enter Email</span>
+              </div>
+              <div style={{ flex: '1 1 200px' }}>
+                <input
+                  type="email"
+                  value={confirmEmail}
+                  onChange={(e) => setConfirmEmail(e.target.value)}
+                  style={INPUT_STYLE}
+                />
+                <span style={{ ...LABEL_STYLE, marginTop: 4 }}>Confirm Email</span>
+              </div>
+            </div>
+
+            {/* 2e. Optional */}
+            <div style={SECTION_HEADING}>Optional</div>
+            <p style={{ fontSize: 13, color: MUTED, marginBottom: 16, marginTop: 0 }}>
+              If you would like to honor or remember an individual through your gift,
+              please provide the recipient's name.
+            </p>
+            <div style={{ maxWidth: 300, marginBottom: 16 }}>
+              <input
+                type="text"
+                value={honorName}
+                onChange={(e) => setHonorName(e.target.value)}
+                style={INPUT_STYLE}
+              />
+              <span style={{ ...LABEL_STYLE, marginTop: 4 }}>Recipient Name</span>
+            </div>
+
+            <div style={{ ...SECTION_HEADING, fontSize: 13, marginTop: 24 }}>In Memory</div>
+            <textarea
+              value={inMemory}
+              onChange={(e) => setInMemory(e.target.value)}
+              style={{ ...INPUT_STYLE, minHeight: 80, resize: 'vertical' }}
+            />
+            <span style={{ ...LABEL_STYLE, marginTop: 4 }}>
+              Name and address or email of person to be notified of this memorial gift
+            </span>
+
+            <div style={{ ...SECTION_HEADING, fontSize: 13, marginTop: 24 }}>In Honor</div>
+            <textarea
+              value={inHonor}
+              onChange={(e) => setInHonor(e.target.value)}
+              style={{ ...INPUT_STYLE, minHeight: 80, resize: 'vertical' }}
+            />
+            <span style={{ ...LABEL_STYLE, marginTop: 4 }}>
+              Address or email of person gift is in honor of
+            </span>
+
+            <div style={{ ...SECTION_HEADING, fontSize: 13, marginTop: 24 }}>Message to Recipient</div>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              style={{ ...INPUT_STYLE, minHeight: 100, resize: 'vertical' }}
+            />
+
+            {/* 2f. Submit */}
+            <div>
+              <button
+                type="submit"
+                onMouseEnter={() => setSubmitHover(true)}
+                onMouseLeave={() => setSubmitHover(false)}
+                style={{
+                  background: submitHover ? 'rgb(160,30,30)' : SUBMIT_RED,
+                  color: '#fff',
+                  border: 'none',
+                  padding: '14px 40px',
+                  fontSize: 15,
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px',
+                  cursor: 'pointer',
+                  marginTop: 36,
+                  transition: 'background 0.2s ease',
+                }}
+              >
+                Submit
+              </button>
+            </div>
+          </form>
         </div>
       </div>
 
-      {/* Footer */}
-      <div style={entrance.style(4)}>
+      {/* Section 3 — Footer */}
+      <div style={entrance.style(3)}>
         <Footer variant="light" onNavigate={onNavigate} />
       </div>
     </div>

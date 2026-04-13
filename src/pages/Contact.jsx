@@ -46,22 +46,6 @@ export default function Contact({ onNavigate }) {
             robbymeek@gmail.com
           </a>
         </p>
-        <button
-          onClick={() => onNavigate('Path')}
-          style={{
-            display: 'inline-block',
-            color: 'rgb(25,25,25)',
-            fontSize: 13,
-            border: '1px solid rgb(160,160,160)',
-            padding: '11px 30px',
-            background: 'none',
-            cursor: 'pointer',
-            letterSpacing: '-0.2px',
-            fontFamily: 'inherit',
-          }}
-        >
-          See the Path
-        </button>
       </div>
     </div>
   )

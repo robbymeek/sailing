@@ -317,7 +317,9 @@ export default function App() {
             display: 'flex', flexDirection: 'column',
             gap: 28, alignItems: 'center',
           }}>
-            {COMPACT_PAGES.map((item) => (
+            {COMPACT_PAGES.map((item) => {
+              const isSupport = item === 'Support'
+              return (
                 <button
                   key={item}
                   onClick={(e) => {
@@ -325,17 +327,19 @@ export default function App() {
                     go(item)
                     setNavMenuOpen(false)
                   }}
+                  className={isSupport ? 'chrome-text' : undefined}
                   style={{
-                    background: 'none',
+                    background: isSupport ? undefined : 'none',
                     border: 'none', cursor: 'pointer',
-                    color: 'rgba(255,255,255,0.75)',
-                    fontSize: 24, fontWeight: 400,
+                    color: isSupport ? undefined : 'rgba(255,255,255,0.75)',
+                    fontSize: 24, fontWeight: isSupport ? 500 : 400,
                     letterSpacing: '-0.6px', padding: '8px 14px',
                   }}
                 >
                   {item}
                 </button>
-              ))}
+              )
+            })}
           </div>
         </div>
       )}

@@ -336,8 +336,8 @@ function FinalSlide({ days, isMobile }) {
           <span style={{ ...LABEL, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Days</span>
         </div>
         <div style={{ marginTop: 28 }}>
-          <a
-            href="mailto:robbymeek+LA2028@gmail.com?subject=Supporting%20Your%20Olympic%20Campaign"
+          <button
+            onClick={() => onNavigate('Support')}
             onMouseEnter={() => setCtaHover(true)}
             onMouseLeave={() => setCtaHover(false)}
             style={{
@@ -345,32 +345,37 @@ function FinalSlide({ days, isMobile }) {
               fontSize: 'clamp(16px, 2vw, 26px)',
               fontWeight: 500,
               color: ctaHover ? '#fff' : 'rgba(255,255,255,0.92)',
-              textDecoration: 'none',
+              background: 'none',
+              border: 'none',
               borderBottomStyle: 'solid',
               borderBottomWidth: ctaHover ? 3 : 2,
               borderBottomColor: 'rgb(220,40,40)',
+              padding: 0,
               paddingBottom: 6,
               transition: 'color 0.2s ease, border-bottom-width 0.2s ease',
               letterSpacing: '-0.3px',
               pointerEvents: 'auto',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
             }}
           >
-            EMAIL ROBBY &rarr;
-          </a>
+            SUPPORT &rarr;
+          </button>
         </div>
         <div style={{ marginTop: 14 }}>
           <a
-            href="mailto:robbymeek+LA2028@gmail.com?subject=Connecting"
+            href="mailto:robbymeek+LA2028@gmail.com?subject=Supporting%20Your%20Olympic%20Campaign"
             style={{
               fontSize: 13,
               fontStyle: 'italic',
-              color: 'rgba(255,255,255,0.5)',
-              textDecoration: 'underline',
-              textUnderlineOffset: '3px',
+              color: '#fff',
+              textDecoration: 'none',
+              borderBottom: '1px solid rgb(10,85,235)',
+              paddingBottom: 2,
               pointerEvents: 'auto',
             }}
           >
-            or reach out about anything else
+            or email Robby
           </a>
         </div>
       </div>

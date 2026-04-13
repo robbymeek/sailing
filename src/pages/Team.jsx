@@ -309,9 +309,9 @@ export default function Team({ onNavigate }) {
 
           {/* Support CTA — plain underlined white so the chrome-text treatment
               stays reserved for the single editorial headline above. */}
-          <div style={{ marginBottom: 48 }}>
+          <div style={{ marginBottom: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
             <button
-              onClick={() => onNavigate('Path')}
+              onClick={() => onNavigate('Support')}
               style={{
                 background: 'none',
                 border: 'none',
@@ -323,6 +323,23 @@ export default function Team({ onNavigate }) {
                 fontFamily: 'inherit',
                 color: '#fff',
                 borderBottom: '1px solid rgba(255,255,255,0.45)',
+              }}
+            >
+              Join the Team
+            </button>
+            <button
+              onClick={() => onNavigate('Path')}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '6px 0',
+                fontSize: 13,
+                fontWeight: 400,
+                letterSpacing: '-0.2px',
+                fontFamily: 'inherit',
+                color: 'rgba(255,255,255,0.55)',
+                borderBottom: '1px solid rgba(255,255,255,0.25)',
               }}
             >
               The Path to LA
