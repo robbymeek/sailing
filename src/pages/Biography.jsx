@@ -507,7 +507,7 @@ export default function Biography({ onNavigate, scrollOffsetRef }) {
         }}>
           <div style={{ flex: '1 1 380px', minWidth: 280 }}>
             <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.8, margin: '0 0 20px' }}>
-              I'm currently campaigning for the 2028 Olympic Games in the ILCA 7, the men's single-handed sailing class. I've been sailing since I was nine years old and started racing in the ILCA class at age twelve. Since then, I've been fortunate to win six national championships and three continental titles.
+              I'm currently campaigning for the 2028 Olympic Games in the ILCA 7, the men's single-handed sailing class. I've been sailing since I was six years old and started racing at nine years old. 3 years later at age twelve I began racing in the ILCA. Since then, I've been fortunate to win six national championships and three continental titles.
             </p>
             <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.8, margin: 0 }}>
               I now compete as part of the Harvard Sailing Team while studying Applied Mathematics and Economics at Harvard College. At Harvard, I serve as Team Captain and have won the Team Race National Championship and the Single-Handed National Championship.
@@ -518,7 +518,7 @@ export default function Biography({ onNavigate, scrollOffsetRef }) {
               Originally from Annapolis, Maryland, sailing has always been a central part of my life. Outside of training and academics, I enjoy painting, cooking, and spending time with my family.
             </p>
             <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.8, margin: 0 }}>
-              I'm incredibly grateful for the opportunity to chase this Olympic dream and excited for everything the journey ahead holds.
+              I'm incredibly grateful for the opportunity to accomplish my Olympic dream and excited for everything the journey ahead holds.
             </p>
           </div>
         </div>

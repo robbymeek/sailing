@@ -15,7 +15,7 @@ const TIMELINE_DATA = [
   { year: '2021', main: 'HS National Champion', sub: ['Orange Bowl Champion', '9th at Youth Worlds', 'North American Champion'], past: true },
   { year: '2022', main: 'HS National Champion', sub: ['5th at Youth Worlds'], past: true },
   { year: '2023', main: 'Harvard Sailing', sub: ['North American Champion'], past: true },
-  { year: '2024', main: 'CrossnoKaye', sub: ['Train and work'], past: true },
+  { year: '2024', main: 'CrossnoKaye', sub: ['Train, work at a start-up, and compete at the ILCA 7 Worlds'], past: true },
   { year: '2025', main: 'North American Champion', sub: ['Top American at Europeans'], past: true },
   { year: '2026', main: 'Olympic training', sub: null, current: true },
   { year: '2027', main: 'World Champs contender', sub: null },
@@ -26,9 +26,9 @@ const FACT_BOXES = {
   '2017': { label: 'AGE 9', text: 'Started sailing on Long Island Sound. Fell in love with the speed, the strategy, and the solitude of singlehanded racing.' },
   '2019': { label: 'FRESHMAN', text: '5th at HS Nationals as a freshman — the youngest sailor in the top 10.' },
   '2021': { label: 'BREAKTHROUGH', text: 'Won the HS National Championship, the Orange Bowl, and placed 9th at Youth Worlds — all in the same year. Three continental titles would follow.' },
-  '2023': { label: 'HARVARD', text: 'Joined Harvard Sailing as Team Captain while studying Applied Mathematics and Economics. Won North Americans again.' },
-  '2025': { label: 'TOP AMERICAN', text: 'North American Champion for the third time. Top American finisher at the European Championships — a statement on the world stage.' },
-  '2026': { label: 'NOW', text: 'Full-time Olympic training. Every day is focused on one goal: making the US team for LA 2028.' },
+  '2023': { label: 'HARVARD', text: 'Joined the Harvard Sailing team where I study Applied Mathematics and Economics. Won the Senior ILCA 7 North American Championship' },
+  '2025': { label: 'SUMMER', text: 'North American Champion for the third time. Trained in LA all summer attending regattas held on the Olympic waters and in Europe.' },
+  '2026': { label: 'NOW', text: 'Full-time Olympic training while attending Harvard' },
 }
 
 const BIO_STATS = [

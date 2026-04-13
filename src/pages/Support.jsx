@@ -69,6 +69,7 @@ export default function Support({ onNavigate }) {
   const [confirmEmail, setConfirmEmail] = useState('')
   const [honorName, setHonorName] = useState('')
   const [inHonor, setInHonor] = useState('')
+  const [giftMessage, setGiftMessage] = useState('')
   const [message, setMessage] = useState('')
   const [submitHover, setSubmitHover] = useState(false)
 
@@ -114,8 +115,8 @@ export default function Support({ onNavigate }) {
           }}>
             Your support makes this Olympic campaign possible. By contributing, you
             directly fund training, travel, equipment, coaching, and competition entry
-            fees — everything it takes to compete at the highest level. Every
-            contribution, no matter the size, brings this goal closer to reality.
+            fees. Every contribution continues to allow me and the US to compete at the
+            highest level.
           </p>
         </div>
 
@@ -141,6 +142,16 @@ export default function Support({ onNavigate }) {
               <span style={{ color: 'rgb(40,160,80)', fontSize: 16, fontWeight: 600 }}>
                 {formatAmount(amount)}
               </span>
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+              <textarea
+                value={giftMessage}
+                onChange={(e) => setGiftMessage(e.target.value)}
+                placeholder="Add a message with your gift..."
+                style={{ ...INPUT_STYLE, minHeight: 80, resize: 'vertical' }}
+              />
+              <span style={{ ...LABEL_STYLE, marginTop: 4 }}>Message (optional)</span>
             </div>
 
             {/* 2b. Name */}
@@ -239,10 +250,10 @@ export default function Support({ onNavigate }) {
               </div>
             </div>
 
-            {/* 2e. Optional */}
-            <div style={SECTION_HEADING}>Optional</div>
+            {/* 2e. Optional - In Honor */}
+            <div style={SECTION_HEADING}>Optional - In Honor</div>
             <p style={{ fontSize: 13, color: MUTED, marginBottom: 16, marginTop: 0 }}>
-              If you would like to honor or remember an individual through your gift,
+              If you would like to honor an individual through your gift,
               please provide the recipient's name.
             </p>
             <div style={{ maxWidth: 300, marginBottom: 16 }}>
@@ -254,16 +265,6 @@ export default function Support({ onNavigate }) {
               />
               <span style={{ ...LABEL_STYLE, marginTop: 4 }}>Recipient Name</span>
             </div>
-
-            <div style={{ ...SECTION_HEADING, fontSize: 13, marginTop: 24 }}>In Honor</div>
-            <textarea
-              value={inHonor}
-              onChange={(e) => setInHonor(e.target.value)}
-              style={{ ...INPUT_STYLE, minHeight: 80, resize: 'vertical' }}
-            />
-            <span style={{ ...LABEL_STYLE, marginTop: 4 }}>
-              Address or email of person gift is in honor of
-            </span>
 
             <div style={{ ...SECTION_HEADING, fontSize: 13, marginTop: 24 }}>Message to Recipient</div>
             <textarea
