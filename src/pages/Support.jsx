@@ -193,6 +193,23 @@ export default function Support({ onNavigate }) {
               >
                 Back to Support Page
               </button>
+              <button
+                onClick={() => onNavigate('Contact')}
+                style={{
+                  padding: '12px 32px',
+                  fontSize: 15,
+                  fontWeight: 600,
+                  color: '#fff',
+                  background: SUBMIT_RED,
+                  border: 'none',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                Contact
+              </button>
             </div>
           </div>
         ) : (
