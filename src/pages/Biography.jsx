@@ -229,6 +229,46 @@ function EventModal({ event, onClose }) {
   )
 }
 
+function ExploreCard({ label, desc, isMobile, onClick }) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        flex: isMobile ? undefined : '1 1 0',
+        padding: isMobile ? '14px 24px' : '28px 24px',
+        fontSize: isMobile ? 15 : 16,
+        fontWeight: 500,
+        letterSpacing: '0.5px',
+        color: '#fff',
+        background: hovered ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)',
+        border: `1px solid ${hovered ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)'}`,
+        borderRadius: 8,
+        cursor: 'pointer',
+        transition: 'background 0.25s ease, border-color 0.25s ease, transform 0.25s ease',
+        transform: !isMobile && hovered ? 'translateY(-2px)' : 'none',
+        fontFamily: 'inherit',
+        textAlign: isMobile ? 'center' : 'left',
+      }}
+    >
+      <span style={{ display: 'block', marginBottom: isMobile ? 0 : 6 }}>{label}</span>
+      {!isMobile && (
+        <span style={{
+          display: 'block',
+          fontSize: 13,
+          fontWeight: 400,
+          color: 'rgba(255,255,255,0.4)',
+          letterSpacing: '0px',
+        }}>
+          {desc}
+        </span>
+      )}
+    </button>
+  )
+}
+
 export default function Biography({ onNavigate, scrollOffsetRef }) {
   const [selectedEvent, setSelectedEvent] = useState(null)
   const imageRef = useRef(null)
@@ -600,56 +640,44 @@ export default function Biography({ onNavigate, scrollOffsetRef }) {
         )}
       </div>
 
-      {/* ===== MOBILE NAV BUTTONS — between events and press ===== */}
-      {isMobile && (
-        <div style={{
-          background: 'rgb(12,14,18)',
-          padding: '48px 24px',
-          textAlign: 'center',
+      {/* ===== EXPLORE MORE — between events and press ===== */}
+      <div style={{
+        background: 'rgb(12,14,18)',
+        padding: isMobile ? '48px 24px' : '60px 40px',
+        textAlign: 'center',
+      }}>
+        <p style={{
+          color: 'rgba(255,255,255,0.5)',
+          fontSize: 12,
+          letterSpacing: '1.5px',
+          textTransform: 'uppercase',
+          marginBottom: isMobile ? 28 : 36,
         }}>
-          <p style={{
-            color: 'rgba(255,255,255,0.5)',
-            fontSize: 12,
-            letterSpacing: '1.5px',
-            textTransform: 'uppercase',
-            marginBottom: 28,
-          }}>
-            Explore more
-          </p>
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 12,
-            maxWidth: 280,
-            margin: '0 auto',
-          }}>
-            {[
-              { label: 'Path & Team', page: 'Path' },
-              { label: 'Contact', page: 'Contact' },
-              { label: 'Support', page: 'Support' },
-            ].map(({ label, page }) => (
-              <button
-                key={page}
-                onClick={() => onNavigate(page)}
-                style={{
-                  padding: '14px 24px',
-                  fontSize: 15,
-                  fontWeight: 500,
-                  letterSpacing: '0.5px',
-                  color: '#fff',
-                  background: 'rgba(255,255,255,0.08)',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  borderRadius: 8,
-                  cursor: 'pointer',
-                  transition: 'background 0.2s ease, border-color 0.2s ease',
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          Explore more
+        </p>
+        <div style={{
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: isMobile ? 12 : 20,
+          maxWidth: isMobile ? 280 : 700,
+          margin: '0 auto',
+          justifyContent: 'center',
+        }}>
+          {[
+            { label: 'Path & Team', page: 'Path', desc: 'The journey to LA 2028' },
+            { label: 'Support', page: 'Support', desc: 'Fund the campaign' },
+            { label: 'Contact', page: 'Contact', desc: 'Get in touch' },
+          ].map(({ label, page, desc }) => (
+            <ExploreCard
+              key={page}
+              label={label}
+              desc={desc}
+              isMobile={isMobile}
+              onClick={() => onNavigate(page)}
+            />
+          ))}
         </div>
-      )}
+      </div>
 
       {/* ===== PRESS + FOOTER — black section ===== */}
       <div style={{ background: 'rgb(0,0,0)', position: 'relative', zIndex: 5 }}>
