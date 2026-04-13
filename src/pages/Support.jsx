@@ -194,7 +194,7 @@ function HeroSlide({ isMobile }) {
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'center',
-      padding: isMobile ? '60px 24px 0' : '0 clamp(48px, 6vw, 100px)',
+      padding: isMobile ? '60px 24px 0 48px' : '0 clamp(48px, 6vw, 100px)',
     }}>
       <div style={{
         maxWidth: isMobile ? '100%' : 540,
@@ -297,7 +297,7 @@ function FinalSlide({ days, isMobile }) {
       {/* 2027 — left side, upper area */}
       <div style={{
         position: 'absolute',
-        top: '30%',
+        top: isMobile ? '25%' : '30%',
         left: isMobile ? 48 : undefined,
         right: isMobile ? 20 : 'calc(50% + 40px)',
         textAlign: isMobile ? 'left' : 'right',
@@ -313,7 +313,7 @@ function FinalSlide({ days, isMobile }) {
       {/* 2028 + CTA — right side, well clear of the spine */}
       <div style={{
         position: 'absolute',
-        top: isMobile ? '55%' : '65%',
+        top: isMobile ? '62%' : '65%',
         left: isMobile ? 48 : 'calc(50% + 60px)',
         right: isMobile ? 20 : 'clamp(40px, 5vw, 100px)',
         transform: 'translateY(-50%)',
