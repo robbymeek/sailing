@@ -239,33 +239,46 @@ function ExploreCard({ label, desc, isMobile, onClick }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         flex: isMobile ? undefined : '1 1 0',
-        padding: isMobile ? '14px 24px' : '28px 24px',
-        fontSize: isMobile ? 15 : 16,
+        padding: isMobile ? '18px 20px' : '28px 28px',
+        fontSize: isMobile ? 14 : 15,
         fontWeight: 500,
-        letterSpacing: '0.5px',
-        color: '#fff',
-        background: hovered ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)',
-        border: `1px solid ${hovered ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)'}`,
-        borderRadius: 8,
+        letterSpacing: '0.6px',
+        color: hovered ? '#fff' : 'rgba(255,255,255,0.75)',
+        background: 'transparent',
+        border: `1px solid ${hovered ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.18)'}`,
+        borderRadius: 6,
         cursor: 'pointer',
-        transition: 'background 0.25s ease, border-color 0.25s ease, transform 0.25s ease',
-        transform: !isMobile && hovered ? 'translateY(-2px)' : 'none',
+        transition: 'border-color 0.2s ease, color 0.2s ease, transform 0.2s ease',
+        transform: !isMobile && hovered ? 'translateY(-3px)' : 'none',
         fontFamily: 'inherit',
-        textAlign: isMobile ? 'center' : 'left',
+        textAlign: 'left',
       }}
     >
-      <span style={{ display: 'block', marginBottom: isMobile ? 0 : 6 }}>{label}</span>
-      {!isMobile && (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 8,
+      }}>
+        <span>{label}</span>
         <span style={{
-          display: 'block',
-          fontSize: 13,
-          fontWeight: 400,
-          color: 'rgba(255,255,255,0.4)',
-          letterSpacing: '0px',
-        }}>
-          {desc}
-        </span>
-      )}
+          fontSize: 14,
+          opacity: hovered ? 1 : 0,
+          transform: hovered ? 'translateX(0)' : 'translateX(-6px)',
+          transition: 'opacity 0.2s ease, transform 0.2s ease',
+          marginLeft: 12,
+        }}>→</span>
+      </div>
+      <span style={{
+        display: 'block',
+        fontSize: 12,
+        fontWeight: 400,
+        color: hovered ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.35)',
+        letterSpacing: '0px',
+        transition: 'color 0.2s ease',
+      }}>
+        {desc}
+      </span>
     </button>
   )
 }
@@ -643,24 +656,24 @@ export default function Biography({ onNavigate, scrollOffsetRef }) {
 
       {/* ===== EXPLORE MORE — between events and press ===== */}
       <div style={{
-        background: 'rgb(12,14,18)',
-        padding: isMobile ? '48px 24px' : '60px 40px',
+        background: '#000',
+        padding: isMobile ? '52px 24px' : '72px 40px',
         textAlign: 'center',
       }}>
         <p style={{
-          color: 'rgba(255,255,255,0.5)',
-          fontSize: 12,
-          letterSpacing: '1.5px',
+          color: 'rgba(255,255,255,0.3)',
+          fontSize: 11,
+          letterSpacing: '2.5px',
           textTransform: 'uppercase',
-          marginBottom: isMobile ? 28 : 36,
+          marginBottom: isMobile ? 32 : 44,
         }}>
           Explore more
         </p>
         <div style={{
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
-          gap: isMobile ? 12 : 20,
-          maxWidth: isMobile ? 280 : 700,
+          gap: isMobile ? 12 : 16,
+          maxWidth: isMobile ? 320 : 760,
           margin: '0 auto',
           justifyContent: 'center',
         }}>
