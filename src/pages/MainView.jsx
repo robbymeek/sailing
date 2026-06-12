@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import useCountdown from '../hooks/useCountdown'
 import { introPhotos } from '../assets/home-intro'
+// Rest-state background: hiking shot, shown nearly black under the overlay.
+import hikingBg from '../assets/home-intro/img-5957-alt.jpg'
 
 const BASE = import.meta.env.BASE_URL
 const BOAT_SIZE = 200
@@ -57,11 +59,14 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
   // this via replayNonce > 0 so the intro runs regardless.
   const skipIntro = forceSkip || introHasPlayed || prefersReducedMotion
 
-  // phase drives the blue→black overlay; separate booleans drive boat/UI fades
+  // phase drives the black overlay; separate booleans drive boat/UI fades
   // so their timing isn't locked to the overlay transition.
   const [phase, setPhase] = useState(skipIntro ? 'rest' : 'ignition')
   const [photoIndex, setPhotoIndex] = useState(0)
   const [photoLayerVisible, setPhotoLayerVisible] = useState(!skipIntro && introPhotos.length > 0)
+  // Only photos that fully loaded + decoded make it into the montage, so a
+  // slow or failed image can never produce a blank/broken flash frame.
+  const [playablePhotos, setPlayablePhotos] = useState([])
   const [photoAnimDuration, setPhotoAnimDuration] = useState(80)
   const [boatVisible, setBoatVisible] = useState(skipIntro)
   const [uiVisible, setUiVisible] = useState(skipIntro)
@@ -92,22 +97,33 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
       introHasPlayed = true
       return
     }
-    if (introPhotos.length === 0) {
+    let cancelled = false
+
+    const runWithoutMontage = () => {
       // Degrade gracefully: skip the flash montage, run the boat/ui reveals only
-      // eslint-disable-next-line no-console
-      console.warn('[HomeIntro] No photos in src/assets/home-intro/, skipping flash montage')
       setPhotoLayerVisible(false)
-      const t1 = setTimeout(() => setPhase('revealing'), 200)
-      const t2 = setTimeout(() => setBoatVisible(true), 400)
-      const t3 = setTimeout(() => { setPhase('rest'); setUiVisible(true); introHasPlayed = true }, 1400)
-      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
+      const schedule = (ms, fn) => {
+        phaseTimersRef.current.push(setTimeout(fn, ms))
+      }
+      schedule(200, () => setPhase('revealing'))
+      schedule(400, () => setBoatVisible(true))
+      schedule(1400, () => { setPhase('rest'); setUiVisible(true); introHasPlayed = true })
     }
 
-    const startTime = performance.now()
+    if (introPhotos.length === 0) {
+      // eslint-disable-next-line no-console
+      console.warn('[HomeIntro] No photos in src/assets/home-intro/, skipping flash montage')
+      runWithoutMontage()
+      return () => {
+        cancelled = true
+        phaseTimersRef.current.forEach((t) => clearTimeout(t))
+        phaseTimersRef.current = []
+      }
+    }
 
     // Photo cadence: starts very fast (45ms), eases up to ~85ms by ~1.4s,
     // then a slowing phase to ~480ms, then stops cycling — the last image
-    // hovers in place while the overlay fades blue→black on top of it.
+    // hovers in place while the overlay fades to black on top of it.
     const delayForElapsed = (elapsed) => {
       if (elapsed < 1400) {
         // Snap-fast at the start, gentle ramp 45ms → 85ms over 1.4s
@@ -123,45 +139,60 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
       return Infinity // hold last image
     }
 
-    const cyclePhoto = () => {
-      const elapsed = performance.now() - startTime
-      const delay = delayForElapsed(elapsed)
-      if (delay === Infinity) return
-      photoTimerRef.current = setTimeout(() => {
-        setPhotoIndex((i) => i + 1)
-        setPhotoAnimDuration(delay)
-        cyclePhoto()
-      }, delay)
-    }
-
     const schedule = (ms, fn) => {
       phaseTimersRef.current.push(setTimeout(fn, ms))
     }
 
-    // Best-effort pre-decode — hard 400ms ceiling so slow images can't stall the intro.
-    const preload = Promise.race([
-      Promise.all(
-        introPhotos.map(
-          (url) =>
-            new Promise((resolve) => {
-              const img = new Image()
-              img.onload = resolve
-              img.onerror = resolve
-              img.src = url
-            })
-        )
-      ),
-      new Promise((resolve) => setTimeout(resolve, 400)),
-    ])
+    // Reliable preload: every photo is fully loaded AND decoded before the
+    // montage starts, so no frame can ever flash blank. Photos that fail (or
+    // are still in flight at the 4s ceiling) are simply left out of the run.
+    const loadOne = (url) =>
+      new Promise((resolve) => {
+        const img = new Image()
+        img.onload = () => {
+          if (img.decode) img.decode().then(() => resolve(url), () => resolve(url))
+          else resolve(url)
+        }
+        img.onerror = () => resolve(null)
+        img.src = url
+      })
 
-    preload.then(() => {
-      // Phase timeline:
+    const results = []
+    const allLoaded = Promise.all(
+      introPhotos.map((url) => loadOne(url).then((r) => { results.push(r); return r }))
+    )
+    const ceiling = new Promise((resolve) => setTimeout(resolve, 4000))
+
+    Promise.race([allLoaded, ceiling]).then(() => {
+      if (cancelled) return
+      const loaded = results.filter(Boolean)
+      if (loaded.length === 0) {
+        // Nothing usable arrived in time — degrade to the no-montage reveal.
+        runWithoutMontage()
+        return
+      }
+      setPlayablePhotos(loaded)
+
+      const startTime = performance.now()
+      const cyclePhoto = () => {
+        const elapsed = performance.now() - startTime
+        const delay = delayForElapsed(elapsed)
+        if (delay === Infinity) return
+        photoTimerRef.current = setTimeout(() => {
+          setPhotoIndex((i) => i + 1)
+          setPhotoAnimDuration(delay)
+          cyclePhoto()
+        }, delay)
+      }
+
+      // Phase timeline (relative to preload completing):
       //   200ms : flash begins (snap-fast cadence)
       //  1400ms : cadence ease-out begins
-      //  2600ms : last image latches in place; overlay starts blue→black
+      //  2600ms : last image latches in place; overlay starts fading to black
       //  3400ms : boat starts fading in over the (still visible) last image
-      //  3800ms : photo layer hidden — overlay is mostly black by now
-      //  4400ms : rest state, bottom-left nav + countdown fade in
+      //  3800ms : photo layer hidden — overlay is fully black by now
+      //  4400ms : rest state — overlay eases back to near-black so the hiking
+      //           background photo emerges; bottom-left nav + countdown fade in
       schedule(200, () => {
         setPhase('flash')
         setPhotoAnimDuration(45)
@@ -179,6 +210,7 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
     })
 
     return () => {
+      cancelled = true
       if (photoTimerRef.current) clearTimeout(photoTimerRef.current)
       phaseTimersRef.current.forEach((t) => clearTimeout(t))
       phaseTimersRef.current = []
@@ -186,24 +218,22 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [replayNonce])
 
-  // Overlay color per phase. The blue→black transition is a hue shift on a
-  // single solid layer — no linear-gradient involved.
+  // Overlay per phase — black only. The montage darkens gradually, goes fully
+  // black, then eases back to near-black so the hiking photo behind it reads
+  // as a barely-there texture rather than flat black.
   const overlayStyle = (() => {
-    let background = 'rgba(30,64,255,0)'
+    let background = 'rgba(0,0,0,0)'
     let transition = 'background 1.2s linear'
     if (phase === 'flash') {
-      background = 'rgba(30,64,255,0.35)'
-      transition = 'background 1.2s linear'
+      background = 'rgba(0,0,0,0.12)'
     } else if (phase === 'slowing') {
-      background = 'rgba(30,64,255,0.75)'
-      transition = 'background 1.2s linear'
+      background = 'rgba(0,0,0,0.3)'
     } else if (phase === 'revealing') {
-      // Hue-shift over the full 1.2s of the held last image (2600→3800ms)
-      background = 'rgba(0,0,0,0.9)'
-      transition = 'background 1.2s linear'
-    } else if (phase === 'rest') {
+      // Fade the held last image down to full black over 1.2s (2600→3800ms)
       background = 'rgba(0,0,0,1)'
-      transition = 'background 0.6s linear'
+    } else if (phase === 'rest') {
+      background = 'rgba(0,0,0,0.88)'
+      transition = 'background 1.4s ease'
     }
     return { background, transition }
   })()
@@ -225,9 +255,9 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
   // drop it there. TODO mobile pass — a future prompt will redesign mobile nav.
   const showCountdown = viewportWidth >= 400
 
-  const currentPhotoUrl = introPhotos.length > 0
-    ? introPhotos[photoIndex % introPhotos.length]
-    : null
+  const activePhoto = playablePhotos.length > 0
+    ? photoIndex % playablePhotos.length
+    : -1
 
   return (
     <div style={{
@@ -237,24 +267,44 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
       position: 'relative',
       overflow: 'hidden',
     }}>
-      {/* Full-bleed photo layer — only rendered while the flash montage runs */}
-      {currentPhotoUrl && photoLayerVisible && (
+      {/* Rest-state background — hiking shot, sits under everything and only
+          shows through the near-black overlay once the intro settles. Toggled
+          while hidden behind the fully-black overlay, so no visible pop. */}
+      <img
+        src={hikingBg}
+        alt=""
+        aria-hidden="true"
+        style={{
+          position: 'absolute', inset: 0,
+          width: '100%', height: '100%',
+          objectFit: 'cover',
+          opacity: phase === 'rest' ? 1 : 0,
+        }}
+      />
+
+      {/* Full-bleed photo layer — all decoded photos stay mounted, stacked;
+          only the active one is visible. No per-frame remounting, so the
+          montage can never flash a blank frame. */}
+      {photoLayerVisible && playablePhotos.map((url, i) => (
         <img
-          key={photoIndex}
-          src={currentPhotoUrl}
+          key={url}
+          src={url}
           alt=""
           aria-hidden="true"
           style={{
             position: 'absolute', inset: 0,
             width: '100%', height: '100%',
             objectFit: 'cover',
-            animation: `photoFlash ${photoAnimDuration}ms linear forwards`,
+            opacity: i === activePhoto ? 1 : 0,
+            animation: i === activePhoto
+              ? `photoFlash ${photoAnimDuration}ms linear forwards`
+              : 'none',
             transformOrigin: 'center center',
           }}
         />
-      )}
+      ))}
 
-      {/* Blue → black overlay (solid color, hue-shifts via CSS transition) */}
+      {/* Darkening overlay (solid black, alpha animates via CSS transition) */}
       <div
         aria-hidden="true"
         style={{
