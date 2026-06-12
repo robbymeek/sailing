@@ -160,6 +160,16 @@ button {
   animation: sailBob 3s ease-in-out infinite;
 }
 
+/* Path page: gentle chapter snapping on the root scroller, desktop only.
+   `proximity` (never mandatory) so the banner/sponsors/team sections above
+   and below the timeline scroll completely freely. */
+@media (min-width: 700px) {
+  .path-snap-root { scroll-snap-type: y proximity; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sail-bob { animation: none; }
+}
+
 /* Support form focus */
 .support-input:focus {
   border-color: rgb(10,85,235) !important;
