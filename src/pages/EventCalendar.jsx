@@ -12,17 +12,16 @@ const EVENTS = [
     url: 'https://ilcasailing.org/',
   },
   {
-    n: 'Upcoming: ILCA 7 European Championships',
-    d: 'May 2026',
-    upcoming: true,
-    summary: 'The ILCA 7 Senior European Championships in Split, Croatia. A critical event for fleet racing experience at the highest international level, bringing together top sailors from across Europe and beyond.',
-    url: 'https://eurilca.org/',
-  },
-  {
     n: 'Upcoming: San Pedro OCR',
     d: 'July 20\u201324, 2026',
     upcoming: true,
     summary: 'Olympic classes regatta in San Pedro on the LA 2028 Olympic venue waters. An important opportunity to race in the conditions and waters where the 2028 Olympic sailing events will be held.',
+  },
+  {
+    n: 'Past: ILCA 7 European Championships',
+    d: 'May 2026',
+    summary: 'The ILCA 7 Senior European Championships in Split, Croatia. A critical event for fleet racing experience at the highest international level, bringing together top sailors from across Europe and beyond.',
+    url: 'https://eurilca.org/',
   },
   {
     n: 'Past: Trofeo Princesa Sofia \u2014 Palma',
@@ -194,8 +193,8 @@ export default function EventCalendar({ onNavigate }) {
   const olympicTarget = new Date('2028-07-14T00:00:00')
   const olympic = useCountdown(olympicTarget)
 
-  // Next event countdown — Europeans in Split, May 2026
-  const nextEventTarget = new Date('2026-05-16T00:00:00')
+  // Next event countdown — San Pedro OCR, July 2026
+  const nextEventTarget = new Date('2026-07-20T00:00:00')
   const nextEvent = useCountdown(nextEventTarget)
 
   const entrance = usePageEntrance(5, { staggerMs: 120, initialDelayMs: 0 })
@@ -227,7 +226,7 @@ export default function EventCalendar({ onNavigate }) {
               whiteSpace: 'nowrap',
             }}
           >
-            Next Event: European Championships, Split in {nextEvent.days} Days
+            Next Event: San Pedro OCR in {nextEvent.days} Days
           </p>
         </div>
 
