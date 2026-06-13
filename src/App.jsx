@@ -1,9 +1,9 @@
-import { useState, useEffect, useLayoutEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, lazy, Suspense } from 'react'
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import Nav from './components/Nav'
 
 // Pages shown in the compact (narrow-viewport) overlay nav.
-const COMPACT_PAGES = ['Home', 'Biography', 'Path', 'Contact', 'Support']
+const COMPACT_PAGES = ['Home', 'Biography', 'Path', 'Coming Soon', 'Contact', 'Support']
 import MainView from './pages/MainView'
 import Biography from './pages/Biography'
 import EventCalendar from './pages/EventCalendar'
@@ -12,6 +12,11 @@ import Team from './pages/Team'
 import Contact from './pages/Contact'
 import Support from './pages/Support'
 
+// Lazy: Coming Soon carries three.js (~150KB gz) — keep it out of the main
+// bundle. Do NOT add it to the offscreen preload div below; that would boot
+// a hidden WebGL context permanently.
+const ComingSoon = lazy(() => import('./pages/ComingSoon'))
+
 const INNER_BG = {
   '/biography': 'rgb(230,235,240)',
   '/event-calendar': 'rgb(0,0,0)',
@@ -19,6 +24,7 @@ const INNER_BG = {
   '/contact': 'rgb(240,240,240)',
   '/path': 'rgb(12,14,18)',
   '/support': 'rgb(240,240,240)',
+  '/coming-soon': 'rgb(0,0,0)',
 }
 
 const VARIANT_MAP = {
@@ -29,6 +35,7 @@ const VARIANT_MAP = {
   '/contact': 'light',
   '/path': 'dark',
   '/support': 'light',
+  '/coming-soon': 'dark',
 }
 
 const CURRENT_MAP = {
@@ -39,6 +46,7 @@ const CURRENT_MAP = {
   '/contact': 'Contact',
   '/path': 'Path',
   '/support': 'Support',
+  '/coming-soon': 'Coming Soon',
 }
 
 function getNavMode(pathname) {
@@ -48,6 +56,9 @@ function getNavMode(pathname) {
   // narrow screens — see the isHomeRoute gates below.
   if (pathname === '/') return 'hover'
   if (pathname === '/path') return 'overlay'
+  // Coming Soon is a fixed-canvas scrollytelling page — overlay the nav over
+  // the dark hero and let it scroll away with the page.
+  if (pathname === '/coming-soon') return 'overlay'
   if (pathname === '/support') return 'static'
   // Contact is a single-viewport page — overlay the nav so the nav's height
   // counts toward the 100dvh and the page can stay exactly one screen tall.
@@ -93,6 +104,7 @@ export default function App() {
       'Biography': '/biography',
       'Event Calendar': '/event-calendar',
       'Path': '/path',
+      'Coming Soon': '/coming-soon',
       'Team': '/team',
       'Contact': '/contact',
       'Support': '/support',
@@ -130,6 +142,13 @@ export default function App() {
     document.body.style.background = getBg(location.pathname)
     document.body.style.transition = 'background 0.4s ease'
   }, [location.pathname])
+
+  // Idle-prefetch the lazy Coming Soon chunk so the 350ms route transition
+  // never waits on the network.
+  useEffect(() => {
+    const t = setTimeout(() => { import('./pages/ComingSoon') }, 2500)
+    return () => clearTimeout(t)
+  }, [])
 
   const isExiting = transitionStage === 'exiting'
   const navPath = isExiting ? displayLocation.pathname : location.pathname
@@ -431,6 +450,11 @@ export default function App() {
           <Route path="/contact" element={<Contact onNavigate={go} />} />
           <Route path="/path" element={<Path onNavigate={go} />} />
           <Route path="/support" element={<Support onNavigate={go} />} />
+          <Route path="/coming-soon" element={
+            <Suspense fallback={<div style={{ height: '100dvh', background: 'rgb(0,0,0)' }} />}>
+              <ComingSoon onNavigate={go} />
+            </Suspense>
+          } />
         </Routes>
       </div>
 

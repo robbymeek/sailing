@@ -54,9 +54,7 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
     return () => window.removeEventListener('resize', h)
   }, [])
 
-  // Initial skip check: on the very first mount, respect the module-level
-  // played flag + reduced-motion. On explicit replay (boat click) we bypass
-  // this via replayNonce > 0 so the intro runs regardless.
+  // Skip check: respect the module-level played flag + reduced-motion.
   const skipIntro = forceSkip || introHasPlayed || prefersReducedMotion
 
   // phase drives the black overlay; separate booleans drive boat/UI fades
@@ -70,30 +68,11 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
   const [photoAnimDuration, setPhotoAnimDuration] = useState(80)
   const [boatVisible, setBoatVisible] = useState(skipIntro)
   const [uiVisible, setUiVisible] = useState(skipIntro)
-  // replayNonce increments on boat click to force the intro effect to re-run.
-  const [replayNonce, setReplayNonce] = useState(0)
   const photoTimerRef = useRef(null)
   const phaseTimersRef = useRef([])
 
-  // Reset state back to intro-start and bump the nonce. The intro useEffect
-  // depends on replayNonce, so this triggers a fresh run (cleanup clears
-  // any in-flight timers from a previous run first).
-  const replayIntro = () => {
-    if (introPhotos.length === 0) return
-    setPhase('ignition')
-    setPhotoIndex(0)
-    setPhotoLayerVisible(true)
-    setPhotoAnimDuration(80)
-    setBoatVisible(false)
-    setUiVisible(false)
-    setReplayNonce((n) => n + 1)
-  }
-
   useEffect(() => {
-    // Only honor the skip check on the initial mount (nonce === 0). An
-    // explicit replay always runs the intro.
-    const isInitialMount = replayNonce === 0
-    if (isInitialMount && skipIntro) {
+    if (skipIntro) {
       introHasPlayed = true
       return
     }
@@ -216,7 +195,7 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
       phaseTimersRef.current = []
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [replayNonce])
+  }, [])
 
   // Overlay per phase — black only. The montage darkens gradually, goes fully
   // black, then eases back to near-black so the hiking photo behind it reads
@@ -315,10 +294,11 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
       />
 
       {/* Spinning boat — centered, fades in during the reveal phase.
-          Clickable once the rest state is reached (uiVisible) to replay the intro. */}
+          Clickable once the rest state is reached (uiVisible); opens the
+          Coming Soon globe page, teased by the italic text below it. */}
       <button
-        onClick={replayIntro}
-        aria-label="Replay home intro"
+        onClick={() => onNavigate('Coming Soon')}
+        aria-label="Coming soon — see the road to LA 2028"
         disabled={!uiVisible}
         style={{
           position: 'absolute',
@@ -341,6 +321,8 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
           style={{ width: '100%', height: '100%', display: 'block' }}
         />
       </button>
+
+      <ComingSoonTeaser visible={uiVisible} onClick={() => onNavigate('Coming Soon')} />
 
       {/* Bottom-left persistent nav — always visible after intro */}
       <nav
@@ -416,6 +398,42 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
 
 // Top-right countdown corner — LA 2028 hovers royal blue and click-throughs
 // to Event Calendar. The countdown line below is a non-interactive sibling.
+// Italic teaser under the boat — same fade timing as the boat, navigates to
+// the Coming Soon page just like clicking the boat itself.
+function ComingSoonTeaser({ visible, onClick }) {
+  const [hover, setHover] = useState(false)
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onFocus={() => setHover(true)}
+      onBlur={() => setHover(false)}
+      style={{
+        position: 'absolute',
+        top: `calc(50% + ${BOAT_SIZE / 2 + 18}px)`,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        background: 'none',
+        border: 'none',
+        padding: 4,
+        cursor: 'pointer',
+        fontStyle: 'italic',
+        fontSize: 13,
+        letterSpacing: '0.2px',
+        fontFamily: 'inherit',
+        color: hover ? '#1E40FF' : 'rgba(255,255,255,0.45)',
+        opacity: visible ? 1 : 0,
+        transition: 'opacity 0.8s ease, color 0.25s ease',
+        pointerEvents: visible ? 'auto' : 'none',
+        zIndex: 10,
+      }}
+    >
+      coming soon
+    </button>
+  )
+}
+
 function CountdownCorner({ onNavigate, uiVisible, hoverNavOpen, embedded, anchorButton, anchorValue, anchorMeta, countdownText }) {
   const [hover, setHover] = useState(false)
   return (
