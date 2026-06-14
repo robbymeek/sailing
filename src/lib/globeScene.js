@@ -1,4 +1,7 @@
 import * as THREE from 'three'
+import { Line2 } from 'three/addons/lines/Line2.js'
+import { LineGeometry } from 'three/addons/lines/LineGeometry.js'
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 
 // Plain-JS three.js scene for the Coming Soon globe tour. No React in here:
 // the page hands us a flat list of frames (one orientation per waypoint) plus
@@ -250,27 +253,35 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
   })
 
   // ---------- arcs ---------- (great-circle hop between consecutive frames)
+  // Line2 gives real, resolution-aware thickness (plain GL lines are 1px on
+  // most platforms). One shared material; each arc draws on progressively by
+  // limiting its instanced segment count.
+  const arcMaterial = new LineMaterial({
+    color: 0x2f6bff,
+    linewidth: 2.6, // screen-space pixels
+    transparent: true,
+    opacity: 0.92,
+  })
+  arcMaterial.resolution.set(canvas.clientWidth, Math.max(1, canvas.clientHeight))
   const arcs = []
   for (let i = 0; i < frames.length - 1; i++) {
     const a = latLngToVector3(frames[i].lat, frames[i].lng, 1).normalize()
     const b = latLngToVector3(frames[i + 1].lat, frames[i + 1].lng, 1).normalize()
     const angle = Math.acos(THREE.MathUtils.clamp(a.dot(b), -1, 1))
-    const positions = new Float32Array((ARC_SAMPLES + 1) * 3)
+    const positions = []
     for (let k = 0; k <= ARC_SAMPLES; k++) {
       const t = k / ARC_SAMPLES
       const altitude = 1 + 0.16 * Math.sin(Math.PI * t) * (angle / Math.PI + 0.3)
       const p = slerpVec(a, b, t).multiplyScalar(altitude)
-      positions.set([p.x, p.y, p.z], k * 3)
+      positions.push(p.x, p.y, p.z)
     }
-    const geo = new THREE.BufferGeometry()
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-    geo.setDrawRange(0, 0)
-    const line = new THREE.Line(
-      geo,
-      new THREE.LineBasicMaterial({ color: 0x1e40ff, transparent: true, opacity: 0.8 })
-    )
+    const geo = new LineGeometry()
+    geo.setPositions(positions)
+    geo.instanceCount = 0
+    const line = new Line2(geo, arcMaterial)
+    line.frustumCulled = false
     globe.add(line)
-    arcs.push({ line, total: ARC_SAMPLES + 1, a, b, angle })
+    arcs.push({ line, geo, segCount: ARC_SAMPLES, a, b, angle })
   }
 
   // exact point on arc i at parameter t (same altitude profile as the line)
@@ -324,11 +335,11 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
       globe.quaternion.slerpQuaternions(quats[p.fi], quats[p.fi + 1], p.moveT)
     }
 
-    // arcs: behind us fully drawn, the current hop animating in
+    // arcs: behind us fully drawn, the current hop animating in (instanced
+    // segment count = progressive draw for Line2)
     for (let i = 0; i < arcs.length; i++) {
-      const count =
-        p.fi > i ? arcs[i].total : p.fi === i ? Math.floor(p.moveT * arcs[i].total) : 0
-      arcs[i].line.geometry.setDrawRange(0, count)
+      arcs[i].geo.instanceCount =
+        p.fi > i ? arcs[i].segCount : p.fi === i ? Math.floor(p.moveT * arcs[i].segCount) : 0
     }
 
     // pins: the destination only lights up as the dot nears it (~0.75), so the
@@ -404,6 +415,7 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
     baseZ = fitCameraZ(camera.aspect)
     camera.updateProjectionMatrix()
     renderer.setSize(w, h, false)
+    arcMaterial.resolution.set(w, h)
   }
 
   function dispose() {

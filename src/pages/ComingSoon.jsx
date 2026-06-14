@@ -60,6 +60,11 @@ const OFFSETS = (() => {
   for (let i = 1; i < F; i++) o[i] = o[i - 1] + segLen(i - 1)
   return o
 })()
+const TOTAL_VH = (OFFSETS[F - 1] + FINALE_EXTRA + 0.8) * 100 // +0.8 screen of finale linger before the end block
+
+const TAGS = { confirmed: 'Confirmed', training: 'Training', projected: 'Planned' }
+const REEL_SPACING = 152 // px between reel cards (vertical slot-machine pitch)
+
 // dotT past which the globe is "arriving" at the next waypoint: the card/label
 // for the destination pops up here — just before the dot reaches the pin.
 const ARRIVE = 0.74
@@ -122,12 +127,22 @@ function computeScroll() {
   const labelStop = FRAMES[labelFrameIdx].stopIndex
   const showLabel = !!(STOPS[labelStop] && STOPS[labelStop].points && STOPS[labelStop].points.length > 1)
 
+  // stopProgress drives the desktop "slot-machine" reel: it holds on a stop
+  // through its waypoints and scrolls to the neighbour only on a cross-stop
+  // hop (in transit with the dot), so the reel scrolls one card at a time.
+  let stopProgress
+  if (heroT < 1) stopProgress = 0
+  else if (isFinaleFrame) stopProgress = STOPS.length - 1
+  else if (src.stopIndex === dst.stopIndex) stopProgress = src.stopIndex
+  else stopProgress = src.stopIndex + smoothstep(0.18, 0.82, dotT)
+
   return {
     heroT,
     fi,
     moveT,
     finaleT,
     isFinaleFrame,
+    stopProgress,
     bodyStopIndex,
     bodyOpacity,
     showLabel,
@@ -163,23 +178,10 @@ export default function ComingSoon({ onNavigate }) {
 function GlobeTour({ onNavigate, onSceneFail }) {
   const canvasRef = useRef(null)
   const [ready, setReady] = useState(false)
-  const [card, setCard] = useState({ stopIndex: 0, opacity: 0, showLabel: false, label: '', labelKey: 0 })
+  const [card, setCard] = useState({ stopIndex: 0, opacity: 0, prog: 0, showLabel: false, label: '', labelKey: 0 })
   const [finaleT, setFinaleT] = useState(0)
   const [heroDone, setHeroDone] = useState(false)
   const [isMobile] = useState(() => window.innerWidth < 700)
-
-  // Gentle proximity scroll-snap so the page settles on each card. Desktop
-  // only — mobile momentum + snap fights the user. Scoped to this page via
-  // the documentElement style, restored on unmount.
-  useEffect(() => {
-    if (isMobile) return undefined
-    const el = document.documentElement
-    const prev = el.style.scrollSnapType
-    el.style.scrollSnapType = 'y proximity'
-    return () => {
-      el.style.scrollSnapType = prev
-    }
-  }, [isMobile])
 
   useEffect(() => {
     let scene
@@ -214,6 +216,7 @@ function GlobeTour({ onNavigate, onSceneFail }) {
         setCard((prev) =>
           prev.stopIndex === p.bodyStopIndex &&
           prev.opacity === p.bodyOpacity &&
+          prev.prog === p.stopProgress &&
           prev.showLabel === p.showLabel &&
           prev.label === p.label &&
           prev.labelKey === p.labelKey
@@ -221,6 +224,7 @@ function GlobeTour({ onNavigate, onSceneFail }) {
             : {
                 stopIndex: p.bodyStopIndex,
                 opacity: p.bodyOpacity,
+                prog: p.stopProgress,
                 showLabel: p.showLabel,
                 label: p.label,
                 labelKey: p.labelKey,
@@ -238,9 +242,19 @@ function GlobeTour({ onNavigate, onSceneFail }) {
     }
   }, [])
 
-  const stop = STOPS[Math.min(card.stopIndex, STOPS.length - 1)]
-  const confirmed = stop.status === 'confirmed'
-  const tag = { confirmed: 'Confirmed', training: 'Training', projected: 'Planned' }[stop.status] || 'Planned'
+  // Mobile shows a single card keyed off the popping bodyStopIndex/opacity.
+  const mStop = STOPS[Math.min(card.stopIndex, STOPS.length - 1)]
+  const mConfirmed = mStop.status === 'confirmed'
+  const mTag = TAGS[mStop.status] || 'Planned'
+
+  // Desktop reel: a window of stop entries around the current progress.
+  const currentStop = isMobile ? card.stopIndex : Math.round(card.prog)
+  const labelInfo = { show: card.showLabel, text: card.label, key: card.labelKey }
+  const reelLo = Math.max(0, Math.round(card.prog) - 2)
+  const reelHi = Math.min(STOPS.length - 1, Math.round(card.prog) + 2)
+  const reelIndices = []
+  for (let k = reelLo; k <= reelHi; k++) reelIndices.push(k)
+  const reelVisible = heroDone && finaleT < 0.05
 
   return (
     <div style={{ background: 'rgb(0,0,0)' }}>
@@ -257,22 +271,8 @@ function GlobeTour({ onNavigate, onSceneFail }) {
         }}
       />
 
-      {/* scroll runway — all visible content is fixed-position above it. One
-          section per frame so each card is a gentle scroll-snap target; snap
-          aligns the start of a stop's first waypoint (the centered view). */}
-      <div>
-        <div style={{ height: `${HERO * 100}vh` }} />
-        {FRAMES.map((fr, i) => (
-          <div
-            key={i}
-            style={{
-              height: `${segLen(i) * 100}vh`,
-              scrollSnapAlign: !isMobile && fr.isFirstOfStop && i < F - 1 ? 'start' : 'none',
-            }}
-          />
-        ))}
-        <div style={{ height: '80vh' }} />
-      </div>
+      {/* scroll runway — all visible content is fixed-position above it */}
+      <div style={{ height: `${TOTAL_VH}vh` }} />
 
       <Hero visible={!heroDone} />
 
@@ -301,9 +301,9 @@ function GlobeTour({ onNavigate, onSceneFail }) {
                 height: 6,
                 borderRadius: '50%',
                 background:
-                  i === card.stopIndex
+                  i === currentStop
                     ? '#1E40FF'
-                    : i < card.stopIndex
+                    : i < currentStop
                       ? 'rgba(255,255,255,0.5)'
                       : 'rgba(255,255,255,0.18)',
                 transition: 'background 0.3s ease',
@@ -313,72 +313,62 @@ function GlobeTour({ onNavigate, onSceneFail }) {
         </div>
       )}
 
-      {/* stop card */}
-      <div
-        data-testid="stop-card"
-        style={{
-          position: 'fixed',
-          ...(isMobile
-            ? { left: 20, right: 20, bottom: 28 }
-            : { right: '7vw', top: '50%', width: 340, transform: 'translateY(-50%)' }),
-          zIndex: 1,
-          opacity: card.opacity,
-          pointerEvents: 'none',
-        }}
-      >
-        <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, letterSpacing: '2px', margin: '0 0 14px' }}>
-          {String(card.stopIndex + 1).padStart(2, '0')} / {String(STOPS.length).padStart(2, '0')}
-        </p>
-        <p
+      {/* desktop: slot-machine reel — current stop centered, prev/next faded
+          above/below, scrolling with the dot on each cross-stop hop */}
+      {!isMobile && (
+        <div
+          data-testid="reel"
           style={{
-            color: confirmed ? '#1E40FF' : 'rgba(255,255,255,0.35)',
-            fontSize: 10,
-            fontWeight: 600,
-            letterSpacing: '1px',
-            textTransform: 'uppercase',
-            margin: '0 0 8px',
+            position: 'fixed',
+            right: '7vw',
+            top: '50%',
+            width: 340,
+            height: 0,
+            zIndex: 1,
+            opacity: reelVisible ? 1 : 0,
+            transition: 'opacity 0.45s ease',
+            pointerEvents: 'none',
           }}
         >
-          {tag}
-        </p>
-        <h2
+          {reelIndices.map((k) => (
+            <ReelEntry key={k} stopIndex={k} diff={k - card.prog} spacing={REEL_SPACING} labelInfo={labelInfo} />
+          ))}
+        </div>
+      )}
+
+      {/* mobile: single card (pops in on arrival, no reel) */}
+      {isMobile && (
+        <div
+          data-testid="stop-card"
           style={{
-            color: 'rgba(255,255,255,0.92)',
-            fontSize: 22,
-            fontWeight: 600,
-            letterSpacing: '-0.8px',
-            margin: '0 0 6px',
+            position: 'fixed',
+            left: 20,
+            right: 20,
+            bottom: 28,
+            zIndex: 1,
+            opacity: card.opacity,
+            pointerEvents: 'none',
           }}
         >
-          {stop.name}
-        </h2>
-        <p style={{ color: 'rgb(157,174,194)', fontSize: 14, fontWeight: 500, margin: '0 0 4px' }}>
-          {stop.dates}
-        </p>
-        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, margin: '0 0 10px' }}>
-          {stop.location}
-        </p>
-        <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13, lineHeight: 1.5, margin: 0 }}>
-          {stop.blurb}
-        </p>
-        {/* current waypoint within a multi-city stop — pops on each landing */}
-        {card.showLabel && (
-          <p
-            key={card.labelKey}
-            className="cs-pop"
-            style={{
-              color: 'rgba(255,255,255,0.55)',
-              fontSize: 10,
-              fontWeight: 600,
-              letterSpacing: '2px',
-              textTransform: 'uppercase',
-              margin: '16px 0 0',
-            }}
-          >
-            ● {card.label}
+          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, letterSpacing: '2px', margin: '0 0 14px' }}>
+            {String(card.stopIndex + 1).padStart(2, '0')} / {String(STOPS.length).padStart(2, '0')}
           </p>
-        )}
-      </div>
+          <p style={{ color: mConfirmed ? '#1E40FF' : 'rgba(255,255,255,0.35)', fontSize: 10, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', margin: '0 0 8px' }}>
+            {mTag}
+          </p>
+          <h2 style={{ color: 'rgba(255,255,255,0.92)', fontSize: 22, fontWeight: 600, letterSpacing: '-0.8px', margin: '0 0 6px' }}>
+            {mStop.name}
+          </h2>
+          <p style={{ color: 'rgb(157,174,194)', fontSize: 14, fontWeight: 500, margin: '0 0 4px' }}>{mStop.dates}</p>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, margin: '0 0 10px' }}>{mStop.location}</p>
+          <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13, lineHeight: 1.5, margin: 0 }}>{mStop.blurb}</p>
+          {card.showLabel && (
+            <p key={card.labelKey} className="cs-pop" style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', margin: '16px 0 0' }}>
+              ● {card.label}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* finale */}
       <div
@@ -403,6 +393,57 @@ function GlobeTour({ onNavigate, onSceneFail }) {
       <div style={{ position: 'relative', zIndex: 2, background: 'rgb(0,0,0)' }}>
         <EndBlock onNavigate={onNavigate} />
       </div>
+    </div>
+  )
+}
+
+// One card in the desktop reel. Positioned by its distance from the current
+// progress; the center is full and bright, neighbours fade and the blurb/label
+// only show near the center.
+function ReelEntry({ stopIndex, diff, spacing, labelInfo }) {
+  const stop = STOPS[stopIndex]
+  const absDiff = Math.abs(diff)
+  const entryOpacity = absDiff <= 1 ? 1 - 0.82 * absDiff : Math.max(0, 0.18 - 0.36 * (absDiff - 1))
+  const detail = clamp(1 - absDiff * 2, 0, 1) // blurb + waypoint label only near center
+  const isCenter = absDiff < 0.5
+  const confirmed = stop.status === 'confirmed'
+  const tag = stop.status === 'finale' ? 'The Games' : TAGS[stop.status] || 'Planned'
+  return (
+    <div
+      data-testid={isCenter ? 'stop-card' : undefined}
+      style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        top: 0,
+        transform: `translateY(calc(-50% + ${diff * spacing}px))`,
+        opacity: entryOpacity,
+        pointerEvents: 'none',
+      }}
+    >
+      <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, letterSpacing: '2px', margin: '0 0 10px' }}>
+        {String(stopIndex + 1).padStart(2, '0')} / {String(STOPS.length).padStart(2, '0')}
+      </p>
+      <p style={{ color: confirmed ? '#1E40FF' : 'rgba(255,255,255,0.35)', fontSize: 10, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', margin: '0 0 8px' }}>
+        {tag}
+      </p>
+      <h2 style={{ color: 'rgba(255,255,255,0.92)', fontSize: 22, fontWeight: 600, letterSpacing: '-0.8px', margin: '0 0 6px' }}>
+        {stop.name}
+      </h2>
+      <p style={{ color: 'rgb(157,174,194)', fontSize: 14, fontWeight: 500, margin: '0 0 4px' }}>{stop.dates}</p>
+      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, margin: '0 0 10px' }}>{stop.location}</p>
+      <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13, lineHeight: 1.5, margin: 0, opacity: detail }}>
+        {stop.blurb}
+      </p>
+      {isCenter && labelInfo.show && (
+        <p
+          key={labelInfo.key}
+          className="cs-pop"
+          style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', margin: '16px 0 0', opacity: detail }}
+        >
+          ● {labelInfo.text}
+        </p>
+      )}
     </div>
   )
 }
