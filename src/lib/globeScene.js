@@ -1,8 +1,10 @@
 import * as THREE from 'three'
 
 // Plain-JS three.js scene for the Coming Soon globe tour. No React in here:
-// the page hands us a canvas plus a getProgress() callback and we run one
-// rAF loop that reads scroll progress every frame.
+// the page hands us a flat list of frames (one orientation per waypoint) plus
+// a getProgress() callback, and we run one rAF loop that reads scroll
+// progress every frame. A "stop" with several waypoints (e.g. an Australia
+// training block hopping Adelaide → Perth → Sydney) is just several frames.
 
 const SUN_WORLD = new THREE.Vector3(-2, 0.6, 1.5).normalize()
 const ARC_SAMPLES = 128
@@ -22,10 +24,10 @@ function latLngToVector3(lat, lng, radius = 1) {
   )
 }
 
-// Globe orientation that puts the venue dead-center facing the camera (+Z)
+// Globe orientation that puts the waypoint dead-center facing the camera (+Z)
 // with north up. Built from an explicit basis so there's no roll, which a
 // naive setFromUnitVectors would introduce.
-function quaternionForStop(lat, lng) {
+function quaternionForPoint(lat, lng) {
   const f = latLngToVector3(lat, lng, 1).normalize()
   const north = new THREE.Vector3(0, 1, 0)
   const u = north.clone().addScaledVector(f, -north.dot(f)).normalize()
@@ -74,8 +76,8 @@ function makeGlowTexture() {
 }
 
 // ---------- factory ----------
-
-export default function createGlobeScene(canvas, stops, { isMobile, baseUrl, onReady, getProgress }) {
+// frames: [{ lat, lng, isFinale }]  (one per waypoint, in tour order)
+export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, onReady, getProgress }) {
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
@@ -212,47 +214,46 @@ export default function createGlobeScene(canvas, stops, { isMobile, baseUrl, onR
   })
   scene.add(new THREE.Points(starGeo, starMat))
 
-  // ---------- pins ----------
+  // ---------- pins ---------- (one per frame/waypoint)
   const glowTex = makeGlowTexture()
-  const pinGeo = new THREE.SphereGeometry(0.012, 16, 16)
-  const pins = stops.map((stop) => {
-    const isFinale = stop.status === 'finale'
-    const coreMat = new THREE.MeshBasicMaterial({
-      color: isFinale ? 0xffe9b0 : 0xeaf0ff,
-    })
-    const core = new THREE.Mesh(pinGeo, coreMat)
-    core.position.copy(latLngToVector3(stop.lat, stop.lng, 1.005))
+  const pinGeo = new THREE.SphereGeometry(0.011, 16, 16)
+  const pins = frames.map((fr) => {
+    const isFinale = !!fr.isFinale
+    const core = new THREE.Mesh(
+      pinGeo,
+      new THREE.MeshBasicMaterial({ color: isFinale ? 0xffe9b0 : 0xeaf0ff })
+    )
+    core.position.copy(latLngToVector3(fr.lat, fr.lng, 1.004))
 
-    const glowMat = new THREE.SpriteMaterial({
-      map: glowTex,
-      color: isFinale ? 0xffd87a : 0x3a66ff,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      transparent: true,
-      opacity: 0.55,
-    })
-    const glow = new THREE.Sprite(glowMat)
-    glow.position.copy(latLngToVector3(stop.lat, stop.lng, 1.02))
-    const glowScale = isFinale ? 0.11 : 0.08
+    const glow = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: glowTex,
+        color: isFinale ? 0xffd87a : 0x3a66ff,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        transparent: true,
+        opacity: 0.5,
+      })
+    )
+    glow.position.copy(latLngToVector3(fr.lat, fr.lng, 1.02))
+    const glowScale = isFinale ? 0.11 : 0.075
     glow.scale.setScalar(glowScale)
 
     globe.add(core)
     globe.add(glow)
-    return { core, glow, glowScale, isFinale }
+    return { glow, glowScale }
   })
 
-  // ---------- arcs ----------
-  // Great-circle routes between consecutive stops, with a sine altitude
-  // bulge scaled by hop length; drawn on progressively via setDrawRange.
+  // ---------- arcs ---------- (great-circle hop between consecutive frames)
   const arcs = []
-  for (let i = 0; i < stops.length - 1; i++) {
-    const a = latLngToVector3(stops[i].lat, stops[i].lng, 1).normalize()
-    const b = latLngToVector3(stops[i + 1].lat, stops[i + 1].lng, 1).normalize()
+  for (let i = 0; i < frames.length - 1; i++) {
+    const a = latLngToVector3(frames[i].lat, frames[i].lng, 1).normalize()
+    const b = latLngToVector3(frames[i + 1].lat, frames[i + 1].lng, 1).normalize()
     const angle = Math.acos(THREE.MathUtils.clamp(a.dot(b), -1, 1))
     const positions = new Float32Array((ARC_SAMPLES + 1) * 3)
     for (let k = 0; k <= ARC_SAMPLES; k++) {
       const t = k / ARC_SAMPLES
-      const altitude = 1 + 0.18 * Math.sin(Math.PI * t) * (angle / Math.PI + 0.35)
+      const altitude = 1 + 0.16 * Math.sin(Math.PI * t) * (angle / Math.PI + 0.3)
       const p = slerpVec(a, b, t).multiplyScalar(altitude)
       positions.set([p.x, p.y, p.z], k * 3)
     }
@@ -261,19 +262,20 @@ export default function createGlobeScene(canvas, stops, { isMobile, baseUrl, onR
     geo.setDrawRange(0, 0)
     const line = new THREE.Line(
       geo,
-      new THREE.LineBasicMaterial({ color: 0x1e40ff, transparent: true, opacity: 0.85 })
+      new THREE.LineBasicMaterial({ color: 0x1e40ff, transparent: true, opacity: 0.8 })
     )
     globe.add(line)
     arcs.push({ line, total: ARC_SAMPLES + 1 })
   }
 
-  // ---------- per-stop orientations ----------
-  const quats = stops.map((s) => quaternionForStop(s.lat, s.lng))
-  // Opening view: mid-Pacific, so the hero scroll sweeps into the first stop.
-  const heroQuat = quaternionForStop(10, -170)
+  // ---------- per-frame orientations ----------
+  const quats = frames.map((f) => quaternionForPoint(f.lat, f.lng))
+  // Opening view: mid-Pacific, so the hero scroll sweeps east into frame 0.
+  const heroQuat = quaternionForPoint(10, -170)
   globe.quaternion.copy(heroQuat)
 
   // ---------- render loop ----------
+  const last = frames.length - 1
   let rafId = 0
   let running = false
   let disposed = false
@@ -282,44 +284,38 @@ export default function createGlobeScene(canvas, stops, { isMobile, baseUrl, onR
   function frame() {
     rafId = requestAnimationFrame(frame)
     const p = getProgress()
-    const last = stops.length - 1
 
     // orientation
     if (p.heroT < 1) {
       globe.quaternion.slerpQuaternions(heroQuat, quats[0], easeInOut(p.heroT))
+    } else if (p.fi >= last) {
+      globe.quaternion.copy(quats[last])
     } else {
-      globe.quaternion.slerpQuaternions(
-        quats[p.seg],
-        quats[Math.min(p.seg + 1, last)],
-        p.travelT
-      )
+      globe.quaternion.slerpQuaternions(quats[p.fi], quats[p.fi + 1], p.moveT)
     }
 
-    // arcs: fully drawn behind us, animating on the current hop
+    // arcs: behind us fully drawn, the current hop animating in
     for (let i = 0; i < arcs.length; i++) {
-      const count = i < p.seg ? arcs[i].total : i === p.seg ? Math.floor(p.travelT * arcs[i].total) : 0
+      const count =
+        p.fi > i ? arcs[i].total : p.fi === i ? Math.floor(p.moveT * arcs[i].total) : 0
       arcs[i].line.geometry.setDrawRange(0, count)
     }
 
-    // pins: active one pulses; during travel the destination takes over
+    // pins: the waypoint we're nearest pulses
     const t = (performance.now() - t0) / 1000
-    const active = p.heroT < 1 ? -1 : p.travelT > 0.5 ? Math.min(p.seg + 1, last) : p.seg
+    const active =
+      p.heroT < 1 ? -1 : p.fi >= last ? last : p.moveT < 0.5 ? p.fi : p.fi + 1
     for (let i = 0; i < pins.length; i++) {
-      const pin = pins[i]
       const isActive = i === active
-      const pulse = isActive ? 1.3 + 0.25 * Math.sin(t * 3.5) : 1
-      pin.glow.scale.setScalar(pin.glowScale * pulse)
-      pin.glow.material.opacity = isActive ? 0.95 : 0.5
+      const pulse = isActive ? 1.35 + 0.25 * Math.sin(t * 3.5) : 1
+      pins[i].glow.scale.setScalar(pins[i].glowScale * pulse)
+      pins[i].glow.material.opacity = isActive ? 0.95 : 0.45
     }
 
     // finale: zoom in, recenter, brighten the atmosphere
     const f = easeInOut(p.finaleT)
     camera.position.z = baseZ * (1 - 0.27 * f)
-    anchor.position.set(
-      baseOffset.x * (1 - f),
-      baseOffset.y * (1 - f),
-      0
-    )
+    anchor.position.set(baseOffset.x * (1 - f), baseOffset.y * (1 - f), 0)
     atmosMat.uniforms.uIntensity.value = 1 + 1.2 * p.finaleT
 
     // night-lights mask needs the sun direction in view space

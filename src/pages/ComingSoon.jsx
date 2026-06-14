@@ -5,34 +5,107 @@ import Footer from '../components/Footer'
 import useCountdown from '../hooks/useCountdown'
 import usePageEntrance from '../hooks/usePageEntrance'
 
-// Scroll choreography, in viewport-height units: a hero screen, then one
-// STOP-length segment per campaign stop (dwell, then travel to the next),
-// then extra runway for the LA 2028 finale zoom.
+// Scroll choreography in viewport-height units. A "stop" is a card; a stop can
+// span several waypoints (e.g. Australia hopping Adelaide → Perth → Sydney),
+// each of which is a "frame" the globe rotates to. The first frame of a stop
+// gets a full segment (the card reads); extra waypoints are quick hops.
 const HERO = 1.0
-const STOP = 1.2
-const FINALE_EXTRA = 1.0
-const N = STOPS.length
-const TOTAL_VH = (HERO + (N - 1) * STOP + FINALE_EXTRA + 1) * 100
+const FIRST_LEN = 0.95 // segment for the first waypoint of a stop
+const HOP_LEN = 0.55 // segment for each extra waypoint within a stop
+const FINALE_EXTRA = 1.0 // runway for the LA 2028 zoom
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
-
+const easeInOut = (t) => t * t * (3 - 2 * t)
 function smoothstep(a, b, x) {
   const t = clamp((x - a) / (b - a), 0, 1)
   return t * t * (3 - 2 * t)
 }
 
-// Single source of truth for scroll progress — the three.js loop calls this
-// every frame, and the React scroll listener uses it for coarse card state.
+// Flatten stops → frames (one per waypoint), tagging position within the stop.
+function buildFrames(stops) {
+  const frames = []
+  stops.forEach((stop, si) => {
+    const pts =
+      stop.points && stop.points.length
+        ? stop.points
+        : [{ lat: stop.lat, lng: stop.lng, label: stop.location }]
+    pts.forEach((pt, pi) => {
+      frames.push({
+        lat: pt.lat,
+        lng: pt.lng,
+        label: pt.label || stop.location,
+        stopIndex: si,
+        isFirstOfStop: pi === 0,
+        isLastOfStop: pi === pts.length - 1,
+        isFinale: stop.status === 'finale',
+        multi: pts.length > 1,
+      })
+    })
+  })
+  return frames
+}
+
+const FRAMES = buildFrames(STOPS)
+const F = FRAMES.length
+
+function segLen(i) {
+  if (i === F - 1) return FINALE_EXTRA
+  return FRAMES[i].isFirstOfStop ? FIRST_LEN : HOP_LEN
+}
+
+// Cumulative vh offset where each frame's segment begins.
+const OFFSETS = (() => {
+  const o = new Array(F)
+  o[0] = HERO
+  for (let i = 1; i < F; i++) o[i] = o[i - 1] + segLen(i - 1)
+  return o
+})()
+const CONTENT_VH = OFFSETS[F - 1] + FINALE_EXTRA
+const TOTAL_VH = (CONTENT_VH + 1) * 100 // +1 viewport of end-block runway
+
+// Single source of truth for scroll progress — the three.js loop reads this
+// every frame; the React listener uses it for coarse card/finale state.
 function computeScroll() {
   const vh = window.innerHeight || 1
   const y = window.scrollY / vh
   const heroT = clamp(y / HERO, 0, 1)
-  const tl = (y - HERO) / STOP
-  const seg = Math.floor(clamp(tl, 0, N - 1.0001))
-  const local = clamp(tl - seg, 0, 1)
-  const travelT = smoothstep(0.55, 1.0, local) // dwell 0–0.55, travel 0.55–1
-  const finaleT = clamp((tl - (N - 1)) / (FINALE_EXTRA / STOP), 0, 1)
-  return { heroT, seg, local, travelT, finaleT }
+
+  // active frame = last frame whose segment has started
+  let fi = 0
+  for (let i = 0; i < F; i++) {
+    if (OFFSETS[i] <= y) fi = i
+    else break
+  }
+  const fr = FRAMES[fi]
+  const isFinaleFrame = fi >= F - 1
+
+  let t = 0
+  let moveT = 0
+  let finaleT = 0
+  if (isFinaleFrame) {
+    finaleT = clamp((y - OFFSETS[F - 1]) / FINALE_EXTRA, 0, 1)
+  } else {
+    t = clamp((y - OFFSETS[fi]) / segLen(fi), 0, 1)
+    moveT = easeInOut(t)
+  }
+
+  // Card fades in on a stop's first frame, holds across its waypoints, fades
+  // out on its last frame. Single-waypoint stops do both in one segment.
+  const fadeIn = fr.isFirstOfStop ? smoothstep(0, 0.22, t) : 1
+  const fadeOut = fr.isLastOfStop ? 1 - smoothstep(0.62, 0.96, t) : 1
+  const cardOpacity = heroT < 1 || isFinaleFrame ? 0 : Math.min(fadeIn, fadeOut)
+
+  return {
+    heroT,
+    fi,
+    moveT,
+    finaleT,
+    isFinaleFrame,
+    activeStopIndex: fr.stopIndex,
+    activeLabel: fr.label,
+    showLabel: fr.multi,
+    cardOpacity,
+  }
 }
 
 function hasWebGL() {
@@ -48,8 +121,7 @@ export default function ComingSoon({ onNavigate }) {
   // Fallback gate: reduced motion, no WebGL, or the renderer failing to boot
   // (some environments pass the context probe but refuse a real context).
   const [useFallback, setUseFallback] = useState(
-    () =>
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches || !hasWebGL()
+    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches || !hasWebGL()
   )
   return useFallback ? (
     <StaticTimeline onNavigate={onNavigate} />
@@ -63,16 +135,15 @@ export default function ComingSoon({ onNavigate }) {
 function GlobeTour({ onNavigate, onSceneFail }) {
   const canvasRef = useRef(null)
   const [ready, setReady] = useState(false)
-  const [activeIndex, setActiveIndex] = useState(0)
-  const [cardVisible, setCardVisible] = useState(false)
-  const [finaleOn, setFinaleOn] = useState(false)
+  const [card, setCard] = useState({ stopIndex: 0, label: '', showLabel: false, opacity: 0 })
+  const [finaleT, setFinaleT] = useState(0)
   const [heroDone, setHeroDone] = useState(false)
   const [isMobile] = useState(() => window.innerWidth < 700)
 
   useEffect(() => {
     let scene
     try {
-      scene = createGlobeScene(canvasRef.current, STOPS, {
+      scene = createGlobeScene(canvasRef.current, FRAMES, {
         isMobile: window.innerWidth < 700,
         baseUrl: import.meta.env.BASE_URL,
         onReady: () => setReady(true),
@@ -91,8 +162,7 @@ function GlobeTour({ onNavigate, onSceneFail }) {
     }
   }, [])
 
-  // Coarse state only — the heavy per-frame work happens in the scene's own
-  // rAF loop; here CSS transitions do the actual fading.
+  // Coarse React state; the heavy per-frame work runs in the scene's rAF loop.
   useEffect(() => {
     let raf = 0
     const onScroll = () => {
@@ -100,12 +170,21 @@ function GlobeTour({ onNavigate, onSceneFail }) {
       raf = requestAnimationFrame(() => {
         raf = 0
         const p = computeScroll()
-        setActiveIndex(p.seg)
-        setHeroDone(p.heroT > 0.5)
-        setCardVisible(
-          p.heroT >= 1 && p.local < 0.6 && p.seg < N - 1 && p.finaleT === 0
+        setCard((prev) =>
+          prev.stopIndex === p.activeStopIndex &&
+          prev.label === p.activeLabel &&
+          prev.showLabel === p.showLabel &&
+          prev.opacity === p.cardOpacity
+            ? prev
+            : {
+                stopIndex: p.activeStopIndex,
+                label: p.activeLabel,
+                showLabel: p.showLabel,
+                opacity: p.cardOpacity,
+              }
         )
-        setFinaleOn(p.finaleT > 0.15)
+        setHeroDone(p.heroT > 0.6)
+        setFinaleT(p.finaleT)
       })
     }
     onScroll()
@@ -116,7 +195,9 @@ function GlobeTour({ onNavigate, onSceneFail }) {
     }
   }, [])
 
-  const stop = STOPS[Math.min(activeIndex, N - 1)]
+  const stop = STOPS[Math.min(card.stopIndex, STOPS.length - 1)]
+  const confirmed = stop.status === 'confirmed'
+  const tag = { confirmed: 'Confirmed', training: 'Training', projected: 'Planned' }[stop.status] || 'Planned'
 
   return (
     <div style={{ background: 'rgb(0,0,0)' }}>
@@ -138,7 +219,7 @@ function GlobeTour({ onNavigate, onSceneFail }) {
 
       <Hero visible={!heroDone} />
 
-      {/* progress rail (desktop) */}
+      {/* progress rail (desktop) — one dot per stop */}
       {!isMobile && (
         <div
           style={{
@@ -148,9 +229,9 @@ function GlobeTour({ onNavigate, onSceneFail }) {
             transform: 'translateY(-50%)',
             display: 'flex',
             flexDirection: 'column',
-            gap: 12,
+            gap: 9,
             zIndex: 1,
-            opacity: heroDone && !finaleOn ? 1 : 0,
+            opacity: heroDone && finaleT === 0 ? 1 : 0,
             transition: 'opacity 0.5s ease',
             pointerEvents: 'none',
           }}
@@ -163,9 +244,9 @@ function GlobeTour({ onNavigate, onSceneFail }) {
                 height: 6,
                 borderRadius: '50%',
                 background:
-                  i === activeIndex
+                  i === card.stopIndex
                     ? '#1E40FF'
-                    : i < activeIndex
+                    : i < card.stopIndex
                       ? 'rgba(255,255,255,0.5)'
                       : 'rgba(255,255,255,0.18)',
                 transition: 'background 0.3s ease',
@@ -177,30 +258,23 @@ function GlobeTour({ onNavigate, onSceneFail }) {
 
       {/* stop card */}
       <div
+        data-testid="stop-card"
         style={{
           position: 'fixed',
           ...(isMobile
             ? { left: 20, right: 20, bottom: 28 }
             : { right: '7vw', top: '50%', width: 340, transform: 'translateY(-50%)' }),
           zIndex: 1,
-          opacity: cardVisible ? 1 : 0,
-          transition: 'opacity 0.45s ease',
+          opacity: card.opacity,
           pointerEvents: 'none',
         }}
       >
-        <p
-          style={{
-            color: 'rgba(255,255,255,0.3)',
-            fontSize: 13,
-            letterSpacing: '2px',
-            margin: '0 0 14px',
-          }}
-        >
-          {String(activeIndex + 1).padStart(2, '0')} / {String(N).padStart(2, '0')}
+        <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, letterSpacing: '2px', margin: '0 0 14px' }}>
+          {String(card.stopIndex + 1).padStart(2, '0')} / {String(STOPS.length).padStart(2, '0')}
         </p>
         <p
           style={{
-            color: stop.status === 'confirmed' ? '#1E40FF' : 'rgba(255,255,255,0.35)',
+            color: confirmed ? '#1E40FF' : 'rgba(255,255,255,0.35)',
             fontSize: 10,
             fontWeight: 600,
             letterSpacing: '1px',
@@ -208,7 +282,7 @@ function GlobeTour({ onNavigate, onSceneFail }) {
             margin: '0 0 8px',
           }}
         >
-          {stop.status === 'confirmed' ? 'Confirmed' : 'Projected'}
+          {tag}
         </p>
         <h2
           style={{
@@ -221,33 +295,35 @@ function GlobeTour({ onNavigate, onSceneFail }) {
         >
           {stop.name}
         </h2>
-        <p
-          style={{
-            color: 'rgb(157,174,194)',
-            fontSize: 14,
-            fontWeight: 500,
-            margin: '0 0 4px',
-          }}
-        >
+        <p style={{ color: 'rgb(157,174,194)', fontSize: 14, fontWeight: 500, margin: '0 0 4px' }}>
           {stop.dates}
         </p>
         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, margin: '0 0 10px' }}>
           {stop.location}
         </p>
-        <p
-          style={{
-            color: 'rgba(255,255,255,0.65)',
-            fontSize: 13,
-            lineHeight: 1.5,
-            margin: 0,
-          }}
-        >
+        <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13, lineHeight: 1.5, margin: 0 }}>
           {stop.blurb}
         </p>
+        {/* current waypoint within a multi-city stop */}
+        {card.showLabel && (
+          <p
+            style={{
+              color: 'rgba(255,255,255,0.4)',
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: '2px',
+              textTransform: 'uppercase',
+              margin: '16px 0 0',
+            }}
+          >
+            ● {card.label}
+          </p>
+        )}
       </div>
 
       {/* finale */}
       <div
+        data-testid="finale"
         style={{
           position: 'fixed',
           inset: 0,
@@ -257,8 +333,7 @@ function GlobeTour({ onNavigate, onSceneFail }) {
           alignItems: 'center',
           justifyContent: 'center',
           textAlign: 'center',
-          opacity: finaleOn ? 1 : 0,
-          transition: 'opacity 0.8s ease',
+          opacity: smoothstep(0.1, 0.6, finaleT),
           pointerEvents: 'none',
         }}
       >
@@ -292,38 +367,14 @@ function Hero({ visible }) {
         padding: '0 20px',
       }}
     >
-      <p
-        style={{
-          ...entrance.style(0),
-          fontStyle: 'italic',
-          color: 'rgba(255,255,255,0.45)',
-          fontSize: 14,
-          margin: '0 0 14px',
-        }}
-      >
+      <p style={{ ...entrance.style(0), fontStyle: 'italic', color: 'rgba(255,255,255,0.45)', fontSize: 14, margin: '0 0 14px' }}>
         coming soon
       </p>
-      <h1
-        style={{
-          ...entrance.style(1),
-          color: '#fff',
-          fontSize: 'clamp(40px, 7vw, 88px)',
-          fontWeight: 800,
-          letterSpacing: '-3px',
-          margin: 0,
-        }}
-      >
+      <h1 style={{ ...entrance.style(1), color: '#fff', fontSize: 'clamp(40px, 7vw, 88px)', fontWeight: 800, letterSpacing: '-3px', margin: 0 }}>
         The Road to LA 2028
       </h1>
-      <p
-        style={{
-          ...entrance.style(2),
-          color: 'rgba(255,255,255,0.35)',
-          fontSize: 13,
-          margin: '18px 0 0',
-        }}
-      >
-        Two years. Nine stops. One goal.
+      <p style={{ ...entrance.style(2), color: 'rgba(255,255,255,0.35)', fontSize: 13, margin: '18px 0 0' }}>
+        Two years. The whole world. One goal.
       </p>
       <div
         style={{
@@ -346,27 +397,11 @@ function FinaleContent() {
   const { days, hrs, mins, secs } = useCountdown(new Date('2028-07-14T00:00:00'))
   return (
     <>
-      <h1
-        className="chrome-text"
-        style={{
-          fontSize: 'clamp(56px, 10vw, 120px)',
-          fontWeight: 800,
-          letterSpacing: '-4px',
-          margin: '0 0 10px',
-        }}
-      >
+      <h1 className="chrome-text" style={{ fontSize: 'clamp(56px, 10vw, 120px)', fontWeight: 800, letterSpacing: '-4px', margin: '0 0 10px' }}>
         LA 2028
       </h1>
-      <p
-        style={{
-          color: 'rgb(153,153,153)',
-          fontSize: 18,
-          fontWeight: 500,
-          margin: '0 0 10px',
-        }}
-      >
-        {days} : {String(hrs).padStart(2, '0')} : {String(mins).padStart(2, '0')} :{' '}
-        {String(secs).padStart(2, '0')}
+      <p style={{ color: 'rgb(153,153,153)', fontSize: 18, fontWeight: 500, margin: '0 0 10px' }}>
+        {days} : {String(hrs).padStart(2, '0')} : {String(mins).padStart(2, '0')} : {String(secs).padStart(2, '0')}
       </p>
       <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, margin: 0 }}>
         Olympic sailing. Long Beach, California.
@@ -380,28 +415,11 @@ function EndBlock({ onNavigate }) {
   return (
     <>
       <div style={{ textAlign: 'center', padding: '110px 20px 120px' }}>
-        <h2
-          style={{
-            color: '#fff',
-            fontSize: 'clamp(24px, 3.4vw, 38px)',
-            fontWeight: 600,
-            letterSpacing: '-0.8px',
-            margin: '0 0 14px',
-          }}
-        >
+        <h2 style={{ color: '#fff', fontSize: 'clamp(24px, 3.4vw, 38px)', fontWeight: 600, letterSpacing: '-0.8px', margin: '0 0 14px' }}>
           Two years. One goal.
         </h2>
-        <p
-          style={{
-            color: 'rgba(255,255,255,0.5)',
-            fontSize: 14,
-            lineHeight: 1.6,
-            maxWidth: 520,
-            margin: '0 auto 30px',
-          }}
-        >
-          Every stop on this map takes funding, training, and a team behind it.
-          Be part of the road to LA 2028.
+        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, lineHeight: 1.6, maxWidth: 520, margin: '0 auto 30px' }}>
+          Every stop on this map takes funding, training, and a team behind it. Be part of the road to LA 2028.
         </p>
         <button
           onClick={() => onNavigate('Support')}
@@ -433,110 +451,57 @@ function StaticTimeline({ onNavigate }) {
   return (
     <div style={{ background: 'rgb(0,0,0)', minHeight: '100vh' }}>
       <div style={{ textAlign: 'center', padding: '110px 20px 30px' }}>
-        <p
-          style={{
-            ...entrance.style(0),
-            fontStyle: 'italic',
-            color: 'rgba(255,255,255,0.45)',
-            fontSize: 14,
-            margin: '0 0 12px',
-          }}
-        >
+        <p style={{ ...entrance.style(0), fontStyle: 'italic', color: 'rgba(255,255,255,0.45)', fontSize: 14, margin: '0 0 12px' }}>
           coming soon
         </p>
-        <h1
-          style={{
-            ...entrance.style(1),
-            color: '#fff',
-            fontSize: 'clamp(36px, 6vw, 64px)',
-            fontWeight: 800,
-            letterSpacing: '-2px',
-            margin: 0,
-          }}
-        >
+        <h1 style={{ ...entrance.style(1), color: '#fff', fontSize: 'clamp(36px, 6vw, 64px)', fontWeight: 800, letterSpacing: '-2px', margin: 0 }}>
           The Road to LA 2028
         </h1>
       </div>
 
-      <div
-        style={{
-          ...entrance.style(2),
-          maxWidth: 720,
-          margin: '0 auto',
-          padding: '0 24px 50px',
-        }}
-      >
+      <div style={{ ...entrance.style(2), maxWidth: 720, margin: '0 auto', padding: '0 24px 50px' }}>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-          {STOPS.map((s) => (
-            <div
-              key={s.id}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'baseline',
-                gap: 16,
-                padding: '18px 0',
-                borderBottom: '1px solid rgba(255,255,255,0.1)',
-              }}
-            >
-              <div>
-                <p
-                  style={{
-                    color: 'rgba(255,255,255,0.85)',
-                    fontSize: 15,
-                    fontWeight: 500,
-                    margin: '0 0 3px',
-                  }}
-                >
-                  {s.name}
-                  {s.status === 'confirmed' && (
-                    <span
-                      style={{
-                        color: '#1E40FF',
-                        fontSize: 10,
-                        fontWeight: 600,
-                        letterSpacing: '1px',
-                        marginLeft: 10,
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      Confirmed
-                    </span>
-                  )}
-                </p>
-                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, margin: 0 }}>
-                  {s.location}
-                </p>
-              </div>
-              <span
+          {STOPS.map((s) => {
+            const cities =
+              s.points && s.points.length > 1
+                ? s.points.map((p) => p.label).filter(Boolean).join(' · ')
+                : s.location
+            return (
+              <div
+                key={s.id}
                 style={{
-                  color: 'rgba(255,255,255,0.3)',
-                  fontSize: 13,
-                  flexShrink: 0,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'baseline',
+                  gap: 16,
+                  padding: '18px 0',
+                  borderBottom: '1px solid rgba(255,255,255,0.1)',
                 }}
               >
-                {s.dates}
-              </span>
-            </div>
-          ))}
+                <div>
+                  <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 15, fontWeight: 500, margin: '0 0 3px' }}>
+                    {s.name}
+                    {s.status === 'confirmed' && (
+                      <span style={{ color: '#1E40FF', fontSize: 10, fontWeight: 600, letterSpacing: '1px', marginLeft: 10, textTransform: 'uppercase' }}>
+                        Confirmed
+                      </span>
+                    )}
+                  </p>
+                  <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, margin: 0 }}>{cities}</p>
+                </div>
+                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, flexShrink: 0 }}>{s.dates}</span>
+              </div>
+            )
+          })}
         </div>
       </div>
 
       <div style={{ ...entrance.style(3), textAlign: 'center', padding: '10px 20px 80px' }}>
-        <h2
-          className="chrome-text"
-          style={{
-            fontSize: 'clamp(40px, 7vw, 72px)',
-            fontWeight: 800,
-            letterSpacing: '-3px',
-            margin: '0 0 8px',
-          }}
-        >
+        <h2 className="chrome-text" style={{ fontSize: 'clamp(40px, 7vw, 72px)', fontWeight: 800, letterSpacing: '-3px', margin: '0 0 8px' }}>
           LA 2028
         </h2>
         <p style={{ color: 'rgb(153,153,153)', fontSize: 16, fontWeight: 500, margin: 0 }}>
-          {days} : {String(hrs).padStart(2, '0')} : {String(mins).padStart(2, '0')} :{' '}
-          {String(secs).padStart(2, '0')}
+          {days} : {String(hrs).padStart(2, '0')} : {String(mins).padStart(2, '0')} : {String(secs).padStart(2, '0')}
         </p>
       </div>
 
