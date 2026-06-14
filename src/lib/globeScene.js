@@ -51,6 +51,11 @@ function easeInOut(t) {
   return t * t * (3 - 2 * t)
 }
 
+function smoothstep(a, b, x) {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)))
+  return t * t * (3 - 2 * t)
+}
+
 // Camera distance so a radius-1 sphere fits the narrower viewport axis
 // with some margin (sphere silhouette: sin(halfAngle) = r / d).
 function fitCameraZ(aspect) {
@@ -265,8 +270,33 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
       new THREE.LineBasicMaterial({ color: 0x1e40ff, transparent: true, opacity: 0.8 })
     )
     globe.add(line)
-    arcs.push({ line, total: ARC_SAMPLES + 1 })
+    arcs.push({ line, total: ARC_SAMPLES + 1, a, b, angle })
   }
+
+  // exact point on arc i at parameter t (same altitude profile as the line)
+  function arcPoint(i, t) {
+    const m = arcs[i]
+    const altitude = 1 + 0.16 * Math.sin(Math.PI * t) * (m.angle / Math.PI + 0.3)
+    return slerpVec(m.a, m.b, t).multiplyScalar(altitude)
+  }
+
+  // ---------- traveling dot ---------- (rides the current arc between stops)
+  const travelDot = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: glowTex,
+      color: 0xdfeaff,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      transparent: true,
+      opacity: 0,
+    })
+  )
+  globe.add(travelDot)
+  const travelCore = new THREE.Mesh(
+    new THREE.SphereGeometry(0.006, 12, 12),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 })
+  )
+  globe.add(travelCore)
 
   // ---------- per-frame orientations ----------
   const quats = frames.map((f) => quaternionForPoint(f.lat, f.lng))
@@ -301,16 +331,33 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
       arcs[i].line.geometry.setDrawRange(0, count)
     }
 
-    // pins: the waypoint we're nearest pulses
+    // pins: the destination only lights up as the dot nears it (~0.75), so the
+    // glow "arrives" with the dot rather than at the travel midpoint.
     const t = (performance.now() - t0) / 1000
     const active =
-      p.heroT < 1 ? -1 : p.fi >= last ? last : p.moveT < 0.5 ? p.fi : p.fi + 1
+      p.heroT < 1 ? -1 : p.fi >= last ? last : p.moveT < 0.75 ? p.fi : p.fi + 1
     for (let i = 0; i < pins.length; i++) {
       const isActive = i === active
       const pulse = isActive ? 1.35 + 0.25 * Math.sin(t * 3.5) : 1
       pins[i].glow.scale.setScalar(pins[i].glowScale * pulse)
       pins[i].glow.material.opacity = isActive ? 0.95 : 0.45
     }
+
+    // traveling dot: rides arc `fi` from the current stop toward the next,
+    // fading out right as it reaches the destination pin.
+    let dotOp = 0
+    if (p.heroT >= 1 && p.fi < last) {
+      const m = arcs[p.fi]
+      if (m && m.angle > 0.012) {
+        const pos = arcPoint(p.fi, p.moveT)
+        travelDot.position.copy(pos)
+        travelCore.position.copy(pos)
+        dotOp = Math.min(smoothstep(0.03, 0.12, p.moveT), 1 - smoothstep(0.88, 0.99, p.moveT))
+      }
+    }
+    travelDot.material.opacity = dotOp
+    travelCore.material.opacity = dotOp
+    travelDot.scale.setScalar(0.05 + 0.012 * Math.sin(t * 6))
 
     // finale: zoom in, recenter, brighten the atmosphere
     const f = easeInOut(p.finaleT)

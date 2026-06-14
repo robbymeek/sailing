@@ -60,11 +60,13 @@ const OFFSETS = (() => {
   for (let i = 1; i < F; i++) o[i] = o[i - 1] + segLen(i - 1)
   return o
 })()
-const CONTENT_VH = OFFSETS[F - 1] + FINALE_EXTRA
-const TOTAL_VH = (CONTENT_VH + 1) * 100 // +1 viewport of end-block runway
+// dotT past which the globe is "arriving" at the next waypoint: the card/label
+// for the destination pops up here — just before the dot reaches the pin.
+const ARRIVE = 0.74
 
 // Single source of truth for scroll progress — the three.js loop reads this
-// every frame; the React listener uses it for coarse card/finale state.
+// every frame (heroT/fi/moveT/finaleT to drive the dot + rotation); the React
+// listener uses the rest for the card body + waypoint label.
 function computeScroll() {
   const vh = window.innerHeight || 1
   const y = window.scrollY / vh
@@ -76,7 +78,6 @@ function computeScroll() {
     if (OFFSETS[i] <= y) fi = i
     else break
   }
-  const fr = FRAMES[fi]
   const isFinaleFrame = fi >= F - 1
 
   let t = 0
@@ -89,11 +90,37 @@ function computeScroll() {
     moveT = easeInOut(t)
   }
 
-  // Card fades in on a stop's first frame, holds across its waypoints, fades
-  // out on its last frame. Single-waypoint stops do both in one segment.
-  const fadeIn = fr.isFirstOfStop ? smoothstep(0, 0.22, t) : 1
-  const fadeOut = fr.isLastOfStop ? 1 - smoothstep(0.62, 0.96, t) : 1
-  const cardOpacity = heroT < 1 || isFinaleFrame ? 0 : Math.min(fadeIn, fadeOut)
+  const src = FRAMES[fi]
+  const dst = FRAMES[Math.min(fi + 1, F - 1)]
+  const dotT = moveT
+  const arriving = dotT >= ARRIVE
+
+  // Card body (keyed by stop): for a cross-stop hop it fades out as the dot
+  // departs and pops back in just before the dot lands at the next stop. For a
+  // hop within one stop (multi-waypoint), the body just stays up.
+  let bodyStopIndex
+  let bodyOpacity
+  if (heroT < 1 || isFinaleFrame) {
+    bodyStopIndex = src.stopIndex
+    bodyOpacity = 0
+  } else if (src.stopIndex === dst.stopIndex) {
+    bodyStopIndex = src.stopIndex
+    bodyOpacity = 1
+  } else if (arriving) {
+    bodyStopIndex = dst.stopIndex
+    bodyOpacity = smoothstep(ARRIVE, 0.9, dotT)
+  } else {
+    bodyStopIndex = src.stopIndex
+    bodyOpacity = 1 - smoothstep(0.16, 0.46, dotT)
+  }
+  if (STOPS[bodyStopIndex] && STOPS[bodyStopIndex].status === 'finale') bodyOpacity = 0
+
+  // Waypoint label (keyed by waypoint): switches to the destination as the dot
+  // lands, so the city name pops just before arrival. labelKey changing drives
+  // the pop animation on the page.
+  const labelFrameIdx = arriving ? Math.min(fi + 1, F - 1) : fi
+  const labelStop = FRAMES[labelFrameIdx].stopIndex
+  const showLabel = !!(STOPS[labelStop] && STOPS[labelStop].points && STOPS[labelStop].points.length > 1)
 
   return {
     heroT,
@@ -101,10 +128,11 @@ function computeScroll() {
     moveT,
     finaleT,
     isFinaleFrame,
-    activeStopIndex: fr.stopIndex,
-    activeLabel: fr.label,
-    showLabel: fr.multi,
-    cardOpacity,
+    bodyStopIndex,
+    bodyOpacity,
+    showLabel,
+    label: FRAMES[labelFrameIdx].label,
+    labelKey: labelFrameIdx,
   }
 }
 
@@ -135,10 +163,23 @@ export default function ComingSoon({ onNavigate }) {
 function GlobeTour({ onNavigate, onSceneFail }) {
   const canvasRef = useRef(null)
   const [ready, setReady] = useState(false)
-  const [card, setCard] = useState({ stopIndex: 0, label: '', showLabel: false, opacity: 0 })
+  const [card, setCard] = useState({ stopIndex: 0, opacity: 0, showLabel: false, label: '', labelKey: 0 })
   const [finaleT, setFinaleT] = useState(0)
   const [heroDone, setHeroDone] = useState(false)
   const [isMobile] = useState(() => window.innerWidth < 700)
+
+  // Gentle proximity scroll-snap so the page settles on each card. Desktop
+  // only — mobile momentum + snap fights the user. Scoped to this page via
+  // the documentElement style, restored on unmount.
+  useEffect(() => {
+    if (isMobile) return undefined
+    const el = document.documentElement
+    const prev = el.style.scrollSnapType
+    el.style.scrollSnapType = 'y proximity'
+    return () => {
+      el.style.scrollSnapType = prev
+    }
+  }, [isMobile])
 
   useEffect(() => {
     let scene
@@ -171,16 +212,18 @@ function GlobeTour({ onNavigate, onSceneFail }) {
         raf = 0
         const p = computeScroll()
         setCard((prev) =>
-          prev.stopIndex === p.activeStopIndex &&
-          prev.label === p.activeLabel &&
+          prev.stopIndex === p.bodyStopIndex &&
+          prev.opacity === p.bodyOpacity &&
           prev.showLabel === p.showLabel &&
-          prev.opacity === p.cardOpacity
+          prev.label === p.label &&
+          prev.labelKey === p.labelKey
             ? prev
             : {
-                stopIndex: p.activeStopIndex,
-                label: p.activeLabel,
+                stopIndex: p.bodyStopIndex,
+                opacity: p.bodyOpacity,
                 showLabel: p.showLabel,
-                opacity: p.cardOpacity,
+                label: p.label,
+                labelKey: p.labelKey,
               }
         )
         setHeroDone(p.heroT > 0.6)
@@ -214,8 +257,22 @@ function GlobeTour({ onNavigate, onSceneFail }) {
         }}
       />
 
-      {/* scroll runway — all visible content is fixed-position above it */}
-      <div style={{ height: `${TOTAL_VH}vh` }} />
+      {/* scroll runway — all visible content is fixed-position above it. One
+          section per frame so each card is a gentle scroll-snap target; snap
+          aligns the start of a stop's first waypoint (the centered view). */}
+      <div>
+        <div style={{ height: `${HERO * 100}vh` }} />
+        {FRAMES.map((fr, i) => (
+          <div
+            key={i}
+            style={{
+              height: `${segLen(i) * 100}vh`,
+              scrollSnapAlign: !isMobile && fr.isFirstOfStop && i < F - 1 ? 'start' : 'none',
+            }}
+          />
+        ))}
+        <div style={{ height: '80vh' }} />
+      </div>
 
       <Hero visible={!heroDone} />
 
@@ -304,11 +361,13 @@ function GlobeTour({ onNavigate, onSceneFail }) {
         <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13, lineHeight: 1.5, margin: 0 }}>
           {stop.blurb}
         </p>
-        {/* current waypoint within a multi-city stop */}
+        {/* current waypoint within a multi-city stop — pops on each landing */}
         {card.showLabel && (
           <p
+            key={card.labelKey}
+            className="cs-pop"
             style={{
-              color: 'rgba(255,255,255,0.4)',
+              color: 'rgba(255,255,255,0.55)',
               fontSize: 10,
               fontWeight: 600,
               letterSpacing: '2px',

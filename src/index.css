@@ -151,6 +151,14 @@ button {
   50% { transform: translateY(4px); }
 }
 
+/* Coming Soon: waypoint label pop as the dot lands on a new point */
+@keyframes csPop {
+  0% { opacity: 0; transform: translateY(3px) scale(0.96); }
+  60% { opacity: 1; transform: translateY(0) scale(1.02); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.cs-pop { animation: csPop 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
 /* Support page: sailboat gentle rocking */
 @keyframes sailBob {
   0%, 100% { transform: translate(-50%, -50%) rotate(-2deg); }
