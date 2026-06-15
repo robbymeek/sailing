@@ -2,6 +2,9 @@ import * as THREE from 'three'
 import { Line2 } from 'three/addons/lines/Line2.js'
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js'
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
+// Camera primitives + the earth itself come from buildEarth so this globe and
+// the home orb→globe morph are identical (seamless transition between them).
+import { FOV, SUN_WORLD, fitCameraZ, latLngToVector3, quaternionForPoint, buildEarth } from './buildEarth'
 
 // Plain-JS three.js scene for the Coming Soon globe tour. No React in here:
 // the page hands us a flat list of frames (one orientation per waypoint) plus
@@ -9,35 +12,10 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 // progress every frame. A "stop" with several waypoints (e.g. an Australia
 // training block hopping Adelaide → Perth → Sydney) is just several frames.
 
-const SUN_WORLD = new THREE.Vector3(-2, 0.6, 1.5).normalize()
 const ARC_SAMPLES = 128
-const FOV = 38
 
-// ---------- math ----------
-
-// Matches SphereGeometry's default UV layout: equirectangular seam at
-// lng ±180, texture left edge = -180.
-function latLngToVector3(lat, lng, radius = 1) {
-  const phi = ((90 - lat) * Math.PI) / 180
-  const theta = ((lng + 180) * Math.PI) / 180
-  return new THREE.Vector3(
-    -radius * Math.sin(phi) * Math.cos(theta),
-    radius * Math.cos(phi),
-    radius * Math.sin(phi) * Math.sin(theta)
-  )
-}
-
-// Globe orientation that puts the waypoint dead-center facing the camera (+Z)
-// with north up. Built from an explicit basis so there's no roll, which a
-// naive setFromUnitVectors would introduce.
-function quaternionForPoint(lat, lng) {
-  const f = latLngToVector3(lat, lng, 1).normalize()
-  const north = new THREE.Vector3(0, 1, 0)
-  const u = north.clone().addScaledVector(f, -north.dot(f)).normalize()
-  const r = new THREE.Vector3().crossVectors(u, f)
-  const m = new THREE.Matrix4().makeBasis(r, u, f)
-  return new THREE.Quaternion().setFromRotationMatrix(m).invert()
-}
+// ---------- math ---------- (globe-specific helpers; the shared earth/camera
+// math lives in ./buildEarth)
 
 function slerpVec(a, b, t) {
   const omega = Math.acos(THREE.MathUtils.clamp(a.dot(b), -1, 1))
@@ -59,14 +37,6 @@ function smoothstep(a, b, x) {
   return t * t * (3 - 2 * t)
 }
 
-// Camera distance so a radius-1 sphere fits the narrower viewport axis
-// with some margin (sphere silhouette: sin(halfAngle) = r / d).
-function fitCameraZ(aspect) {
-  const halfV = THREE.MathUtils.degToRad(FOV / 2)
-  const halfH = Math.atan(Math.tan(halfV) * aspect)
-  return 1.06 / Math.sin(Math.min(halfV, halfH))
-}
-
 // Soft radial-gradient sprite texture for pin glows.
 function makeGlowTexture() {
   const size = 128
@@ -85,7 +55,7 @@ function makeGlowTexture() {
 
 // ---------- factory ----------
 // frames: [{ lat, lng, isFinale }]  (one per waypoint, in tour order)
-export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, onReady, getProgress }) {
+export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, onReady, getProgress, seamless = false }) {
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
@@ -116,84 +86,16 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
   const globe = new THREE.Group()
   anchor.add(globe)
 
-  // Lights: a fixed "sun" so the terminator stays put while the globe spins
-  // underneath it — night side (with city lights) is always camera-right.
-  const sun = new THREE.DirectionalLight(0xffffff, 2.2)
-  sun.position.copy(SUN_WORLD).multiplyScalar(10)
+  // ---------- earth + atmosphere + lights ---------- (shared with the home orb
+  // morph via buildEarth, so the two globes render identically). The earth spins
+  // inside `globe`; the atmosphere stays put on `anchor`.
+  const { earth, atmosphere, atmosMat, uSunDirView, manager, sun, ambient } = buildEarth(
+    renderer,
+    { baseUrl, isMobile }
+  )
   scene.add(sun)
-  scene.add(new THREE.AmbientLight(0xffffff, 0.08))
-
-  // ---------- earth ----------
-  const manager = new THREE.LoadingManager()
-  const loader = new THREE.TextureLoader(manager)
-  const texSuffix = isMobile ? '-2k' : ''
-  const dayTex = loader.load(`${baseUrl}earth/earth-blue-marble${texSuffix}.jpg`)
-  const nightTex = loader.load(`${baseUrl}earth/earth-night${texSuffix}.jpg`)
-  const topoTex = loader.load(`${baseUrl}earth/earth-topology.png`)
-  const waterTex = loader.load(`${baseUrl}earth/earth-water.png`)
-
-  const maxAniso = renderer.capabilities.getMaxAnisotropy()
-  // sRGB on the color maps — without this the globe renders washed out.
-  for (const t of [dayTex, nightTex]) {
-    t.colorSpace = THREE.SRGBColorSpace
-    t.anisotropy = maxAniso
-  }
-  topoTex.anisotropy = maxAniso
-
-  const uSunDirView = { value: new THREE.Vector3() }
-  const earthMat = new THREE.MeshPhongMaterial({
-    map: dayTex,
-    bumpMap: topoTex,
-    bumpScale: 0.5,
-    specularMap: waterTex,
-    specular: new THREE.Color(0x223355),
-    shininess: 14,
-    emissive: new THREE.Color(0xffffff),
-    emissiveMap: nightTex,
-    emissiveIntensity: 1.0,
-  })
-  // City lights only on the night side: mask the emissive term by the
-  // view-space sun direction (smoothstep spans the terminator).
-  earthMat.onBeforeCompile = (shader) => {
-    shader.uniforms.uSunDirView = uSunDirView
-    shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform vec3 uSunDirView;')
-      .replace(
-        '#include <emissivemap_fragment>',
-        `#include <emissivemap_fragment>
-         totalEmissiveRadiance *= smoothstep(0.08, -0.18, dot(normal, uSunDirView));`
-      )
-  }
-
-  const earth = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 96), earthMat)
+  scene.add(ambient)
   globe.add(earth)
-
-  // ---------- atmosphere ----------
-  const atmosMat = new THREE.ShaderMaterial({
-    uniforms: {
-      uColor: { value: new THREE.Color(0x3a66ff) },
-      uIntensity: { value: 1.0 },
-    },
-    vertexShader: `
-      varying vec3 vNormal;
-      void main() {
-        vNormal = normalize(normalMatrix * normal);
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }`,
-    fragmentShader: `
-      uniform vec3 uColor;
-      uniform float uIntensity;
-      varying vec3 vNormal;
-      void main() {
-        float glow = pow(max(0.6 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 0.0), 5.0);
-        gl_FragColor = vec4(uColor, 1.0) * glow * uIntensity;
-      }`,
-    side: THREE.BackSide,
-    blending: THREE.AdditiveBlending,
-    transparent: true,
-    depthWrite: false,
-  })
-  const atmosphere = new THREE.Mesh(new THREE.SphereGeometry(1.12, 64, 64), atmosMat)
   anchor.add(atmosphere)
 
   // ---------- starfield ----------
@@ -229,7 +131,8 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
     const isFinale = !!fr.isFinale
     const core = new THREE.Mesh(
       pinGeo,
-      new THREE.MeshBasicMaterial({ color: isFinale ? 0xffe9b0 : 0xeaf0ff })
+      // transparent so the seamless intro can fade the pins in after the globe
+      new THREE.MeshBasicMaterial({ color: isFinale ? 0xffe9b0 : 0xeaf0ff, transparent: true })
     )
     core.position.copy(latLngToVector3(fr.lat, fr.lng, 1.004))
 
@@ -249,7 +152,7 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
 
     globe.add(core)
     globe.add(glow)
-    return { glow, glowScale }
+    return { core, glow, glowScale }
   })
 
   // ---------- arcs ---------- (great-circle hop between consecutive frames)
@@ -320,6 +223,7 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
   let rafId = 0
   let running = false
   let disposed = false
+  let startedAt = 0 // seconds at first start() — anchors the seamless pin fade-in
   const t0 = performance.now()
 
   function frame() {
@@ -345,13 +249,19 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
     // pins: the destination only lights up as the dot nears it (~0.75), so the
     // glow "arrives" with the dot rather than at the travel midpoint.
     const t = (performance.now() - t0) / 1000
+    // seamless intro: hold the dots invisible, then fade them in ~0.45s AFTER the
+    // globe has settled (so the orb→globe handoff lands on a clean globe first).
+    const pinIntro = seamless
+      ? smoothstep(startedAt + 0.45, startedAt + 1.15, performance.now() / 1000)
+      : 1
     const active =
       p.heroT < 1 ? -1 : p.fi >= last ? last : p.moveT < 0.75 ? p.fi : p.fi + 1
     for (let i = 0; i < pins.length; i++) {
       const isActive = i === active
       const pulse = isActive ? 1.35 + 0.25 * Math.sin(t * 3.5) : 1
       pins[i].glow.scale.setScalar(pins[i].glowScale * pulse)
-      pins[i].glow.material.opacity = isActive ? 0.95 : 0.45
+      pins[i].glow.material.opacity = (isActive ? 0.95 : 0.45) * pinIntro
+      pins[i].core.material.opacity = pinIntro
     }
 
     // traveling dot: rides arc `fi` from the current stop toward the next,
@@ -385,6 +295,7 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
 
   function start() {
     if (running || disposed) return
+    if (!startedAt) startedAt = performance.now() / 1000
     running = true
     rafId = requestAnimationFrame(frame)
   }

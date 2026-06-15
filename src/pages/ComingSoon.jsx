@@ -160,7 +160,10 @@ function hasWebGL() {
   }
 }
 
-export default function ComingSoon({ onNavigate }) {
+// seamless: arrived via the home orb→globe morph. The body-level orb overlay is
+// already showing the finished globe, so this page's globe must paint opaque from
+// the first frame (no 1.2s black-in) and relay onReady up so the overlay dissolves.
+export default function ComingSoon({ onNavigate, seamless = false, onGlobeReady }) {
   // Fallback gate: reduced motion, no WebGL, or the renderer failing to boot
   // (some environments pass the context probe but refuse a real context).
   const [useFallback, setUseFallback] = useState(
@@ -169,13 +172,18 @@ export default function ComingSoon({ onNavigate }) {
   return useFallback ? (
     <StaticTimeline onNavigate={onNavigate} />
   ) : (
-    <GlobeTour onNavigate={onNavigate} onSceneFail={() => setUseFallback(true)} />
+    <GlobeTour
+      onNavigate={onNavigate}
+      seamless={seamless}
+      onGlobeReady={onGlobeReady}
+      onSceneFail={() => setUseFallback(true)}
+    />
   )
 }
 
 // ---------- scroll-driven globe tour ----------
 
-function GlobeTour({ onNavigate, onSceneFail }) {
+function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail }) {
   const canvasRef = useRef(null)
   const [ready, setReady] = useState(false)
   const [card, setCard] = useState({ stopIndex: 0, opacity: 0, prog: 0, showLabel: false, label: '', labelKey: 0 })
@@ -189,8 +197,9 @@ function GlobeTour({ onNavigate, onSceneFail }) {
       scene = createGlobeScene(canvasRef.current, FRAMES, {
         isMobile: window.innerWidth < 700,
         baseUrl: import.meta.env.BASE_URL,
-        onReady: () => setReady(true),
+        onReady: () => { setReady(true); if (onGlobeReady) onGlobeReady() },
         getProgress: computeScroll,
+        seamless, // fade the pins in after the orb→globe handoff
       })
     } catch (err) {
       console.warn('Globe scene failed to initialize, using static timeline', err)
@@ -204,6 +213,18 @@ function GlobeTour({ onNavigate, onSceneFail }) {
       scene.dispose()
     }
   }, [])
+
+  // Seamless arrival: lock scrolling through the staged reveal (globe → pins →
+  // text) so the tour can't be scrubbed mid-animation, then release it.
+  useEffect(() => {
+    if (!seamless) return undefined
+    const html = document.documentElement
+    const prev = html.style.overflow
+    html.style.overflow = 'hidden'
+    window.scrollTo(0, 0)
+    const t = setTimeout(() => { html.style.overflow = prev }, 1900)
+    return () => { clearTimeout(t); html.style.overflow = prev }
+  }, [seamless])
 
   // Coarse React state; the heavy per-frame work runs in the scene's rAF loop.
   useEffect(() => {
@@ -266,15 +287,17 @@ function GlobeTour({ onNavigate, onSceneFail }) {
           width: '100%',
           height: '100%',
           zIndex: 0,
-          opacity: ready ? 1 : 0,
-          transition: 'opacity 1.2s ease',
+          // seamless handoff: paint opaque immediately (the orb overlay is showing
+          // the identical globe over us and will dissolve once we're ready).
+          opacity: seamless ? 1 : ready ? 1 : 0,
+          transition: seamless ? 'none' : 'opacity 1.2s ease',
         }}
       />
 
       {/* scroll runway — all visible content is fixed-position above it */}
       <div style={{ height: `${TOTAL_VH}vh` }} />
 
-      <Hero visible={!heroDone} />
+      <Hero visible={!heroDone} seamless={seamless} />
 
       {/* progress rail (desktop) — one dot per stop */}
       {!isMobile && (
@@ -448,8 +471,10 @@ function ReelEntry({ stopIndex, diff, spacing, labelInfo }) {
   )
 }
 
-function Hero({ visible }) {
-  const entrance = usePageEntrance(3, { staggerMs: 150, initialDelayMs: 200 })
+function Hero({ visible, seamless }) {
+  // After a seamless morph, hold the hero text back so it fades in LAST — after
+  // the overlay has dissolved to the globe and the pins have faded in.
+  const entrance = usePageEntrance(3, { staggerMs: 150, initialDelayMs: seamless ? 1450 : 200 })
   return (
     <div
       style={{

@@ -1,6 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, lazy, Suspense } from 'react'
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import Nav from './components/Nav'
+import orbOverlay from './lib/orbOverlay'
 
 // Pages shown in the compact (narrow-viewport) overlay nav.
 const COMPACT_PAGES = ['Home', 'Biography', 'Path', 'Coming Soon', 'Contact', 'Support']
@@ -116,17 +117,37 @@ export default function App() {
   const [displayLocation, setDisplayLocation] = useState(location)
   const [transitionStage, setTransitionStage] = useState('entered')
 
-  useEffect(() => {
-    if (location.pathname !== displayLocation.pathname) {
-      setTransitionStage('exiting')
-      const t = setTimeout(() => {
-        setDisplayLocation(location)
-        setTransitionStage('entered')
-        window.scrollTo(0, 0)
-      }, 350)
-      return () => clearTimeout(t)
+  // fromOrb: the home orb→globe morph is mid-handoff. The body-level orb overlay
+  // is showing the finished globe; swap routes SYNCHRONOUSLY with NO fade-to-black
+  // (the overlay hides the swap), land at scroll 0 (= the globe's hero pose), and
+  // let Coming Soon boot underneath. The overlay dissolves once its globe is ready.
+  const fromOrb = location.state?.fromOrb || orbOverlay.pendingFromOrb
+  useLayoutEffect(() => {
+    if (location.pathname === displayLocation.pathname) return
+    if (fromOrb) {
+      try { history.scrollRestoration = 'manual' } catch { /* older browsers */ }
+      window.scrollTo(0, 0)
+      setDisplayLocation(location) // pre-paint swap
+      setTransitionStage('entered')
+      return undefined
     }
+    setTransitionStage('exiting')
+    const t = setTimeout(() => {
+      setDisplayLocation(location)
+      setTransitionStage('entered')
+      window.scrollTo(0, 0)
+    }, 350)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location])
+
+  // Safety net: if Coming Soon's globe never signals ready (texture error →
+  // StaticTimeline), dissolve the overlay anyway so it can't get stuck on screen.
+  useEffect(() => {
+    if (displayLocation.pathname !== '/coming-soon' || !orbOverlay.holding) return undefined
+    const t = setTimeout(() => orbOverlay.crossfadeOut(250), 1800)
+    return () => clearTimeout(t)
+  }, [displayLocation.pathname])
 
   function handleExitComplete(e) {
     if (e.target !== e.currentTarget) return
@@ -452,7 +473,11 @@ export default function App() {
           <Route path="/support" element={<Support onNavigate={go} />} />
           <Route path="/coming-soon" element={
             <Suspense fallback={<div style={{ height: '100dvh', background: 'rgb(0,0,0)' }} />}>
-              <ComingSoon onNavigate={go} />
+              <ComingSoon
+                onNavigate={go}
+                seamless={fromOrb}
+                onGlobeReady={() => { if (orbOverlay.holding) orbOverlay.crossfadeOut(250) }}
+              />
             </Suspense>
           } />
         </Routes>

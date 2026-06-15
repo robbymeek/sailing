@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import useCountdown from '../hooks/useCountdown'
+import orbOverlay from '../lib/orbOverlay'
 import { introPhotos } from '../assets/home-intro'
-// Rest-state background: hiking shot, shown nearly black under the overlay.
-import hikingBg from '../assets/home-intro/img-5957-alt.jpg'
+// Rest-state background: the portrait sailing shot, shown nearly black under the
+// overlay — and refracted, with the boat, inside the glass orb.
+import hikingBg from '../assets/home-intro/img-5957.jpg'
 
 const BASE = import.meta.env.BASE_URL
 const BOAT_SIZE = 200
@@ -11,6 +13,17 @@ const BOAT_SIZE = 200
 // initialization (hard refresh) and is skipped on SPA navigation back
 // to /. No storage APIs — this lives for the tab's lifetime only.
 let introHasPlayed = false
+
+// Cheap WebGL probe (mirrors ComingSoon). Some environments pass this but still
+// refuse a real context — the scene mount is wrapped in try/catch for that.
+function hasWebGL() {
+  try {
+    const c = document.createElement('canvas')
+    return !!(c.getContext('webgl2') || c.getContext('webgl'))
+  } catch {
+    return false
+  }
+}
 
 export default function MainView({ onNavigate, hoverNavOpen, skipIntro, embedded }) {
   const target = new Date('2028-07-14T00:00:00')
@@ -56,6 +69,54 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
 
   // Skip check: respect the module-level played flag + reduced-motion.
   const skipIntro = forceSkip || introHasPlayed || prefersReducedMotion
+
+  // The glass orb (desktop) refracts the page behind it — the dark photo + the
+  // spinning boat. Needs WebGL + motion; skipped in the mobile embedded home and
+  // for reduced-motion/no-WebGL, which keep the original DOM boat. Computed ONCE
+  // (lazy) — hasWebGL() spins up a throwaway context, never run every render.
+  const [useOrb] = useState(
+    () => !embedded && !prefersReducedMotion && hasWebGL()
+  )
+  const boatImgRef = useRef(null)
+  const [orbReady, setOrbReady] = useState(false)
+  const [orbFailed, setOrbFailed] = useState(false)
+  const [morph, setMorph] = useState(0) // 0→1 morph progress, drives the text-out
+  const showOrb = useOrb && !orbFailed
+
+  // beginMorph (orb clicked) + navTo (fired by the scene at m≈0.82). Held in refs
+  // so they always see the current uiVisible/onNavigate without re-attaching.
+  const beginMorphRef = useRef(() => {})
+  const navToRef = useRef(() => {})
+
+  // Mount the orb into the BODY-LEVEL overlay (orbOverlay), so the canvas survives
+  // the Home → Coming Soon route swap for the seamless morph handoff.
+  useEffect(() => {
+    if (!useOrb) return undefined
+    orbOverlay
+      .attach({
+        isMobile: window.innerWidth < 700,
+        baseUrl: BASE,
+        photoUrl: hikingBg,
+        boatUrl: `${BASE}[0001-0250].gif`,
+        boatImg: boatImgRef.current,
+        boatSize: BOAT_SIZE,
+        orbDiameterPx: BOAT_SIZE * 1.3, // orb ≈ 130% of the sailboat height
+        prefersReducedMotion,
+        onReady: () => setOrbReady(true),
+        onMorph: (m) => setMorph(m),
+        onClick: () => beginMorphRef.current(),
+      })
+      .catch((err) => {
+        console.warn('[HomeIntro] glass orb failed to init, using flat boat', err)
+        setOrbFailed(true)
+      })
+    return () => {
+      // Keep the overlay alive across a fromOrb nav (the morph handoff needs it);
+      // otherwise tear it down — but DEFERRED, so a StrictMode remount cancels it.
+      if (!orbOverlay.holding) orbOverlay.requestDetach()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // phase drives the black overlay; separate booleans drive boat/UI fades
   // so their timing isn't locked to the overlay transition.
@@ -197,13 +258,51 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Fade the body-level orb overlay in once the page has settled (mirrors the old
+  // in-place canvas opacity rule). Once a morph starts it owns its own opacity.
+  useEffect(() => {
+    if (morph === 0) orbOverlay.setVisible(showOrb && orbReady && phase === 'rest')
+  }, [showOrb, orbReady, phase, morph])
+
+  // Keep the click + navigate handlers current (they read uiVisible / onNavigate).
+  beginMorphRef.current = () => {
+    if (!uiVisible || orbOverlay.holding) return // only at rest, once
+    orbOverlay.holding = true // overlay must survive the upcoming route swap
+    orbOverlay.pendingFromOrb = true
+    import('./ComingSoon') // load Coming Soon ASAP so it's ready under the overlay
+    orbOverlay.startMorph()
+  }
+  navToRef.current = () => onNavigate('Coming Soon', { fromOrb: true })
+
+  // As the morph grows the orb, the home text fades out and slides aside (early,
+  // so the screen is clear before the orb is large). 0 → 1 across morph 0.08–0.32.
+  const textOut = (() => {
+    const t = Math.min(1, Math.max(0, (morph - 0.08) / 0.24))
+    return t * t * (3 - 2 * t)
+  })()
+
+  // Once the orb has become the globe (morph ≥ 0.9), fade the page background
+  // (the faded photo) to FULL black — so the globe ends up on pure black BEFORE
+  // we swap routes. The swap is then black→black (invisible), not a photo cut.
+  const bgBlack = morph >= 0.9
+  useEffect(() => {
+    if (!bgBlack) return undefined
+    // navigate only after the background has finished going black (the 0.6s fade)
+    const t = setTimeout(() => navToRef.current(), 620)
+    return () => clearTimeout(t)
+  }, [bgBlack])
+
   // Overlay per phase — black only. The montage darkens gradually, goes fully
   // black, then eases back to near-black so the hiking photo behind it reads
   // as a barely-there texture rather than flat black.
   const overlayStyle = (() => {
     let background = 'rgba(0,0,0,0)'
     let transition = 'background 1.2s linear'
-    if (phase === 'flash') {
+    if (bgBlack) {
+      // post-morph: drive the background to pure black under the formed globe
+      background = 'rgba(0,0,0,1)'
+      transition = 'background 0.6s ease'
+    } else if (phase === 'flash') {
       background = 'rgba(0,0,0,0.12)'
     } else if (phase === 'slowing') {
       background = 'rgba(0,0,0,0.3)'
@@ -293,36 +392,53 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
         }}
       />
 
-      {/* Spinning boat — centered, fades in during the reveal phase.
-          Clickable once the rest state is reached (uiVisible); opens the
-          Coming Soon globe page, teased by the italic text below it. */}
-      <button
-        onClick={() => onNavigate('Coming Soon')}
-        aria-label="Coming soon — see the road to LA 2028"
-        disabled={!uiVisible}
-        style={{
-          position: 'absolute',
-          top: '50%', left: '50%',
-          width: BOAT_SIZE, height: BOAT_SIZE,
-          transform: 'translate(-50%, -50%)',
-          opacity: boatVisible ? 1 : 0,
-          transition: 'opacity 0.8s ease',
-          pointerEvents: uiVisible ? 'auto' : 'none',
-          cursor: uiVisible ? 'pointer' : 'default',
-          background: 'none',
-          border: 'none',
-          padding: 0,
-          zIndex: 10,
-        }}
-      >
+      {/* Spinning boat. With the orb it's hidden (opacity 0) and only sampled
+          into the orb's refraction, so you see it bent through the glass. Without
+          the orb (mobile / reduced-motion / no-WebGL) it's the original
+          clickable DOM boat, centered. */}
+      {showOrb ? (
         <img
+          ref={boatImgRef}
           src={boatSrc}
-          alt="Spinning sailboat"
-          style={{ width: '100%', height: '100%', display: 'block' }}
+          alt=""
+          aria-hidden="true"
+          style={{
+            position: 'absolute', top: 0, left: 0,
+            width: BOAT_SIZE, height: BOAT_SIZE,
+            opacity: 0, pointerEvents: 'none', zIndex: 0,
+          }}
         />
-      </button>
+      ) : (
+        <button
+          onClick={() => onNavigate('Coming Soon')}
+          aria-label="Coming soon — see the road to LA 2028"
+          disabled={!uiVisible}
+          style={{
+            position: 'absolute',
+            top: '50%', left: '50%',
+            width: BOAT_SIZE, height: BOAT_SIZE,
+            transform: 'translate(-50%, -50%)',
+            opacity: boatVisible ? 1 : 0,
+            transition: 'opacity 0.8s ease',
+            pointerEvents: uiVisible ? 'auto' : 'none',
+            cursor: uiVisible ? 'pointer' : 'default',
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            zIndex: 10,
+          }}
+        >
+          <img
+            src={boatSrc}
+            alt="Spinning sailboat"
+            style={{ width: '100%', height: '100%', display: 'block' }}
+          />
+        </button>
+      )}
 
-      <ComingSoonTeaser visible={uiVisible} onClick={() => onNavigate('Coming Soon')} />
+      {/* The glass orb renders into a BODY-LEVEL overlay canvas (orbOverlay.js),
+          NOT here — so it survives the route swap during the orb→globe morph.
+          Clicking it (window-level hit-test) plays the morph → Coming Soon. */}
 
       {/* Bottom-left persistent nav — always visible after intro */}
       <nav
@@ -334,9 +450,10 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
           display: 'flex', flexDirection: 'column',
           alignItems: 'flex-start',
           gap: 20,
-          opacity: uiVisible ? 1 : 0,
+          opacity: (uiVisible ? 1 : 0) * (1 - textOut),
+          transform: `translateX(${-28 * textOut}px)`,
           transition: 'opacity 0.6s ease',
-          pointerEvents: uiVisible ? 'auto' : 'none',
+          pointerEvents: uiVisible && textOut < 0.05 ? 'auto' : 'none',
           zIndex: 20,
           maxWidth: 380,
         }}
@@ -384,6 +501,7 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
         <CountdownCorner
           onNavigate={onNavigate}
           uiVisible={uiVisible}
+          morphOut={textOut}
           hoverNavOpen={hoverNavOpen}
           embedded={embedded}
           anchorButton={anchorButton}
@@ -398,43 +516,7 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
 
 // Top-right countdown corner — LA 2028 hovers royal blue and click-throughs
 // to Event Calendar. The countdown line below is a non-interactive sibling.
-// Italic teaser under the boat — same fade timing as the boat, navigates to
-// the Coming Soon page just like clicking the boat itself.
-function ComingSoonTeaser({ visible, onClick }) {
-  const [hover, setHover] = useState(false)
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      onFocus={() => setHover(true)}
-      onBlur={() => setHover(false)}
-      style={{
-        position: 'absolute',
-        top: `calc(50% + ${BOAT_SIZE / 2 + 18}px)`,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        background: 'none',
-        border: 'none',
-        padding: 4,
-        cursor: 'pointer',
-        fontStyle: 'italic',
-        fontSize: 13,
-        letterSpacing: '0.2px',
-        fontFamily: 'inherit',
-        color: hover ? '#1E40FF' : 'rgba(255,255,255,0.45)',
-        opacity: visible ? 1 : 0,
-        transition: 'opacity 0.8s ease, color 0.25s ease',
-        pointerEvents: visible ? 'auto' : 'none',
-        zIndex: 10,
-      }}
-    >
-      coming soon
-    </button>
-  )
-}
-
-function CountdownCorner({ onNavigate, uiVisible, hoverNavOpen, embedded, anchorButton, anchorValue, anchorMeta, countdownText }) {
+function CountdownCorner({ onNavigate, uiVisible, morphOut = 0, hoverNavOpen, embedded, anchorButton, anchorValue, anchorMeta, countdownText }) {
   const [hover, setHover] = useState(false)
   return (
     <div style={{
@@ -442,9 +524,10 @@ function CountdownCorner({ onNavigate, uiVisible, hoverNavOpen, embedded, anchor
       top: hoverNavOpen ? 72 : 32,
       right: 32,
       textAlign: 'right',
-      opacity: uiVisible ? 1 : 0,
+      opacity: (uiVisible ? 1 : 0) * (1 - morphOut),
+      transform: `translateX(${28 * morphOut}px)`,
       transition: 'opacity 0.6s ease, top 0.3s ease',
-      pointerEvents: uiVisible ? 'auto' : 'none',
+      pointerEvents: uiVisible && morphOut < 0.05 ? 'auto' : 'none',
       zIndex: 20,
     }}>
       <button
