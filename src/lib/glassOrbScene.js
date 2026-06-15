@@ -73,7 +73,7 @@ const CLICK_MS = 350
 const COMP_MAX_W = 1600 // cap the composite resolution for performance
 
 // ---------- morph (glass orb → Coming Soon globe) ----------
-const MORPH_MS = 2200
+const MORPH_MS = 3200
 const HERO_LAT = 10
 const HERO_LNG = -170 // the globe's opening orientation on Coming Soon
 const IDENTITY_Q = new THREE.Quaternion()
@@ -457,23 +457,31 @@ export default function createGlassOrbScene(
     const m = clamp01((now - morphStart) / MORPH_MS)
     if (onMorph) onMorph(m)
 
+    // The timeline is deliberately staged so each beat reads on its own:
+    //   GROW     0.00–0.22  orb enlarges in place
+    //   MOVE     0.22–0.44  slides left to the globe's hero offset (still clear glass)
+    //   (pause)  0.44–0.52  holds at the left, fully clear — the brief breath
+    //   SOLIDIFY 0.52–0.70  glass slowly dissolves into the dark solid sphere
+    //   REVEAL   0.70–0.90  dark sphere slowly resolves into the textured globe
+
     // GROW: glass orb scale (rest → 1 = globe size)
-    orb.scale.setScalar(startScale + (1 - startScale) * easeOutCubic(win(0, 0.3, m)))
+    orb.scale.setScalar(startScale + (1 - startScale) * easeOutCubic(win(0, 0.22, m)))
     // MOVE: centre → the globe's hero offset
-    anchor.position.lerpVectors(startPos, baseOffset, smooth(0.3, 0.58, m))
+    anchor.position.lerpVectors(startPos, baseOffset, smooth(0.22, 0.44, m))
     anchor.rotation.set(0, 0, 0) // freeze cursor-lean while morphing
 
-    // SOLIDIFY: the glass dissolves out, revealing the (dark) solid earth under it
-    const solid = smooth(0.5, 0.72, m)
+    // SOLIDIFY: after the clear pause at the left, the glass slowly dissolves out,
+    // revealing the (dark) solid earth under it
+    const solid = smooth(0.52, 0.7, m)
     orbMat.uniforms.uFadeIn.value = 1 - solid
 
     if (earthParts) {
       earthParts.earth.visible = solid > 0.001
       // ORIENT to the globe's opening pose (dark/featureless here → no spin pop)
-      globe.quaternion.slerpQuaternions(IDENTITY_Q, heroQuat, smooth(0.58, 0.86, m))
+      globe.quaternion.slerpQuaternions(IDENTITY_Q, heroQuat, smooth(0.54, 0.8, m))
       // REVEAL: dark solid sphere → textured globe. The earth's colour multiplies
       // its day map, so dark colour = a dark sphere; ramp to full white = texture.
-      const reveal = smooth(0.72, 0.94, m)
+      const reveal = smooth(0.7, 0.9, m)
       earthParts.earthMat.color.setScalar(0.05 + 0.95 * reveal)
       earthParts.earthMat.emissiveIntensity = reveal // city-lights come on
       earthParts.atmosphere.visible = reveal > 0.001
