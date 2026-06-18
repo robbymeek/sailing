@@ -7,6 +7,7 @@ import { introPhotos } from '../assets/home-intro'
 // overlay — and refracted, with the boat, inside the glass orb.
 import hikingBg from '../assets/home-intro/img-5957.jpg'
 import BakedOrb, { BAKED_ORB_READY } from '../components/BakedOrb'
+import blackBridge from '../lib/blackBridge'
 
 const BASE = import.meta.env.BASE_URL
 const BOAT_SIZE = 200
@@ -449,7 +450,13 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
         }}>
           <BakedOrb
             prefersReducedMotion={prefersReducedMotion}
-            onMorphEnd={() => onNavigate('Coming Soon')}
+            onMorphEnd={() => {
+              // morph ends on the globe → fade to black, then swap routes underneath.
+              // The Coming Soon page lifts the curtain once it's loaded (App's
+              // onGlobeReady → blackBridge.fadeOut), so it fades in after it loads.
+              blackBridge.fadeIn(450)
+              setTimeout(() => onNavigate('Coming Soon'), 480)
+            }}
           />
         </div>
       ) : (

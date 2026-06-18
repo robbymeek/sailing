@@ -161,6 +161,12 @@ export default function ComingSoon({ onNavigate, seamless = false, onGlobeReady 
   const [useFallback, setUseFallback] = useState(
     () => window.matchMedia('(prefers-reduced-motion: reduce)').matches || !hasWebGL2()
   )
+  // The static fallback has no globe to boot — signal ready at once so the mobile
+  // black-bridge curtain (faded in by the home morph) lifts promptly instead of
+  // waiting on a globe onReady that will never come.
+  useEffect(() => {
+    if (useFallback && onGlobeReady) onGlobeReady()
+  }, [useFallback, onGlobeReady])
   return useFallback ? (
     <StaticTimeline onNavigate={onNavigate} />
   ) : (

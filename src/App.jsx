@@ -2,6 +2,7 @@ import { useState, useEffect, useLayoutEffect, useRef, lazy, Suspense } from 're
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import Nav from './components/Nav'
 import orbOverlay from './lib/orbOverlay'
+import blackBridge from './lib/blackBridge'
 
 // Pages shown in the compact (narrow-viewport) overlay nav.
 const COMPACT_PAGES = ['Home', 'Biography', 'Path', 'Coming Soon', 'Contact', 'Support']
@@ -476,7 +477,7 @@ export default function App() {
               <ComingSoon
                 onNavigate={go}
                 seamless={fromOrb}
-                onGlobeReady={() => { if (orbOverlay.holding) orbOverlay.crossfadeOut(250) }}
+                onGlobeReady={() => { if (orbOverlay.holding) orbOverlay.crossfadeOut(250); blackBridge.fadeOut(500) }}
               />
             </Suspense>
           } />
