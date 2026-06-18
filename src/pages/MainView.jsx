@@ -11,6 +11,9 @@ import blackBridge from '../lib/blackBridge'
 
 const BASE = import.meta.env.BASE_URL
 const BOAT_SIZE = 200
+// The morph's final globe frame (baked). Used as the mobile hand-off bridge so the
+// globe stays on screen while the rest of the home fades to black.
+const GLOBE_POSTER = `${BASE}orb/orb-globe-poster.webp`
 // If the orb scene never signals ready by here, flip to the flat boat rather than
 // leave a permanently blank orb (e.g. the background photo load hangs, or a real
 // context is refused after the cheap probe passed). This is a true-hang BACKSTOP,
@@ -451,10 +454,11 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
           <BakedOrb
             prefersReducedMotion={prefersReducedMotion}
             onMorphEnd={() => {
-              // morph ends on the globe → fade to black, then swap routes underneath.
-              // The Coming Soon page lifts the curtain once it's loaded (App's
-              // onGlobeReady → blackBridge.fadeOut), so it fades in after it loads.
-              blackBridge.fadeIn(450)
+              // morph ends on the globe → fade the rest of the home to black but KEEP
+              // the globe (the bridge shows the globe-on-black poster), then swap routes
+              // underneath. Coming Soon lifts the bridge once loaded (App's onGlobeReady
+              // → blackBridge.fadeOut), revealing its globe at the same pose.
+              blackBridge.fadeIn(450, { image: GLOBE_POSTER })
               setTimeout(() => onNavigate('Coming Soon'), 480)
             }}
           />
