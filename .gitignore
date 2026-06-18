@@ -10,3 +10,6 @@ browserstack/screenshots
 browserstack/report.json
 browserstack/report.md
 browserstack/*.log
+
+# Orb bake harness — raw recordings (intermediate; encoded clips live in public/orb/)
+bake-recordings/

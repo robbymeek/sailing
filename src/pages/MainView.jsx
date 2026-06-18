@@ -6,6 +6,7 @@ import { introPhotos } from '../assets/home-intro'
 // Rest-state background: the portrait sailing shot, shown nearly black under the
 // overlay — and refracted, with the boat, inside the glass orb.
 import hikingBg from '../assets/home-intro/img-5957.jpg'
+import BakedOrb, { BAKED_ORB_READY } from '../components/BakedOrb'
 
 const BASE = import.meta.env.BASE_URL
 const BOAT_SIZE = 200
@@ -438,6 +439,19 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
             opacity: 0, pointerEvents: 'none', zIndex: 0,
           }}
         />
+      ) : BAKED_ORB_READY ? (
+        // Phone path: the pixel-identical baked orb + morph (see BAKE.md). Full-bleed
+        // so the morph can grow to fill the screen. Inert until the clips are baked.
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 10,
+          opacity: boatVisible ? 1 : 0, transition: 'opacity 0.8s ease',
+          pointerEvents: uiVisible ? 'auto' : 'none',
+        }}>
+          <BakedOrb
+            prefersReducedMotion={prefersReducedMotion}
+            onMorphEnd={() => onNavigate('Coming Soon')}
+          />
+        </div>
       ) : (
         <button
           onClick={() => onNavigate('Coming Soon')}
