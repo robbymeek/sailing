@@ -35,6 +35,15 @@ harness warns you if it detects this). Then:
 Tune capture size / framing at the top of `src/bake/bakeMain.js` if needed, and keep
 it consistent with `BakedOrb`'s `object-fit: cover` framing.
 
+**Automated alternative (this is what produced the committed clips):** instead of
+clicking, drive headful Chrome — it captures both clips from the real GPU with no
+manual steps and writes them straight to `bake-recordings/`:
+```bash
+npm i -D puppeteer-core    # one-off, NOT a committed dependency
+npm run dev                # in another terminal
+node scripts/auto-bake.mjs # records rest + morph, then continue at step 2
+```
+
 ### 2. Encode to shippable formats
 First make ffmpeg available — it's intentionally **not** a committed dependency, so it
 can never run in (or break) the GitHub Pages production build. Either:

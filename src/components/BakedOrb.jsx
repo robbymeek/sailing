@@ -27,7 +27,7 @@ const BASE = import.meta.env.BASE_URL
 
 // The single switch. Flip to true ONLY after `npm run bake:encode` has populated
 // public/orb/ (see BAKE.md). MainView reads this to decide the phone path.
-export const BAKED_ORB_READY = false
+export const BAKED_ORB_READY = true
 
 // Assets produced by the bake (npm run bake:encode → public/orb/).
 const REST = `${BASE}orb/orb-rest` //   .webm + .mp4 (idle loop)

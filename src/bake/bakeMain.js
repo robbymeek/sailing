@@ -84,6 +84,15 @@ copyFrame()
 
 const stream = out.captureStream(FPS)
 
+// Automation hook for scripts/auto-bake.mjs (headful Puppeteer): exposes the
+// black-composited capture canvas + a morph trigger + a globe-ready check, so a
+// driver can record both clips with no manual clicks. Harmless in normal use.
+window.__BAKE__ = {
+  out,
+  startMorph: () => scene.startMorph(),
+  ready: () => !!bootedAt && performance.now() - bootedAt > EARTH_READY_MS,
+}
+
 function pickMime() {
   const prefs = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
   return prefs.find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || 'video/webm'
