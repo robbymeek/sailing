@@ -30,6 +30,8 @@ let pendingFromOrb = false
 let holding = false
 let handlers = {} // current callbacks — updated every attach so the (one) scene
 //                   always routes to the LIVE MainView, even after StrictMode swaps it
+let sceneReady = false // the singleton scene fires onReady ONCE; remember it so a
+//                        re-attach (StrictMode remount) can replay it to the new mount
 let pendingDetach = 0
 
 function ensureCanvas() {
@@ -63,16 +65,36 @@ async function attach(opts) {
   if (pendingDetach) { clearTimeout(pendingDetach); pendingDetach = 0 }
   const { onReady, onMorph, onClick, ...sceneOpts } = opts
   handlers = { onReady, onMorph, onClick }
-  if (scene) return scene
+  // Re-attach to the existing singleton (e.g. StrictMode remount): the scene's
+  // onReady already fired against the previous mount and won't fire again, so
+  // replay it to THIS mount — otherwise its ready-state (and safety-net timer)
+  // would never resolve and it would wrongly fall back to the flat boat.
+  if (scene) {
+    if (sceneReady && handlers.onReady) handlers.onReady()
+    return scene
+  }
   const c = ensureCanvas()
   if (!createFn) createFn = (await import('./glassOrbScene')).default
-  if (canvasEl !== c || scene) return scene // detached/replaced or built meanwhile
-  scene = createFn(c, {
-    ...sceneOpts,
-    onReady: () => handlers.onReady && handlers.onReady(),
-    onMorph: (m) => handlers.onMorph && handlers.onMorph(m),
-    onClick: () => handlers.onClick && handlers.onClick(),
-  })
+  if (canvasEl !== c || scene) { // detached/replaced or built meanwhile
+    if (scene && sceneReady && handlers.onReady) handlers.onReady()
+    return scene
+  }
+  try {
+    scene = createFn(c, {
+      ...sceneOpts,
+      onReady: () => { sceneReady = true; if (handlers.onReady) handlers.onReady() },
+      onMorph: (m) => handlers.onMorph && handlers.onMorph(m),
+      onClick: () => handlers.onClick && handlers.onClick(),
+    })
+  } catch (err) {
+    // Scene/renderer construction failed (e.g. no WebGL2, which THREE 0.180
+    // requires). Remove the body-level canvas we just appended so the flat-boat
+    // fallback isn't layered under a dead, invisible node, then rethrow so
+    // MainView's .catch flips to the flat boat.
+    if (canvasEl === c) { c.remove(); canvasEl = null }
+    scene = null
+    throw err
+  }
   if (!resizeBound) {
     window.addEventListener('resize', resize)
     resizeBound = true
@@ -121,6 +143,7 @@ function detach() {
     try { scene.dispose() } catch { /* already gone */ }
     scene = null
   }
+  sceneReady = false
   if (canvasEl) {
     canvasEl.remove()
     canvasEl = null

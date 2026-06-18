@@ -177,12 +177,17 @@ export default function createGlassOrbScene(
     onMorph,
   }
 ) {
-  const renderer = new THREE.WebGLRenderer({
-    canvas,
-    antialias: true,
-    alpha: true,
-    powerPreference: 'high-performance',
-  })
+  // Prefer the discrete GPU, but some configs (dual-GPU laptops, blocklisted or
+  // remote Windows drivers) refuse 'high-performance' and throw. Retry with the
+  // browser's default adapter before giving up, so a refusal degrades to a working
+  // orb rather than the flat boat. A genuine no-WebGL2 browser still throws here →
+  // caught by orbOverlay.attach → MainView flips to the flat boat.
+  let renderer
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' })
+  } catch {
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
+  }
   const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2)
   renderer.setPixelRatio(dpr)
   renderer.setSize(canvas.clientWidth, canvas.clientHeight, false)
@@ -584,6 +589,21 @@ export default function createGlassOrbScene(
   }
   document.addEventListener('visibilitychange', onVisibility)
 
+  // ---------- WebGL context loss / restore ----------
+  // iOS Safari aggressively drops WebGL contexts under memory pressure or tab
+  // backgrounding; without this the orb canvas goes permanently blank. preventDefault
+  // lets the browser restore the context; we pause the loop while it's gone and
+  // re-upload the dynamic page texture + re-run the fade-in once it returns.
+  const onContextLost = (e) => { e.preventDefault(); stop() }
+  const onContextRestored = () => {
+    pageTex.needsUpdate = true
+    drawBase()
+    readyAt = performance.now()
+    if (started && !disposed && !document.hidden && !morphFrozen) start()
+  }
+  canvas.addEventListener('webglcontextlost', onContextLost, false)
+  canvas.addEventListener('webglcontextrestored', onContextRestored, false)
+
   // boot once the photo is decoded (the boat GIF streams in independently)
   function boot() {
     if (disposed || started) return
@@ -628,6 +648,8 @@ export default function createGlassOrbScene(
     stop()
     clearTimeout(preloadTimer)
     document.removeEventListener('visibilitychange', onVisibility)
+    canvas.removeEventListener('webglcontextlost', onContextLost)
+    canvas.removeEventListener('webglcontextrestored', onContextRestored)
     window.removeEventListener('pointermove', onMove)
     window.removeEventListener('pointerdown', onDown)
     window.removeEventListener('pointerup', onUp)

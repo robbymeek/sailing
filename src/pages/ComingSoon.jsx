@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import STOPS from '../data/campaignStops'
 import createGlobeScene from '../lib/globeScene'
+import { hasWebGL2 } from '../lib/webglSupport'
 import Footer from '../components/Footer'
 import useCountdown from '../hooks/useCountdown'
 import usePageEntrance from '../hooks/usePageEntrance'
@@ -151,15 +152,6 @@ function computeScroll() {
   }
 }
 
-function hasWebGL() {
-  try {
-    const c = document.createElement('canvas')
-    return !!(c.getContext('webgl2') || c.getContext('webgl'))
-  } catch {
-    return false
-  }
-}
-
 // seamless: arrived via the home orb→globe morph. The body-level orb overlay is
 // already showing the finished globe, so this page's globe must paint opaque from
 // the first frame (no 1.2s black-in) and relay onReady up so the overlay dissolves.
@@ -167,7 +159,7 @@ export default function ComingSoon({ onNavigate, seamless = false, onGlobeReady 
   // Fallback gate: reduced motion, no WebGL, or the renderer failing to boot
   // (some environments pass the context probe but refuse a real context).
   const [useFallback, setUseFallback] = useState(
-    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches || !hasWebGL()
+    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches || !hasWebGL2()
   )
   return useFallback ? (
     <StaticTimeline onNavigate={onNavigate} />

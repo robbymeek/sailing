@@ -56,12 +56,15 @@ function makeGlowTexture() {
 // ---------- factory ----------
 // frames: [{ lat, lng, isFinale }]  (one per waypoint, in tour order)
 export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, onReady, getProgress, seamless = false }) {
-  const renderer = new THREE.WebGLRenderer({
-    canvas,
-    antialias: true,
-    alpha: true,
-    powerPreference: 'high-performance',
-  })
+  // Prefer the discrete GPU, but retry with the default adapter if a config
+  // refuses 'high-performance' (mirrors glassOrbScene), so a refusal degrades to a
+  // working globe rather than the static timeline.
+  let renderer
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' })
+  } catch {
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
+  }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2))
   renderer.setSize(canvas.clientWidth, canvas.clientHeight, false)
 
@@ -319,6 +322,13 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
     start()
   }
 
+  // WebGL context loss/restore (iOS Safari drops contexts under memory pressure):
+  // preventDefault to allow restoration, pause the loop while gone, resume on return.
+  const onContextLost = (e) => { e.preventDefault(); stop() }
+  const onContextRestored = () => { if (texturesReady && !disposed && !document.hidden) start() }
+  canvas.addEventListener('webglcontextlost', onContextLost, false)
+  canvas.addEventListener('webglcontextrestored', onContextRestored, false)
+
   function resize() {
     const w = canvas.clientWidth
     const h = Math.max(1, canvas.clientHeight)
@@ -333,6 +343,8 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
     disposed = true
     stop()
     document.removeEventListener('visibilitychange', onVisibility)
+    canvas.removeEventListener('webglcontextlost', onContextLost)
+    canvas.removeEventListener('webglcontextrestored', onContextRestored)
     scene.traverse((obj) => {
       if (obj.geometry) obj.geometry.dispose()
       if (obj.material) {

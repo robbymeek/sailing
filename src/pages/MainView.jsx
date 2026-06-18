@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import useCountdown from '../hooks/useCountdown'
 import orbOverlay from '../lib/orbOverlay'
+import { hasWebGL2 } from '../lib/webglSupport'
 import { introPhotos } from '../assets/home-intro'
 // Rest-state background: the portrait sailing shot, shown nearly black under the
 // overlay — and refracted, with the boat, inside the glass orb.
@@ -8,22 +9,20 @@ import hikingBg from '../assets/home-intro/img-5957.jpg'
 
 const BASE = import.meta.env.BASE_URL
 const BOAT_SIZE = 200
+// If the orb scene never signals ready by here, flip to the flat boat rather than
+// leave a permanently blank orb (e.g. the background photo load hangs, or a real
+// context is refused after the cheap probe passed). This is a true-hang BACKSTOP,
+// not a slow-load tripwire: onReady normally fires <1s, the orb isn't shown until
+// the intro reaches 'rest' (~4.4s), and the orb only runs on desktop — so 10s
+// comfortably clears even a ~0.5 Mbps connection loading the 561KB photo.
+const ORB_READY_TIMEOUT_MS = 10000
 
 // Module-level flag: the cinematic intro plays once per JS bundle
 // initialization (hard refresh) and is skipped on SPA navigation back
 // to /. No storage APIs — this lives for the tab's lifetime only.
 let introHasPlayed = false
 
-// Cheap WebGL probe (mirrors ComingSoon). Some environments pass this but still
-// refuse a real context — the scene mount is wrapped in try/catch for that.
-function hasWebGL() {
-  try {
-    const c = document.createElement('canvas')
-    return !!(c.getContext('webgl2') || c.getContext('webgl'))
-  } catch {
-    return false
-  }
-}
+// WebGL2 capability gate lives in ../lib/webglSupport (shared with ComingSoon).
 
 export default function MainView({ onNavigate, hoverNavOpen, skipIntro, embedded }) {
   const target = new Date('2028-07-14T00:00:00')
@@ -72,10 +71,10 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
 
   // The glass orb (desktop) refracts the page behind it — the dark photo + the
   // spinning boat. Needs WebGL + motion; skipped in the mobile embedded home and
-  // for reduced-motion/no-WebGL, which keep the original DOM boat. Computed ONCE
-  // (lazy) — hasWebGL() spins up a throwaway context, never run every render.
+  // for reduced-motion/no-WebGL2, which keep the original DOM boat. Computed ONCE
+  // (lazy) — hasWebGL2() spins up a throwaway context, never run every render.
   const [useOrb] = useState(
-    () => !embedded && !prefersReducedMotion && hasWebGL()
+    () => !embedded && !prefersReducedMotion && hasWebGL2()
   )
   const boatImgRef = useRef(null)
   const [orbReady, setOrbReady] = useState(false)
@@ -92,6 +91,17 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
   // the Home → Coming Soon route swap for the seamless morph handoff.
   useEffect(() => {
     if (!useOrb) return undefined
+    // Safety net: a thrown context rejects the attach() promise (handled below),
+    // but a scene that simply never signals onReady would leave a blank orb with
+    // no fallback. Flip to the flat boat if ready hasn't fired in time. Mirrors
+    // the Coming Soon overlay's net in App.jsx. Cleared the instant onReady fires.
+    let readyFired = false
+    const safety = setTimeout(() => {
+      if (readyFired) return
+      // eslint-disable-next-line no-console
+      console.warn('[HomeIntro] glass orb never became ready, using flat boat')
+      setOrbFailed(true)
+    }, ORB_READY_TIMEOUT_MS)
     orbOverlay
       .attach({
         isMobile: window.innerWidth < 700,
@@ -102,15 +112,17 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
         boatSize: BOAT_SIZE,
         orbDiameterPx: BOAT_SIZE * 1.3, // orb ≈ 130% of the sailboat height
         prefersReducedMotion,
-        onReady: () => setOrbReady(true),
+        onReady: () => { readyFired = true; clearTimeout(safety); setOrbReady(true) },
         onMorph: (m) => setMorph(m),
         onClick: () => beginMorphRef.current(),
       })
       .catch((err) => {
+        clearTimeout(safety)
         console.warn('[HomeIntro] glass orb failed to init, using flat boat', err)
         setOrbFailed(true)
       })
     return () => {
+      clearTimeout(safety)
       // Keep the overlay alive across a fromOrb nav (the morph handoff needs it);
       // otherwise tear it down — but DEFERRED, so a StrictMode remount cancels it.
       if (!orbOverlay.holding) orbOverlay.requestDetach()
@@ -263,6 +275,24 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
   useEffect(() => {
     if (morph === 0) orbOverlay.setVisible(showOrb && orbReady && phase === 'rest')
   }, [showOrb, orbReady, phase, morph])
+
+  // Cross-device diagnostics: exposes the orb's own gating decision (which the
+  // external BrowserStack probe can't see) on window.__ORB_DEBUG__. Gated to dev
+  // builds and ?debug=1 only, so production stays clean.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!import.meta.env.DEV && !/[?&]debug=1/.test(window.location.search)) return
+    window.__ORB_DEBUG__ = {
+      embedded: !!embedded,
+      reducedMotion: prefersReducedMotion,
+      useOrb,
+      orbFailed,
+      orbReady,
+      showOrb,
+      phase,
+      morph: Math.round(morph * 100) / 100,
+    }
+  }, [embedded, prefersReducedMotion, useOrb, orbFailed, orbReady, showOrb, phase, morph])
 
   // Keep the click + navigate handlers current (they read uiVisible / onNavigate).
   beginMorphRef.current = () => {

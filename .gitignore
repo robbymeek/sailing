@@ -2,3 +2,11 @@ node_modules
 dist
 .DS_Store
 *.local
+
+# BrowserStack harness — secrets + generated artifacts
+browserstack/.env
+browserstack/node_modules
+browserstack/screenshots
+browserstack/report.json
+browserstack/report.md
+browserstack/*.log

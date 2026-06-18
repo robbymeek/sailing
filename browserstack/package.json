@@ -1,0 +1,17 @@
+{
+  "name": "robbysailing-browserstack",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Cross-device verification harness (BrowserStack Automate + Local) for the home glass orb. Confirms which devices render the LIVE orb vs the flat-boat fallback, and dumps per-device WebGL/codec capabilities.",
+  "scripts": {
+    "test": "node run.js",
+    "test:deployed": "node run.js --url https://robbysailing.com",
+    "test:local": "node run.js --local --serve",
+    "report": "node -e \"console.log(require('fs').readFileSync('report.md','utf8'))\""
+  },
+  "dependencies": {
+    "browserstack-local": "^1.5.6",
+    "selenium-webdriver": "^4.27.0"
+  }
+}
