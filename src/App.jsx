@@ -477,6 +477,7 @@ export default function App() {
               <ComingSoon
                 onNavigate={go}
                 seamless={fromOrb}
+                fromBiography={location.state?.from === 'Biography'}
                 onGlobeReady={() => { if (orbOverlay.holding) orbOverlay.crossfadeOut(250); blackBridge.fadeOut(500) }}
               />
             </Suspense>

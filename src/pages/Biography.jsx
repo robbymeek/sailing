@@ -9,6 +9,7 @@ import exitHome from '../assets/home-intro/img-5854.jpg'
 import exitPath from '../assets/home-intro/img-5956.jpg'
 import exitSupport from '../assets/home-intro/img-5866.jpg'
 import exitContact from '../assets/home-intro/p1177244.jpeg'
+import ctaBg from '../assets/home-intro/img-8856.jpg'
 
 const BASE = import.meta.env.BASE_URL
 
@@ -29,11 +30,8 @@ const REGATTAS = [
     past: true,
   },
   {
-    date: '20 JUL', month: 'JUL',
-    status: 'UPCOMING',
-    name: 'San Pedro OCR',
-    league: 'Olympic Classes',
-    location: 'Los Angeles, CA',
+    // Centre card is the "Road to LA 2028" promo → the Coming Soon tour (see ComingSoonCard).
+    comingSoon: true,
     current: true,
   },
   {
@@ -58,6 +56,75 @@ const PRESS = [
   { t: 'Olympic Class Racing Season Opens With Eyes on LA', u: 'https://www.sailingworld.com/racing/olympic-class-racing-season-opens-with-eyes-on-la/' },
 ]
 
+
+// Centre regatta card, repurposed as a chrome "Road to LA 2028" promo: a sailing
+// photo fades in from the bottom (transparent up top), chrome shimmer text, and a
+// tap sends people to the Coming Soon tour.
+function ComingSoonCard({ isMid, isMobile, onNavigate, img }) {
+  const [hover, setHover] = useState(false)
+  const imgFade = 'linear-gradient(to bottom, transparent 8%, #000 58%)'
+  return (
+    <div
+      className="bio-regatta-card"
+      onClick={() => onNavigate('Coming Soon', { from: 'Biography' })}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        cursor: 'pointer', background: 'rgb(18,0,120)',
+        flex: isMid ? '1.2 1 0' : '1 1 0', minWidth: 0,
+        minHeight: isMid ? 480 : 320,
+        position: 'relative', overflow: 'hidden',
+        display: 'flex', flexDirection: 'column',
+        transition: 'transform 0.25s ease',
+        transform: hover && !isMobile ? 'translateY(-4px)' : 'none',
+      }}
+    >
+      {/* sailing photo, fading up to transparent so the top stays the blue card */}
+      <img
+        src={img}
+        alt=""
+        aria-hidden="true"
+        style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          objectFit: 'cover', objectPosition: '70% center', // frame the USA 211414 sail
+          WebkitMaskImage: imgFade, maskImage: imgFade,
+          transform: hover ? 'scale(1.06)' : 'scale(1)',
+          transition: 'transform 0.6s ease',
+        }}
+      />
+      {/* bottom scrim so the chrome CTA reads over the photo */}
+      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '45%', background: 'linear-gradient(to top, rgba(0,0,0,0.72), transparent)' }} />
+
+      <div style={{
+        position: 'relative', zIndex: 1, flex: 1,
+        padding: isMobile ? '14px 12px' : '22px 18px',
+        display: 'flex', flexDirection: 'column',
+      }}>
+        <div style={{
+          color: 'rgba(255,255,255,0.8)', fontWeight: 700,
+          fontSize: isMobile ? 8 : 11, letterSpacing: '2px', textTransform: 'uppercase',
+          marginBottom: isMobile ? 6 : 12,
+        }}>
+          Coming Soon
+        </div>
+        <h3 className="chrome-text" style={{
+          fontSize: isMobile ? 15 : 26, fontWeight: 800, letterSpacing: '-0.6px',
+          lineHeight: 1.08, margin: 0,
+        }}>
+          The Road to LA 2028
+        </h3>
+        <div style={{ marginTop: 'auto' }}>
+          <span className="chrome-text" style={{
+            fontSize: isMobile ? 11 : 15, fontWeight: 700, letterSpacing: '0.2px',
+            textShadow: '0 2px 12px rgba(0,0,0,0.85)',
+          }}>
+            Click here to learn more →
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function Biography({ onNavigate, scrollOffsetRef }) {
   const [selectedEvent, setSelectedEvent] = useState(null)
@@ -215,6 +282,9 @@ export default function Biography({ onNavigate, scrollOffsetRef }) {
         >
           {REGATTAS.map((r, i) => {
             const isMid = r.current
+            if (r.comingSoon) {
+              return <ComingSoonCard key={i} isMid={isMid} isMobile={isMobile} onNavigate={onNavigate} img={ctaBg} />
+            }
             return (
             <div key={i} className="bio-regatta-card" onClick={() => eventsRef.current?.scrollIntoView({ behavior: 'smooth' })} style={{
               cursor: 'pointer',

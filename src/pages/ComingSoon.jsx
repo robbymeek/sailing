@@ -211,7 +211,7 @@ function computeScroll() {
 // seamless: arrived via the home orb→globe morph. The body-level orb overlay is
 // already showing the finished globe, so this page's globe must paint opaque from
 // the first frame (no 1.2s black-in) and relay onReady up so the overlay dissolves.
-export default function ComingSoon({ onNavigate, seamless = false, onGlobeReady }) {
+export default function ComingSoon({ onNavigate, seamless = false, onGlobeReady, fromBiography = false }) {
   // Fallback gate: reduced motion, no WebGL, or the renderer failing to boot
   // (some environments pass the context probe but refuse a real context).
   const [useFallback, setUseFallback] = useState(
@@ -230,6 +230,7 @@ export default function ComingSoon({ onNavigate, seamless = false, onGlobeReady 
       onNavigate={onNavigate}
       seamless={seamless}
       onGlobeReady={onGlobeReady}
+      fromBiography={fromBiography}
       onSceneFail={() => setUseFallback(true)}
     />
   )
@@ -237,7 +238,7 @@ export default function ComingSoon({ onNavigate, seamless = false, onGlobeReady 
 
 // ---------- scroll-driven globe tour ----------
 
-function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail }) {
+function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiography }) {
   const canvasRef = useRef(null)
   const [ready, setReady] = useState(false)
   const [card, setCard] = useState({ stopIndex: 0, opacity: 0, prog: 0, showLabel: false, label: '', labelKey: 0 })
@@ -246,6 +247,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail }) {
   const [isMobile] = useState(() => window.innerWidth < 700)
   const [playing, setPlaying] = useState(false)
   const [dragging, setDragging] = useState(false)
+  const [docked, setDocked] = useState(false) // "Back to Biography" docks to the top once scrolled past the nav
   const draggingRef = useRef(false)
 
   // Drag the rail sailboat → scrub the tour. Map the pointer's Y within the rail to a
@@ -384,6 +386,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail }) {
         )
         setHeroDone(p.heroT > 0.6)
         setFinaleT(p.finaleT)
+        setDocked(window.scrollY > 48)
       })
     }
     onScroll()
@@ -427,6 +430,11 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail }) {
       <div style={{ height: `${TOTAL_VH}vh` }} />
 
       <Hero visible={!heroDone} seamless={seamless} />
+
+      {/* "Back to Biography" — only when arriving from the Biography page. Sits below
+          the nav at the top, docks up with a little padding once scrolled, and fades
+          out at the finale so the sticky LA 2028 header takes the top spot. */}
+      {fromBiography && <BackButton onNavigate={onNavigate} docked={docked} finaleT={finaleT} />}
 
       {/* progress rail (desktop) — one clickable dot per stop; click flies the globe
           there (last dot = jump to the LA 2028 end). Hover reveals the stop label. */}
@@ -643,6 +651,34 @@ function RailDot({ top, name, dates, active, done, onClick }) {
           {name} <span style={{ color: 'rgba(255,255,255,0.5)' }}>· {dates}</span>
         </span>
       )}
+    </button>
+  )
+}
+
+// "Back to Biography" pill — centered at the top (below the nav), docks up with a
+// little padding once scrolled, fades out as the LA 2028 finale header takes over.
+function BackButton({ onNavigate, docked, finaleT }) {
+  const [hover, setHover] = useState(false)
+  return (
+    <button
+      onClick={() => onNavigate('Biography')}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        position: 'fixed', top: docked ? 20 : 74, left: '50%', transform: 'translateX(-50%)',
+        zIndex: 6,
+        opacity: 1 - Math.min(1, finaleT * 2),
+        pointerEvents: finaleT > 0.4 ? 'none' : 'auto',
+        transition: 'top 0.35s ease, opacity 0.35s ease, background 0.2s ease, border-color 0.2s ease',
+        background: hover ? 'rgba(20,24,40,0.82)' : 'rgba(10,12,20,0.55)',
+        border: `1px solid ${hover ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.28)'}`,
+        borderRadius: 100, color: '#fff', padding: '9px 20px',
+        fontSize: 13.5, fontWeight: 600, letterSpacing: '0.3px',
+        fontFamily: 'inherit', cursor: 'pointer',
+        backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', whiteSpace: 'nowrap',
+      }}
+    >
+      ← Back to Biography
     </button>
   )
 }

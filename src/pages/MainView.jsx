@@ -6,6 +6,9 @@ import { introPhotos } from '../assets/home-intro'
 // Rest-state background: the portrait sailing shot, shown nearly black under the
 // overlay — and refracted, with the boat, inside the glass orb.
 import hikingBg from '../assets/home-intro/img-5957.jpg'
+// Lightweight (733×1100, ~108KB) version of the same shot for the mobile home
+// background — the full-res photo is only needed for the desktop orb's refraction.
+import hikingBgMobile from '../assets/home-intro/img-5957-mobile.jpg'
 import BakedOrb, { BAKED_ORB_READY } from '../components/BakedOrb'
 import blackBridge from '../lib/blackBridge'
 
@@ -403,9 +406,10 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
     }}>
       {/* Rest-state background — hiking shot, sits under everything and only
           shows through the near-black overlay once the intro settles. Toggled
-          while hidden behind the fully-black overlay, so no visible pop. */}
+          while hidden behind the fully-black overlay, so no visible pop. On mobile
+          the orb reveals it around the edges (see BakedOrb revealBackground). */}
       <img
-        src={hikingBg}
+        src={embedded ? hikingBgMobile : hikingBg}
         alt=""
         aria-hidden="true"
         style={{
@@ -472,9 +476,23 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
           opacity: boatVisible ? 1 : 0, transition: 'opacity 0.8s ease',
           pointerEvents: uiVisible ? 'auto' : 'none',
         }}>
+          {/* Mobile: an evenly-faded sailing photo sits behind the orb, in the SAME
+              layer so the orb's screen-blend lands on it (drops the video's black). */}
+          {embedded && (
+            <>
+              <img
+                src={hikingBgMobile}
+                alt=""
+                aria-hidden="true"
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+              <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)' }} />
+            </>
+          )}
           <BakedOrb
             ref={bakedRef}
             prefersReducedMotion={prefersReducedMotion}
+            revealBackground={embedded}
             onMorphEnd={() => {
               // morph ends on the globe → fade the rest of the home to black but KEEP
               // the globe (the bridge shows the globe-on-black poster), then swap routes

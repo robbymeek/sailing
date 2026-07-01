@@ -64,7 +64,7 @@ const HOVER_EASE = 0.12
 //   style               merged onto the full-bleed container
 //   ref.begin()         start the morph imperatively (MainView click-anywhere)
 const BakedOrb = forwardRef(function BakedOrb(
-  { onMorphEnd, prefersReducedMotion = false, style },
+  { onMorphEnd, prefersReducedMotion = false, style, revealBackground = false },
   ref
 ) {
   const [morphing, setMorphing] = useState(false)
@@ -141,8 +141,13 @@ const BakedOrb = forwardRef(function BakedOrb(
 
   const box = {
     position: 'relative', width: '100%', height: '100%',
-    background: '#000', overflow: 'hidden', cursor: 'pointer',
+    background: revealBackground ? 'transparent' : '#000',
+    overflow: 'hidden', cursor: 'pointer',
     transformOrigin: 'center center', willChange: 'transform',
+    // Reveal a background photo behind the orb (mobile): screen-blend so the video's
+    // black field drops out and the orb sits over the (evenly-faded) photo. Dropped
+    // during the morph so the growing globe blacks the screen out for the handoff.
+    ...(revealBackground && !morphing ? { mixBlendMode: 'screen' } : {}),
     ...style,
   }
   const layer = (extra) => ({

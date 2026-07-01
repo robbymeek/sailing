@@ -71,22 +71,34 @@ function ExitCard({ label, page, img, desc, onNavigate, index, count }) {
   )
 }
 
-// Mobile card — a plain full-width image tile.
-function ExitCardSimple({ label, page, img, desc, onNavigate }) {
+// Mobile card — a full-width image tile with SHARP slanted left/right edges
+// (a parallelogram), the lean ALTERNATING down the stack (╱, ╲, ╱, ╲ …).
+const MSLANT = 32
+function mClip(index) {
+  const S = `${MSLANT}px`
+  return index % 2 === 0
+    ? `polygon(${S} 0, 100% 0, calc(100% - ${S}) 100%, 0 100%)` // ╱ lean
+    : `polygon(0 0, calc(100% - ${S}) 0, 100% 100%, ${S} 100%)` // ╲ lean
+}
+
+function ExitCardSimple({ label, page, img, desc, onNavigate, index }) {
+  const clip = mClip(index)
   return (
     <button
       onClick={() => onNavigate(page)}
       style={{
-        position: 'relative', height: 96, borderRadius: 12, overflow: 'hidden',
+        position: 'relative', height: 104, overflow: 'hidden',
         cursor: 'pointer', padding: 0, textAlign: 'left', background: '#111',
-        border: '1px solid rgba(255,255,255,0.12)', width: '100%',
+        width: '100%', border: 'none',
+        clipPath: clip, WebkitClipPath: clip,
       }}
     >
       <img src={img} alt="" aria-hidden="true" style={{
-        position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.6)',
+        position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.58)',
       }} />
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.35) 100%)' }} />
-      <div style={{ position: 'absolute', left: 16, bottom: 14, top: 14, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 100%)' }} />
+      {/* label inset past both slanted edges so it never clips */}
+      <div style={{ position: 'absolute', left: MSLANT + 14, right: MSLANT + 14, top: 0, bottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <span style={{ color: '#fff', fontSize: 17, fontWeight: 700, letterSpacing: '-0.3px' }}>{label} →</span>
         <span style={{ display: 'block', color: 'rgba(255,255,255,0.65)', fontSize: 12, marginTop: 3 }}>{desc}</span>
       </div>
@@ -98,8 +110,8 @@ export default function ExitNav({ links, onNavigate, isMobile }) {
   if (isMobile) {
     return (
       <div style={{ maxWidth: 460, margin: '0 auto', padding: '0 20px', display: 'grid', gap: 12 }}>
-        {links.map((l) => (
-          <ExitCardSimple key={l.page} {...l} onNavigate={onNavigate} />
+        {links.map((l, i) => (
+          <ExitCardSimple key={l.page} {...l} onNavigate={onNavigate} index={i} />
         ))}
       </div>
     )
