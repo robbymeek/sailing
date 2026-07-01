@@ -72,6 +72,13 @@ const CLICK_PX = 6
 const CLICK_MS = 350
 const COMP_MAX_W = 1600 // cap the composite resolution for performance
 
+// ---------- cursor-proximity scale ----------
+// The orb (and the boat inside it) grow as the cursor approaches the orb's screen
+// centre, and ease back to rest size as it moves away. Pure feel — tune freely.
+const HOVER_MAX_SCALE = 1.32 // orb size (× rest) when the cursor is right on it
+const HOVER_INFLUENCE_PX = 360 // cursor distance (px) past which it's back to rest
+const HOVER_EASE = 0.12 // per-frame easing toward the target scale (springiness)
+
 // ---------- morph (glass orb → Coming Soon globe) ----------
 const MORPH_MS = 3200
 const HERO_LAT = 10
@@ -312,7 +319,8 @@ export default function createGlassOrbScene(
         const bs = orbDiaPx * boatFrac * TUNE.boatZoom * scale
         compCtx.drawImage(src, cx * scale - bs / 2, cy * scale - bs / 2, bs, bs)
       } else {
-        const bs = boatSize * TUNE.boatZoom * scale
+        // boat grows with the orb (hoverScale) so the lens magnifies as one piece
+        const bs = boatSize * hoverScale * TUNE.boatZoom * scale
         compCtx.drawImage(src, (w - bs) / 2, (h - bs) / 2, bs, bs)
       }
     }
@@ -358,11 +366,16 @@ export default function createGlassOrbScene(
   // Scale the radius-1 sphere so its on-screen diameter is exactly orbDiameterPx
   // (so the orb frames the boat instead of filling the viewport). Derived from
   // the perspective projection at the sphere's depth; recomputed on resize.
+  // orbBaseScale = the rest size from the perspective fit; hoverScale eases
+  // 1→HOVER_MAX_SCALE with cursor proximity and is applied on top every frame
+  // (see the render loop). Split so a resize recomputes the base without losing hover.
+  let orbBaseScale = 1
+  let hoverScale = 1
   function applyOrbScale() {
     const h = Math.max(1, canvas.clientHeight)
     const halfV = THREE.MathUtils.degToRad(FOV / 2)
-    const sc = (orbDiameterPx * baseZ * Math.tan(halfV)) / h
-    orb.scale.setScalar(sc)
+    orbBaseScale = (orbDiameterPx * baseZ * Math.tan(halfV)) / h
+    orb.scale.setScalar(orbBaseScale * hoverScale)
   }
   applyOrbScale()
 
@@ -507,7 +520,7 @@ export default function createGlassOrbScene(
   // ---------- interaction ---------- (a fixed centered lens: subtle cursor lean
   // + click; spinning a symmetric lens over a screen-fixed page does nothing, so
   // there's no drag-spin — the motion is the boat refracting behind it)
-  const state = { px: 0, py: 0, tx: 0, ty: 0, downX: 0, downY: 0, downT: 0, moved: 0, down: false }
+  const state = { px: 0, py: 0, tx: 0, ty: 0, cx: -1e6, cy: -1e6, downX: 0, downY: 0, downT: 0, moved: 0, down: false }
   const raycaster = new THREE.Raycaster()
   const ndc = new THREE.Vector2()
   function hitsOrb(e) {
@@ -524,6 +537,8 @@ export default function createGlassOrbScene(
     const rect = canvas.getBoundingClientRect()
     state.tx = ((e.clientX - rect.left) / rect.width) * 2 - 1
     state.ty = ((e.clientY - rect.top) / rect.height) * 2 - 1
+    state.cx = e.clientX // raw cursor px → proximity scale (render loop)
+    state.cy = e.clientY
     if (state.down) state.moved += Math.abs(e.clientX - state.downX) + Math.abs(e.clientY - state.downY)
   }
   const onDown = (e) => { state.down = true; state.downX = e.clientX; state.downY = e.clientY; state.downT = performance.now(); state.moved = 0 }
@@ -532,7 +547,7 @@ export default function createGlassOrbScene(
     state.down = false
     if (performance.now() - state.downT < CLICK_MS && state.moved < CLICK_PX && onClick && hitsOrb(e)) onClick()
   }
-  const onLeave = () => { state.tx = 0; state.ty = 0 }
+  const onLeave = () => { state.tx = 0; state.ty = 0; state.cx = -1e6; state.cy = -1e6 } // park cursor far → orb eases back to rest
   // Listen on WINDOW, not the canvas: the canvas is a full-screen overlay set to
   // pointerEvents:none (so it never blocks the nav/links beneath it). The click
   // only acts when it actually hits the orb sphere (hitsOrb raycast); every other
@@ -561,6 +576,19 @@ export default function createGlassOrbScene(
       state.py += (state.ty - state.py) * TUNE.parallaxEase
       anchor.rotation.set(-state.py * TUNE.parallax, state.px * TUNE.parallax, 0)
       if (!prefersReducedMotion) {
+        // PROXIMITY SCALE: distance from cursor to the orb's screen centre drives a
+        // target size (rest → HOVER_MAX_SCALE), eased per frame so it grows/shrinks
+        // smoothly. The boat tracks hoverScale in composite() so the whole lens
+        // magnifies together rather than the boat appearing to shrink inside it.
+        const ocx = orbFracX * canvas.clientWidth
+        const ocy = orbFracY * Math.max(1, canvas.clientHeight)
+        const d = Math.hypot(state.cx - ocx, state.cy - ocy)
+        const t = THREE.MathUtils.clamp((HOVER_INFLUENCE_PX - d) / HOVER_INFLUENCE_PX, 0, 1)
+        const eased = t * t * (3 - 2 * t)
+        const targetScale = 1 + (HOVER_MAX_SCALE - 1) * eased
+        hoverScale += (targetScale - hoverScale) * HOVER_EASE
+        orb.scale.setScalar(orbBaseScale * hoverScale)
+
         const f = THREE.MathUtils.clamp((now - readyAt) / FADE_IN_MS, 0, 1)
         orbMat.uniforms.uFadeIn.value = f * f * (3 - 2 * f)
       }

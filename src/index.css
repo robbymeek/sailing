@@ -189,3 +189,8 @@ button {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
+
+/* Home orb: press the orb → the open "grab" hand closes to "grabbing" */
+.orb-grab:active {
+  cursor: grabbing;
+}

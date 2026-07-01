@@ -2,25 +2,31 @@ import { useState, useEffect, useRef } from 'react'
 import Nav from '../components/Nav'
 import Footer from '../components/Footer'
 import useCountdown from '../hooks/useCountdown'
+import EVENTS from '../data/events'
+import { EventRow, BridgeRow, EventModal } from '../components/eventUI'
+import ExitNav from '../components/ExitNav'
+import exitHome from '../assets/home-intro/img-5854.jpg'
+import exitPath from '../assets/home-intro/img-5956.jpg'
+import exitSupport from '../assets/home-intro/img-5866.jpg'
+import exitContact from '../assets/home-intro/p1177244.jpeg'
 
 const BASE = import.meta.env.BASE_URL
 
+const BIO_EXIT_LINKS = [
+  { label: 'Home', page: 'Home', img: exitHome, desc: 'Back to the start' },
+  { label: 'Path & Team', page: 'Path', img: exitPath, desc: 'The journey to LA 2028' },
+  { label: 'Support', page: 'Support', img: exitSupport, desc: 'Fund the campaign' },
+  { label: 'Contact', page: 'Contact', img: exitContact, desc: 'Get in touch' },
+]
+
 const REGATTAS = [
   {
-    date: '27 MAR', month: 'MAR',
-    status: 'FINISHED',
-    name: 'Trofeo Princesa Sofia',
-    league: 'Grand Slam',
-    location: 'Palma, Spain',
-    past: true,
-  },
-  {
     date: '16 MAY', month: 'MAY',
-    status: 'UPCOMING',
+    status: 'FINISHED',
     name: 'European Championships',
     league: 'Senior Europeans',
     location: 'Split, Croatia',
-    current: true,
+    past: true,
   },
   {
     date: '20 JUL', month: 'JUL',
@@ -28,6 +34,14 @@ const REGATTAS = [
     name: 'San Pedro OCR',
     league: 'Olympic Classes',
     location: 'Los Angeles, CA',
+    current: true,
+  },
+  {
+    date: '17 AUG', month: 'AUG',
+    status: 'UPCOMING',
+    name: 'World Championship',
+    league: 'Senior Worlds',
+    location: 'Dún Laoghaire, Ireland',
   },
 ]
 
@@ -44,244 +58,6 @@ const PRESS = [
   { t: 'Olympic Class Racing Season Opens With Eyes on LA', u: 'https://www.sailingworld.com/racing/olympic-class-racing-season-opens-with-eyes-on-la/' },
 ]
 
-const EVENTS = [
-  {
-    n: 'Upcoming: ILCA 7 Senior World Championship',
-    d: 'August 2026',
-    upcoming: true,
-    summary: 'The ILCA 7 Senior World Championship in Ireland. The pinnacle event of the ILCA 7 calendar, bringing together the best sailors in the world to compete for the world title.',
-    url: 'https://ilcasailing.org/',
-  },
-  {
-    n: 'Upcoming: San Pedro OCR',
-    d: 'July 2026',
-    upcoming: true,
-    summary: 'Olympic classes regatta in San Pedro on the LA 2028 Olympic venue waters. An important opportunity to race in the conditions and waters where the 2028 Olympic sailing events will be held.',
-  },
-  {
-    n: 'Upcoming: ILCA 7 European Championships',
-    d: 'May 2026',
-    upcoming: true,
-    summary: 'The ILCA 7 Senior European Championships in Split, Croatia. A critical event for fleet racing experience at the highest international level, bringing together top sailors from across Europe and beyond.',
-    url: 'https://eurilca.org/',
-  },
-  {
-    n: 'Trofeo Princesa Sofia: Palma',
-    d: 'March 2026',
-    summary: 'The 55th Trofeo Princesa Sofia in Palma de Mallorca, opening the 2026 Sailing Grand Slam season. One of the largest ILCA 7 fleets of the year with sailors from across all continents racing on the Bay of Palma.',
-    url: 'https://www.trofeoprincesasofia.org/en/default/races/race',
-  },
-  {
-    n: 'Miami Training Block',
-    d: 'November 2025',
-    summary: 'Intensive training block in Miami focused on boat speed, fitness, and race preparation with members of the US Sailing Team in Biscayne Bay conditions.',
-  },
-  {
-    n: 'Vilamoura Grand-Prix',
-    d: 'November 2025',
-    summary: 'International ILCA 7 grand-prix regatta in Vilamoura, Portugal. A high-level European fleet racing event with strong Atlantic Ocean conditions.',
-    url: 'https://www.vilamourasailing.com/events',
-  },
-  {
-    n: 'College Single-Handed National Championship \u{1F947}',
-    d: 'November 2025',
-    summary: 'The ICSA College Singlehanded National Championship hosted by Old Dominion University. Won the Open National Championship title representing Harvard.',
-    url: 'https://collegesailing.org/championships/national-championships',
-  },
-  {
-    n: 'Miami Training',
-    d: 'November 2025',
-    summary: 'Continuation of Miami-based training with focus on starts, upwind speed, and tactical decision-making in shifty bay conditions.',
-  },
-  {
-    n: 'ILCA 7 European Championship \u{1F4AA}',
-    d: 'August 2025',
-    summary: 'The ILCA 7 Senior European Championships in Marstrand, Sweden. I was really happy with my performance here among the best in the world. A great learning experience racing against the top fleet on the international stage.',
-    url: 'https://eurilca.org/2025-ilca-senior-european-championships-final-results/',
-  },
-  {
-    n: 'Long Beach Olympic Classes',
-    d: 'July 2025',
-    summary: 'ILCA 7 Olympic classes regatta on the 2028 Olympic venue waters in Long Beach, California. Critical for learning the local conditions ahead of LA 2028.',
-  },
-  {
-    n: 'Kiel Week',
-    d: 'June 2025',
-    summary: 'One of the world\'s largest and most prestigious sailing events, held annually in Kiel, Germany. Raced in the ILCA 7 fleet alongside world-class competition across all Olympic classes.',
-    url: 'https://www.kieler-woche.de/en/sailing.php',
-  },
-  {
-    n: 'ILCA 7 North American Championship \u{1F947}',
-    d: 'June 2025',
-    summary: 'The ILCA 7 North American Championship hosted by Alamitos Bay Yacht Club. Won the title of top North American in the 45-boat ILCA 7 fleet.',
-    url: 'https://ilcanasailing.org/major-regattas',
-  },
-  {
-    n: 'LA Training',
-    d: 'June 2025',
-    summary: 'Training in Los Angeles waters to build familiarity with the Olympic venue. Focused on the unique thermal breeze and current patterns of the LA coast.',
-  },
-]
-
-function EventRow({ event, isActive, onActivate }) {
-  const [hovered, setHovered] = useState(false)
-  const highlighted = hovered || isActive
-
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClick={() => onActivate()}
-      style={{
-        padding: highlighted ? '22px 20px' : '18px 0',
-        borderBottom: '1px solid rgba(255,255,255,0.1)',
-        cursor: 'pointer',
-        background: highlighted ? 'rgb(0,20,120)' : 'transparent',
-        borderRadius: 0,
-        margin: highlighted ? '4px -20px' : '0',
-        transition: 'all 0.25s ease',
-      }}
-    >
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      }}>
-        <span style={{
-          color: event.upcoming ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.75)',
-          fontSize: 14, fontWeight: event.upcoming ? 500 : 400,
-        }}>{event.n}</span>
-        <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, flexShrink: 0, marginLeft: 16 }}>{event.d}</span>
-      </div>
-    </div>
-  )
-}
-
-function EventModal({ event, onClose }) {
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 100,
-        background: 'rgba(0,0,0,0.7)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 20,
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: 'rgb(15,25,60)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: 8,
-          padding: '36px 40px',
-          maxWidth: 520,
-          width: '100%',
-        }}
-      >
-        <h2 style={{
-          color: '#fff', fontSize: 18, fontWeight: 600,
-          margin: '0 0 6px', letterSpacing: '-0.3px',
-        }}>
-          {event.n}
-        </h2>
-        <p style={{
-          color: 'rgba(255,255,255,0.35)', fontSize: 13,
-          margin: '0 0 20px',
-        }}>
-          {event.d}
-        </p>
-        <p style={{
-          color: 'rgba(255,255,255,0.75)', fontSize: 14,
-          lineHeight: 1.7, margin: '0 0 24px',
-        }}>
-          {event.summary}
-        </p>
-        <div style={{ display: 'flex', gap: 12 }}>
-          {event.url && (
-            <a
-              href={event.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                color: 'rgba(255,255,255,0.5)',
-                fontSize: 13, fontWeight: 400,
-                border: '1px solid rgba(255,255,255,0.15)',
-                padding: '8px 20px',
-                textDecoration: 'none',
-                borderRadius: 4,
-              }}
-            >
-              Event Page
-            </a>
-          )}
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none', border: '1px solid rgba(255,255,255,0.15)',
-              color: 'rgba(255,255,255,0.35)', fontSize: 13,
-              padding: '8px 20px', cursor: 'pointer',
-              borderRadius: 4,
-            }}
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function ExploreCard({ label, desc, isMobile, onClick }) {
-  const [hovered, setHovered] = useState(false)
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        flex: isMobile ? undefined : '1 1 0',
-        padding: isMobile ? '18px 20px' : '28px 28px',
-        fontSize: isMobile ? 14 : 15,
-        fontWeight: 500,
-        letterSpacing: '0.6px',
-        color: hovered ? '#fff' : 'rgba(255,255,255,0.75)',
-        background: 'transparent',
-        border: `1px solid ${hovered ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.18)'}`,
-        borderRadius: 6,
-        cursor: 'pointer',
-        transition: 'border-color 0.2s ease, color 0.2s ease, transform 0.2s ease',
-        transform: !isMobile && hovered ? 'translateY(-3px)' : 'none',
-        fontFamily: 'inherit',
-        textAlign: 'left',
-      }}
-    >
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 8,
-      }}>
-        <span>{label}</span>
-        <span style={{
-          fontSize: 14,
-          opacity: hovered ? 1 : 0,
-          transform: hovered ? 'translateX(0)' : 'translateX(-6px)',
-          transition: 'opacity 0.2s ease, transform 0.2s ease',
-          marginLeft: 12,
-        }}>→</span>
-      </div>
-      <span style={{
-        display: 'block',
-        fontSize: 12,
-        fontWeight: 400,
-        color: hovered ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.35)',
-        letterSpacing: '0px',
-        transition: 'color 0.2s ease',
-      }}>
-        {desc}
-      </span>
-    </button>
-  )
-}
 
 export default function Biography({ onNavigate, scrollOffsetRef }) {
   const [selectedEvent, setSelectedEvent] = useState(null)
@@ -301,7 +77,7 @@ export default function Biography({ onNavigate, scrollOffsetRef }) {
   }, [])
 
   const olympic = useCountdown(new Date('2028-07-14T00:00:00'))
-  const nextEvent = useCountdown(new Date('2026-05-16T00:00:00'))
+  const nextEvent = useCountdown(new Date('2026-07-20T00:00:00'))
 
   // Parallax: text moves faster than image, image moves faster than page
   // When embedded (scrollOffsetRef), subtract the container's top so
@@ -613,7 +389,7 @@ export default function Biography({ onNavigate, scrollOffsetRef }) {
                   whiteSpace: 'nowrap',
                 }}
               >
-                Next Event: European Championships, Split in {nextEvent.days} Days
+                Next Event: San Pedro OCR in {nextEvent.days} Days
               </p>
             </div>
 
@@ -625,6 +401,8 @@ export default function Biography({ onNavigate, scrollOffsetRef }) {
           {/* Events that scroll under the sticky header */}
           <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 40px 0' }}>
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+              {/* The chrome "door" into the future campaign tour, pinned to the top. */}
+              <BridgeRow onNavigate={onNavigate} />
               {EVENTS.slice(0, EVENTS.length - 4).map((e, i) => (
                 <EventRow
                   key={i}
@@ -654,43 +432,9 @@ export default function Biography({ onNavigate, scrollOffsetRef }) {
         )}
       </div>
 
-      {/* ===== EXPLORE MORE — between events and press ===== */}
-      <div style={{
-        background: '#000',
-        padding: isMobile ? '52px 24px' : '72px 40px',
-        textAlign: 'center',
-      }}>
-        <p style={{
-          color: 'rgba(255,255,255,0.3)',
-          fontSize: 11,
-          letterSpacing: '2.5px',
-          textTransform: 'uppercase',
-          marginBottom: isMobile ? 32 : 44,
-        }}>
-          Explore more
-        </p>
-        <div style={{
-          display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
-          gap: isMobile ? 12 : 16,
-          maxWidth: isMobile ? 320 : 760,
-          margin: '0 auto',
-          justifyContent: 'center',
-        }}>
-          {[
-            { label: 'Path & Team', page: 'Path', desc: 'The journey to LA 2028' },
-            { label: 'Support', page: 'Support', desc: 'Fund the campaign' },
-            { label: 'Contact', page: 'Contact', desc: 'Get in touch' },
-          ].map(({ label, page, desc }) => (
-            <ExploreCard
-              key={page}
-              label={label}
-              desc={desc}
-              isMobile={isMobile}
-              onClick={() => onNavigate(page)}
-            />
-          ))}
-        </div>
+      {/* ===== WHERE TO NEXT — parallelogram nav (between events and press) ===== */}
+      <div style={{ background: '#000', padding: isMobile ? '40px 0 52px' : '64px 0 84px' }}>
+        <ExitNav links={BIO_EXIT_LINKS} onNavigate={onNavigate} isMobile={isMobile} />
       </div>
 
       {/* ===== PRESS + FOOTER — black section ===== */}

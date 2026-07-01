@@ -1,0 +1,116 @@
+import { useState } from 'react'
+
+// ============================================================================
+//  ExitNav — image-backed "where to next" banner shared across page ends
+//  (Coming Soon tour, Event Calendar, Biography). Desktop: parallelogram cards
+//  that share a slanted seam (square outer edges) and enlarge + lift on hover.
+//  Mobile: plain stacked tiles (slanted-thin cards don't work on a phone).
+//
+//  Props: links = [{ label, page, img, desc }], onNavigate, isMobile
+// ============================================================================
+
+// Cards share a slanted seam; the leftmost/rightmost outer edges stay square.
+// Equal widths + a -SLANT left margin make the seams line up.
+const SLANT = 30
+function clipFor(index, count) {
+  const S = `${SLANT}px`
+  if (index === 0) return `polygon(0 0, 100% 0, calc(100% - ${S}) 100%, 0 100%)` // square left
+  if (index === count - 1) return `polygon(${S} 0, 100% 0, 100% 100%, 0 100%)` // square right
+  return `polygon(${S} 0, 100% 0, calc(100% - ${S}) 100%, 0 100%)` // parallelogram
+}
+
+// Desktop card — an image-backed parallelogram that enlarges + slides up above
+// its neighbours on hover.
+function ExitCard({ label, page, img, desc, onNavigate, index, count }) {
+  const [hover, setHover] = useState(false)
+  const clip = clipFor(index, count)
+  return (
+    <button
+      onClick={() => onNavigate(page)}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        position: 'relative', flex: '1 1 0', minWidth: 0, height: '100%',
+        marginLeft: index === 0 ? 0 : -SLANT,
+        clipPath: clip, WebkitClipPath: clip,
+        border: 'none', padding: 0, cursor: 'pointer', background: '#111',
+        textAlign: 'left',
+        zIndex: hover ? count + 1 : count - index, // hovered on top; else left-over-right
+        transform: hover ? 'translateY(-16px) scale(1.06)' : 'none',
+        transition: 'transform 0.3s cubic-bezier(0.2,0.7,0.2,1)',
+      }}
+    >
+      <img
+        src={img}
+        alt=""
+        aria-hidden="true"
+        style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
+          transform: hover ? 'scale(1.08)' : 'scale(1)',
+          filter: hover ? 'brightness(1)' : 'brightness(0.6)',
+          transition: 'transform 0.6s ease, filter 0.35s ease',
+        }}
+      />
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.32) 55%, rgba(0,0,0,0.06) 100%)',
+      }} />
+      {/* inset past the slanted edges so the label never gets clipped */}
+      <div style={{ position: 'absolute', left: SLANT + 6, right: SLANT + 6, bottom: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ color: '#fff', fontSize: 18, fontWeight: 700, letterSpacing: '-0.3px' }}>{label}</span>
+          <span style={{
+            color: '#fff', fontSize: 16,
+            opacity: hover ? 1 : 0, transform: hover ? 'translateX(0)' : 'translateX(-6px)',
+            transition: 'opacity 0.2s ease, transform 0.2s ease',
+          }}>→</span>
+        </div>
+        <span style={{ display: 'block', color: 'rgba(255,255,255,0.65)', fontSize: 12, marginTop: 4 }}>{desc}</span>
+      </div>
+    </button>
+  )
+}
+
+// Mobile card — a plain full-width image tile.
+function ExitCardSimple({ label, page, img, desc, onNavigate }) {
+  return (
+    <button
+      onClick={() => onNavigate(page)}
+      style={{
+        position: 'relative', height: 96, borderRadius: 12, overflow: 'hidden',
+        cursor: 'pointer', padding: 0, textAlign: 'left', background: '#111',
+        border: '1px solid rgba(255,255,255,0.12)', width: '100%',
+      }}
+    >
+      <img src={img} alt="" aria-hidden="true" style={{
+        position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.6)',
+      }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.35) 100%)' }} />
+      <div style={{ position: 'absolute', left: 16, bottom: 14, top: 14, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <span style={{ color: '#fff', fontSize: 17, fontWeight: 700, letterSpacing: '-0.3px' }}>{label} →</span>
+        <span style={{ display: 'block', color: 'rgba(255,255,255,0.65)', fontSize: 12, marginTop: 3 }}>{desc}</span>
+      </div>
+    </button>
+  )
+}
+
+export default function ExitNav({ links, onNavigate, isMobile }) {
+  if (isMobile) {
+    return (
+      <div style={{ maxWidth: 460, margin: '0 auto', padding: '0 20px', display: 'grid', gap: 12 }}>
+        {links.map((l) => (
+          <ExitCardSimple key={l.page} {...l} onNavigate={onNavigate} />
+        ))}
+      </div>
+    )
+  }
+  return (
+    <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 24px' }}>
+      <div style={{ display: 'flex', height: 210 }}>
+        {links.map((l, i) => (
+          <ExitCard key={l.page} {...l} onNavigate={onNavigate} index={i} count={links.length} />
+        ))}
+      </div>
+    </div>
+  )
+}
