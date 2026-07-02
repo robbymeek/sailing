@@ -7,11 +7,8 @@ import SailboatIcon from '../components/SailboatIcon'
 import ExitNav from '../components/ExitNav'
 import useCountdown from '../hooks/useCountdown'
 import usePageEntrance from '../hooks/usePageEntrance'
-// Exit-banner card imagery (bundled assets → always ship, unlike public/ files).
-import cardHome from '../assets/home-intro/img-8856.jpg'
-import cardBio from '../assets/home-intro/img-5957.jpg'
-import cardPath from '../assets/home-intro/img-5959.jpg'
-import cardSupport from '../assets/home-intro/p1233486-2.jpg'
+// Exit-banner cards — canonical definitions shared by every page's ExitNav.
+import { EXIT_CARDS } from '../components/exitCards'
 
 // Scroll choreography in viewport-height units. A "stop" is a card; a stop can
 // span several waypoints (e.g. Australia hopping Adelaide → Perth → Sydney),
@@ -212,6 +209,10 @@ function computeScroll() {
 // already showing the finished globe, so this page's globe must paint opaque from
 // the first frame (no 1.2s black-in) and relay onReady up so the overlay dissolves.
 export default function ComingSoon({ onNavigate, seamless = false, onGlobeReady, fromBiography = false }) {
+  // Capture seamless ONCE at mount: the flag is a one-shot hand-off signal that
+  // App consumes right after the route swap, so the prop can flip false while
+  // we're mounted — the staged reveal must keep the value it started with.
+  const [seamlessAtMount] = useState(seamless)
   // Fallback gate: reduced motion, no WebGL, or the renderer failing to boot
   // (some environments pass the context probe but refuse a real context).
   const [useFallback, setUseFallback] = useState(
@@ -228,7 +229,7 @@ export default function ComingSoon({ onNavigate, seamless = false, onGlobeReady,
   ) : (
     <GlobeTour
       onNavigate={onNavigate}
-      seamless={seamless}
+      seamless={seamlessAtMount}
       onGlobeReady={onGlobeReady}
       fromBiography={fromBiography}
       onSceneFail={() => setUseFallback(true)}
@@ -756,12 +757,7 @@ function TourControls({ tour, playing }) {
 // Fancy image-backed exit cards for the end of the tour — richer than the flat
 // Biography "explore" cards: a sailing photo per destination, dark scrim, and a
 // lift + zoom + royal-blue glow on hover.
-const EXIT_LINKS = [
-  { label: 'Home', page: 'Home', img: cardHome, desc: 'Back to the start' },
-  { label: 'Biography', page: 'Biography', img: cardBio, desc: 'The story so far' },
-  { label: 'Path & Team', page: 'Path', img: cardPath, desc: 'The journey & crew' },
-  { label: 'Support', page: 'Support', img: cardSupport, desc: 'Fuel the campaign' },
-]
+const EXIT_LINKS = [EXIT_CARDS.home, EXIT_CARDS.biography, EXIT_CARDS.path, EXIT_CARDS.support]
 
 function EndBlock({ onNavigate, isMobile }) {
   const { days, hrs, mins, secs } = useCountdown(new Date('2028-07-14T00:00:00'))

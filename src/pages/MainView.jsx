@@ -306,6 +306,56 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
     }
   }, [embedded, prefersReducedMotion, useOrb, orbFailed, orbReady, showOrb, phase, morph])
 
+  // Baked-orb path: the moment the user taps the orb, start pulling everything the
+  // Coming Soon page needs — the lazy route chunk (three.js + globe code are static
+  // imports of it) and the exact texture set buildEarth will request (-2k on phones),
+  // plus the curtain's globe poster. All land in the HTTP cache while the ~2.5s morph
+  // clip plays, so the globe's onReady fires almost immediately after the route swap
+  // instead of stalling the curtain on ~1.6MB of cold texture fetches.
+  // The baked morph can't report continuous progress like the live orb (which
+  // drives textOut via onMorph), so the instant it starts we fade the home UI out
+  // wholesale — otherwise the nav/countdown would sit on top of the growing orb.
+  const [bakedMorphOut, setBakedMorphOut] = useState(false)
+
+  // The bridge → Coming Soon navigation timer. Cancelled on unmount so a user who
+  // clicks a nav link mid-morph can't have their navigation overridden 480ms later.
+  const bridgeNavTimerRef = useRef(0)
+  useEffect(() => () => clearTimeout(bridgeNavTimerRef.current), [])
+
+  // Rest state on the baked path: quietly cache the curtain's 24KB globe poster so
+  // the morph-end fade never paints a black rectangle while it loads. Runs after
+  // the intro settles, so it never competes with the montage or the orb videos.
+  useEffect(() => {
+    if (showOrb || !BAKED_ORB_READY || !uiVisible) return
+    new Image().src = GLOBE_POSTER
+  }, [showOrb, uiVisible])
+
+  const warmedRef = useRef(false)
+  const warmComingSoon = () => {
+    setBakedMorphOut(true)
+    if (warmedRef.current) return
+    warmedRef.current = true
+    import('./ComingSoon').catch(() => {}) // warm only — the route's own lazy() surfaces real failures
+    new Image().src = GLOBE_POSTER // the curtain paints this; never let it flash black
+    // Textures only help the WebGL globe — reduced-motion / no-WebGL2 devices get
+    // the static timeline and must not pay ~1.6MB for nothing. Deferred + marked
+    // low priority so the morph clip's own buffering wins the first bandwidth.
+    if (prefersReducedMotion || !hasWebGL2()) return
+    const sfx = window.innerWidth < 700 ? '-2k' : ''
+    setTimeout(() => {
+      for (const f of [
+        `earth/earth-blue-marble${sfx}.jpg`,
+        `earth/earth-night${sfx}.jpg`,
+        'earth/earth-topology.png',
+        'earth/earth-water.png',
+      ]) {
+        const img = new Image()
+        img.fetchPriority = 'low'
+        img.src = `${BASE}${f}`
+      }
+    }, 500)
+  }
+
   // Keep the click + navigate handlers current (they read uiVisible / onNavigate).
   beginMorphRef.current = () => {
     if (!uiVisible || orbOverlay.holding) return // only at rest, once
@@ -314,7 +364,10 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
     import('./ComingSoon') // load Coming Soon ASAP so it's ready under the overlay
     orbOverlay.startMorph()
   }
-  navToRef.current = () => onNavigate('Coming Soon', { fromOrb: true })
+  // Stateless: the hand-off signal is orbOverlay.pendingFromOrb (set in beginMorph),
+  // which App consumes once — router state would persist on the history entry and
+  // replay the seamless arrival on every back/forward re-entry.
+  navToRef.current = () => onNavigate('Coming Soon')
 
   // Click-anywhere-to-enter (DESKTOP). Anywhere on the home that isn't an actual
   // control — the bottom-left nav, the LA 2028 corner, or the top hover banner
@@ -335,7 +388,10 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
 
   // As the morph grows the orb, the home text fades out and slides aside (early,
   // so the screen is clear before the orb is large). 0 → 1 across morph 0.08–0.32.
+  // The baked path has no continuous progress — it snaps textOut to 1 the moment
+  // its morph begins (the nav's 0.6s opacity transition supplies the fade).
   const textOut = (() => {
+    if (bakedMorphOut) return 1
     const t = Math.min(1, Math.max(0, (morph - 0.08) / 0.24))
     return t * t * (3 - 2 * t)
   })()
@@ -471,35 +527,46 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
       ) : BAKED_ORB_READY ? (
         // Phone path: the pixel-identical baked orb + morph (see BAKE.md). Full-bleed
         // so the morph can grow to fill the screen. Inert until the clips are baked.
+        // The morph clip runs ~2.5s — warmComingSoon() uses that window to pull the
+        // route chunk, the globe's textures, and the curtain poster into cache so the
+        // globe is ready (or nearly so) the moment the route swaps underneath.
         <div style={{
           position: 'absolute', inset: 0, zIndex: 10,
           opacity: boatVisible ? 1 : 0, transition: 'opacity 0.8s ease',
           pointerEvents: uiVisible ? 'auto' : 'none',
         }}>
-          {/* Mobile: an evenly-faded sailing photo sits behind the orb, in the SAME
-              layer so the orb's screen-blend lands on it (drops the video's black). */}
-          {embedded && (
-            <>
-              <img
-                src={hikingBgMobile}
-                alt=""
-                aria-hidden="true"
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-              <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)' }} />
-            </>
-          )}
+          {/* The sailing photo sits behind the orb, in the SAME layer so the orb's
+              screen-blend lands on it (drops the video's black). The scrim over it is
+              the desktop rest overlay's flat 0.88 — no vignette — EXCEPT an orb-sized
+              bright porthole exactly behind the orb (see BakedOrbBackdropScrim). */}
+          <img
+            src={embedded ? hikingBgMobile : hikingBg}
+            alt=""
+            aria-hidden="true"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+          <BakedOrbBackdropScrim />
           <BakedOrb
             ref={bakedRef}
             prefersReducedMotion={prefersReducedMotion}
-            revealBackground={embedded}
+            revealBackground
+            onMorphBegin={warmComingSoon}
             onMorphEnd={() => {
               // morph ends on the globe → fade the rest of the home to black but KEEP
               // the globe (the bridge shows the globe-on-black poster), then swap routes
               // underneath. Coming Soon lifts the bridge once loaded (App's onGlobeReady
               // → blackBridge.fadeOut), revealing its globe at the same pose.
+              // pendingFromOrb (one-shot; App consumes it right after the swap): App
+              // swaps routes synchronously (no 350ms exit fade) and mounts Coming Soon
+              // with seamless=true, so its globe paints opaque at the exact pose of the
+              // curtain poster — the crossfade reads as the globe waking up. A module
+              // flag, NOT navigation state: state would persist on the history entry
+              // and replay the seamless choreography on every back/forward re-entry.
               blackBridge.fadeIn(450, { image: GLOBE_POSTER })
-              setTimeout(() => onNavigate('Coming Soon'), 480)
+              bridgeNavTimerRef.current = setTimeout(() => {
+                orbOverlay.pendingFromOrb = true
+                onNavigate('Coming Soon')
+              }, 480)
             }}
           />
         </div>
@@ -570,7 +637,9 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
           gap: 20,
           opacity: (uiVisible ? 1 : 0) * (1 - textOut),
           transform: `translateX(${-28 * textOut}px)`,
-          transition: 'opacity 0.6s ease',
+          // Baked morph: textOut snaps 0→1, so transform needs its own transition
+          // (the desktop live orb animates textOut per-frame instead).
+          transition: `opacity 0.6s ease${bakedMorphOut ? ', transform 0.6s ease' : ''}`,
           pointerEvents: uiVisible && textOut < 0.05 ? 'auto' : 'none',
           zIndex: 20,
           maxWidth: 380,
@@ -620,6 +689,7 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
           onNavigate={onNavigate}
           uiVisible={uiVisible}
           morphOut={textOut}
+          snapOut={bakedMorphOut}
           hoverNavOpen={hoverNavOpen}
           embedded={embedded}
           anchorButton={anchorButton}
@@ -632,9 +702,46 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
   )
 }
 
+// ---------- baked-orb backdrop scrim ----------
+// Baked-clip source geometry: in the 1080×1920 recordings the orb is dead-centred
+// with a ~130px radius (measured from orb-rest-poster.jpg). The clips render with
+// objectFit:cover, so on-screen scale = max(vw/1080, vh/1920) and the orb's centre
+// stays at the viewport centre.
+const BAKE_W = 1080
+const BAKE_H = 1920
+const BAKE_ORB_R = 130
+
+// Flat desktop-style darkening over the backdrop photo (one colour, no vignette —
+// mirrors the live home's rest overlay at 0.88) with a circular PORTHOLE exactly
+// the orb's on-screen size: inside it the photo stays bright, and since the orb
+// video is screen-blended, that brightness shows through the glass — the same
+// "orb lights up the scene behind it" read as the desktop orb's live refraction.
+function BakedOrbBackdropScrim() {
+  const [vp, setVp] = useState(() => ({
+    w: typeof window !== 'undefined' ? window.innerWidth : 390,
+    h: typeof window !== 'undefined' ? window.innerHeight : 844,
+  }))
+  useEffect(() => {
+    const h = () => setVp({ w: window.innerWidth, h: window.innerHeight })
+    window.addEventListener('resize', h)
+    return () => window.removeEventListener('resize', h)
+  }, [])
+  const r = BAKE_ORB_R * Math.max(vp.w / BAKE_W, vp.h / BAKE_H)
+  // Porthole darkening: 0 = raw photo (orb reads as a see-through bubble),
+  // 0.88 = same as the surroundings (orb reads flat/dead). ~0.5 keeps the
+  // glass lit like the desktop refraction while the orb body stays solid.
+  const PORTHOLE_DARKEN = 0.62
+  return (
+    <div style={{
+      position: 'absolute', inset: 0,
+      background: `radial-gradient(circle ${r}px at 50% 50%, rgba(0,0,0,${PORTHOLE_DARKEN}) ${r - 4}px, rgba(0,0,0,0.88) ${r}px)`,
+    }} />
+  )
+}
+
 // Top-right countdown corner — LA 2028 hovers royal blue and click-throughs
 // to Event Calendar. The countdown line below is a non-interactive sibling.
-function CountdownCorner({ onNavigate, uiVisible, morphOut = 0, hoverNavOpen, embedded, anchorButton, anchorValue, anchorMeta, countdownText }) {
+function CountdownCorner({ onNavigate, uiVisible, morphOut = 0, snapOut = false, hoverNavOpen, embedded, anchorButton, anchorValue, anchorMeta, countdownText }) {
   const [hover, setHover] = useState(false)
   return (
     <div data-orb-skip style={{
@@ -644,7 +751,7 @@ function CountdownCorner({ onNavigate, uiVisible, morphOut = 0, hoverNavOpen, em
       textAlign: 'right',
       opacity: (uiVisible ? 1 : 0) * (1 - morphOut),
       transform: `translateX(${28 * morphOut}px)`,
-      transition: 'opacity 0.6s ease, top 0.3s ease',
+      transition: `opacity 0.6s ease, top 0.3s ease${snapOut ? ', transform 0.6s ease' : ''}`,
       pointerEvents: uiVisible && morphOut < 0.05 ? 'auto' : 'none',
       zIndex: 20,
     }}>

@@ -58,13 +58,24 @@ const HOVER_MAX_SCALE = 1.3
 const HOVER_INFLUENCE_PX = 360
 const HOVER_EASE = 0.12
 
-// BakedOrb({ onMorphEnd, prefersReducedMotion, style }, ref)
+// Morph stall guards. The clip normally starts within a frame or two of play();
+// if it hasn't, we re-check every 900ms while data is still arriving (readyState ≥
+// HAVE_METADATA) up to MORPH_START_MAX_CHECKS — skipping on the first check would
+// drop the morph for exactly the slow networks the preloading targets — then skip
+// straight to the hand-off. A duration-based ceiling (start allowance included)
+// guards a clip that stalls mid-play, so the user can never be stranded.
+const MORPH_START_TIMEOUT_MS = 900
+const MORPH_START_MAX_CHECKS = 3
+const MORPH_TOTAL_TIMEOUT_PAD_MS = 1500
+
+// BakedOrb({ onMorphBegin, onMorphEnd, prefersReducedMotion, style }, ref)
+//   onMorphBegin        fired the instant a tap starts the morph — preload hook
 //   onMorphEnd          fired when the morph clip finishes — navigate to /coming-soon
 //   prefersReducedMotion shows the static poster only (no autoplay); tap → onMorphEnd
 //   style               merged onto the full-bleed container
 //   ref.begin()         start the morph imperatively (MainView click-anywhere)
 const BakedOrb = forwardRef(function BakedOrb(
-  { onMorphEnd, prefersReducedMotion = false, style, revealBackground = false },
+  { onMorphBegin, onMorphEnd, prefersReducedMotion = false, style, revealBackground = false },
   ref
 ) {
   const [morphing, setMorphing] = useState(false)
@@ -72,6 +83,7 @@ const BakedOrb = forwardRef(function BakedOrb(
   const endedRef = useRef(false)
   const boxRef = useRef(null) //   container we proximity-scale on desktop-baked
   const morphingRef = useRef(false) // freeze the scale once the morph starts
+  const watchdogsRef = useRef([]) // morph stall timers, cleared on unmount
 
   // Coarse pointer (touch) → show the wrapped caption instead of the cursor scale.
   const [touch, setTouch] = useState(false)
@@ -93,6 +105,7 @@ const BakedOrb = forwardRef(function BakedOrb(
   // straight to the page; a blocked autoplay still navigates.
   const begin = () => {
     if (morphing || endedRef.current) return
+    if (onMorphBegin) onMorphBegin() // preload hook — fire before any early return
     morphingRef.current = true
     if (boxRef.current) boxRef.current.style.transform = 'scale(1)' // drop any hover scale before the morph
     if (prefersReducedMotion) { finish(); return }
@@ -102,10 +115,34 @@ const BakedOrb = forwardRef(function BakedOrb(
     v.currentTime = 0
     const p = v.play()
     if (p && p.catch) p.catch(() => finish())
+    // Stall guards (finish() is idempotent): if the clip never starts rendering
+    // frames, or never reaches its end, hand off anyway — the black-bridge curtain
+    // makes the skip look intentional. Never leave the user on a frozen orb.
+    let startChecks = 0
+    const checkStart = () => {
+      if (endedRef.current || v.currentTime > 0.05) return // playing — onEnded owns the rest
+      startChecks += 1
+      if (startChecks < MORPH_START_MAX_CHECKS && v.readyState >= 1) {
+        watchdogsRef.current.push(setTimeout(checkStart, MORPH_START_TIMEOUT_MS))
+      } else {
+        finish()
+      }
+    }
+    watchdogsRef.current.push(
+      setTimeout(checkStart, MORPH_START_TIMEOUT_MS),
+      setTimeout(
+        finish,
+        (((isFinite(v.duration) && v.duration) || 6) * 1000)
+          + MORPH_START_MAX_CHECKS * MORPH_START_TIMEOUT_MS + MORPH_TOTAL_TIMEOUT_PAD_MS
+      )
+    )
   }
 
   // Let MainView start the morph (its desktop click-anywhere handler calls this).
   useImperativeHandle(ref, () => ({ begin }))
+
+  // Clear any pending morph watchdogs when the component unmounts (route swapped).
+  useEffect(() => () => { watchdogsRef.current.forEach(clearTimeout) }, [])
 
   const onKey = (e) => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); begin() }

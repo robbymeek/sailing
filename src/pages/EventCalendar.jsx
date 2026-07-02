@@ -5,17 +5,9 @@ import usePageEntrance from '../hooks/usePageEntrance'
 import EVENTS from '../data/events'
 import { EventRow, BridgeRow, EventModal } from '../components/eventUI'
 import ExitNav from '../components/ExitNav'
-import exitHome from '../assets/home-intro/img-8856.jpg'
-import exitBio from '../assets/home-intro/img-5957.jpg'
-import exitPath from '../assets/home-intro/img-5959.jpg'
-import exitSupport from '../assets/home-intro/p1233486-2.jpg'
+import { EXIT_CARDS } from '../components/exitCards'
 
-const EXIT_LINKS = [
-  { label: 'Home', page: 'Home', img: exitHome, desc: 'Back to the start' },
-  { label: 'Biography', page: 'Biography', img: exitBio, desc: 'The story so far' },
-  { label: 'Path & Team', page: 'Path', img: exitPath, desc: 'The journey & crew' },
-  { label: 'Support', page: 'Support', img: exitSupport, desc: 'Fuel the campaign' },
-]
+const EXIT_LINKS = [EXIT_CARDS.home, EXIT_CARDS.biography, EXIT_CARDS.path, EXIT_CARDS.support]
 
 export default function EventCalendar({ onNavigate }) {
   const [selected, setSelected] = useState(null)

@@ -130,6 +130,11 @@ export default function App() {
       window.scrollTo(0, 0)
       setDisplayLocation(location) // pre-paint swap
       setTransitionStage('entered')
+      // Consume the one-shot hand-off flag AFTER the swap render commits (macro
+      // task), so Coming Soon's first render still sees seamless=true. Without
+      // this, a back/forward re-entry would replay the seamless choreography
+      // (scroll lock, held-back hero) with no curtain on screen.
+      setTimeout(() => { orbOverlay.pendingFromOrb = false }, 0)
       return undefined
     }
     setTransitionStage('exiting')
@@ -149,6 +154,14 @@ export default function App() {
     const t = setTimeout(() => orbOverlay.crossfadeOut(250), 1800)
     return () => clearTimeout(t)
   }, [displayLocation.pathname])
+
+  // Leaving (or never reaching) /coming-soon clears the hand-off curtain — a
+  // no-op when none is up. Covers the user backing out mid-hold (browser
+  // back/edge-swipe bypasses the curtain), which otherwise strands the home
+  // under a tap-swallowing black layer until the curtain's safety timer.
+  useEffect(() => {
+    if (location.pathname !== '/coming-soon') blackBridge.fadeOut(300)
+  }, [location.pathname])
 
   function handleExitComplete(e) {
     if (e.target !== e.currentTarget) return

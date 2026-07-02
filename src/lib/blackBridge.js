@@ -21,11 +21,20 @@
 
 const Z = 95            // above page content + home/app nav during the hand-off
 const MIN_HOLD_MS = 600 // never lift sooner than this after fading in
-const SAFETY_OUT_MS = 3500 // hard backstop if nothing ever calls fadeOut
+// Hard backstop if nothing ever calls fadeOut. Generous on purpose: every real
+// path signals ready (globe onReady, the static fallback, and scene-fail all call
+// fadeOut) — this only catches pathological hangs, and lifting early onto a
+// half-loaded page looks worse than holding the globe poster a little longer.
+const SAFETY_OUT_MS = 9000
+// If the hold runs long (cold cache on a slow connection), fade in a small
+// chrome-shimmer title so the wait reads as intentional, not frozen.
+const CAPTION_DELAY_MS = 1400
+const CAPTION_TEXT = 'The Road to LA 2028'
 
 let el = null
 let shownAt = 0
 let safetyTimer = 0
+let captionTimer = 0
 
 function fadeIn(ms = 450, { image } = {}) {
   if (typeof document === 'undefined') return
@@ -49,11 +58,30 @@ function fadeIn(ms = 450, { image } = {}) {
   shownAt = performance.now()
   clearTimeout(safetyTimer)
   safetyTimer = setTimeout(() => fadeOut(), SAFETY_OUT_MS)
+
+  // Slow-load caption under the globe poster (chrome-text is global CSS).
+  if (image) {
+    const cap = document.createElement('span')
+    cap.className = 'chrome-text'
+    cap.textContent = CAPTION_TEXT
+    Object.assign(cap.style, {
+      position: 'absolute', left: '0', right: '0', bottom: '12%',
+      textAlign: 'center', fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontSize: '15px', fontWeight: '700', letterSpacing: '0.4px',
+      opacity: '0', transition: 'opacity 600ms ease', pointerEvents: 'none',
+    })
+    d.replaceChildren(cap)
+    clearTimeout(captionTimer)
+    captionTimer = setTimeout(() => { cap.style.opacity = '1' }, CAPTION_DELAY_MS)
+  } else {
+    d.replaceChildren()
+  }
 }
 
 function fadeOut(ms = 500) {
   if (!el) return
   clearTimeout(safetyTimer)
+  clearTimeout(captionTimer) // a caption that hasn't appeared yet stays hidden
   const wait = Math.max(0, MIN_HOLD_MS - (performance.now() - shownAt))
   setTimeout(() => {
     const d = el

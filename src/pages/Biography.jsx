@@ -5,20 +5,14 @@ import useCountdown from '../hooks/useCountdown'
 import EVENTS from '../data/events'
 import { EventRow, BridgeRow, EventModal } from '../components/eventUI'
 import ExitNav from '../components/ExitNav'
-import exitHome from '../assets/home-intro/img-5854.jpg'
-import exitPath from '../assets/home-intro/img-5956.jpg'
-import exitSupport from '../assets/home-intro/img-5866.jpg'
-import exitContact from '../assets/home-intro/p1177244.jpeg'
+import SailingBanner from '../components/SailingBanner'
+import { EXIT_CARDS } from '../components/exitCards'
 import ctaBg from '../assets/home-intro/img-8856.jpg'
 
 const BASE = import.meta.env.BASE_URL
 
-const BIO_EXIT_LINKS = [
-  { label: 'Home', page: 'Home', img: exitHome, desc: 'Back to the start' },
-  { label: 'Path & Team', page: 'Path', img: exitPath, desc: 'The journey to LA 2028' },
-  { label: 'Support', page: 'Support', img: exitSupport, desc: 'Fund the campaign' },
-  { label: 'Contact', page: 'Contact', img: exitContact, desc: 'Get in touch' },
-]
+// Support stays LAST in the stack on every page (bottom on mobile, far right on desktop).
+const BIO_EXIT_LINKS = [EXIT_CARDS.home, EXIT_CARDS.path, EXIT_CARDS.contact, EXIT_CARDS.support]
 
 const REGATTAS = [
   {
@@ -92,7 +86,7 @@ function ComingSoonCard({ isMid, isMobile, onNavigate, img }) {
           transition: 'transform 0.6s ease',
         }}
       />
-      {/* bottom scrim so the chrome CTA reads over the photo */}
+      {/* bottom scrim grounds the photo's lower edge (kept after the CTA's removal) */}
       <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '45%', background: 'linear-gradient(to top, rgba(0,0,0,0.72), transparent)' }} />
 
       <div style={{
@@ -113,14 +107,6 @@ function ComingSoonCard({ isMid, isMobile, onNavigate, img }) {
         }}>
           The Road to LA 2028
         </h3>
-        <div style={{ marginTop: 'auto' }}>
-          <span className="chrome-text" style={{
-            fontSize: isMobile ? 11 : 15, fontWeight: 700, letterSpacing: '0.2px',
-            textShadow: '0 2px 12px rgba(0,0,0,0.85)',
-          }}>
-            Click here to learn more →
-          </span>
-        </div>
       </div>
     </div>
   )
@@ -381,6 +367,9 @@ export default function Biography({ onNavigate, scrollOffsetRef }) {
         </div>
 
       </div>
+
+      {/* ===== SAILING TRAILER BANNER — bridges the white hero into the blue section ===== */}
+      <SailingBanner isMobile={isMobile} />
 
       {/* ===== BIO CONTENT — blue section ===== */}
       <div style={{ background: 'rgb(18,0,120)', position: 'relative', zIndex: 5 }}>

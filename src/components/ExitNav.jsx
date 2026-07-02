@@ -6,7 +6,11 @@ import { useState } from 'react'
 //  that share a slanted seam (square outer edges) and enlarge + lift on hover.
 //  Mobile: plain stacked tiles (slanted-thin cards don't work on a phone).
 //
-//  Props: links = [{ label, page, img, desc }], onNavigate, isMobile
+//  Props: links = [{ label, page, img, light }], onNavigate, isMobile
+//  Card variants (see components/exitCards.js for the canonical definitions):
+//  • img   — photo card (default): dark scrim + white label
+//  • light — solid white card, black text (the Support card)
+//  Cards show ONLY their title — no sub-description line.
 // ============================================================================
 
 // Cards share a slanted seam; the leftmost/rightmost outer edges stay square.
@@ -21,9 +25,10 @@ function clipFor(index, count) {
 
 // Desktop card — an image-backed parallelogram that enlarges + slides up above
 // its neighbours on hover.
-function ExitCard({ label, page, img, desc, onNavigate, index, count }) {
+function ExitCard({ label, page, img, light, onNavigate, index, count }) {
   const [hover, setHover] = useState(false)
   const clip = clipFor(index, count)
+  const labelColor = light ? '#111' : '#fff'
   return (
     <button
       onClick={() => onNavigate(page)}
@@ -33,39 +38,43 @@ function ExitCard({ label, page, img, desc, onNavigate, index, count }) {
         position: 'relative', flex: '1 1 0', minWidth: 0, height: '100%',
         marginLeft: index === 0 ? 0 : -SLANT,
         clipPath: clip, WebkitClipPath: clip,
-        border: 'none', padding: 0, cursor: 'pointer', background: '#111',
+        border: 'none', padding: 0, cursor: 'pointer',
+        background: light ? '#fff' : '#111',
         textAlign: 'left',
         zIndex: hover ? count + 1 : count - index, // hovered on top; else left-over-right
         transform: hover ? 'translateY(-16px) scale(1.06)' : 'none',
         transition: 'transform 0.3s cubic-bezier(0.2,0.7,0.2,1)',
       }}
     >
-      <img
-        src={img}
-        alt=""
-        aria-hidden="true"
-        style={{
-          position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
-          transform: hover ? 'scale(1.08)' : 'scale(1)',
-          filter: hover ? 'brightness(1)' : 'brightness(0.6)',
-          transition: 'transform 0.6s ease, filter 0.35s ease',
-        }}
-      />
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.32) 55%, rgba(0,0,0,0.06) 100%)',
-      }} />
+      {img && (
+        <img
+          src={img}
+          alt=""
+          aria-hidden="true"
+          style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
+            transform: hover ? 'scale(1.08)' : 'scale(1)',
+            filter: hover ? 'brightness(1)' : 'brightness(0.6)',
+            transition: 'transform 0.6s ease, filter 0.35s ease',
+          }}
+        />
+      )}
+      {img && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.32) 55%, rgba(0,0,0,0.06) 100%)',
+        }} />
+      )}
       {/* inset past the slanted edges so the label never gets clipped */}
       <div style={{ position: 'absolute', left: SLANT + 6, right: SLANT + 6, bottom: 18 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ color: '#fff', fontSize: 18, fontWeight: 700, letterSpacing: '-0.3px' }}>{label}</span>
+          <span style={{ color: labelColor, fontSize: 18, fontWeight: 700, letterSpacing: '-0.3px' }}>{label}</span>
           <span style={{
-            color: '#fff', fontSize: 16,
+            color: labelColor, fontSize: 16,
             opacity: hover ? 1 : 0, transform: hover ? 'translateX(0)' : 'translateX(-6px)',
             transition: 'opacity 0.2s ease, transform 0.2s ease',
           }}>→</span>
         </div>
-        <span style={{ display: 'block', color: 'rgba(255,255,255,0.65)', fontSize: 12, marginTop: 4 }}>{desc}</span>
       </div>
     </button>
   )
@@ -81,26 +90,31 @@ function mClip(index) {
     : `polygon(0 0, calc(100% - ${S}) 0, 100% 100%, ${S} 100%)` // ╲ lean
 }
 
-function ExitCardSimple({ label, page, img, desc, onNavigate, index }) {
+function ExitCardSimple({ label, page, img, light, onNavigate, index }) {
   const clip = mClip(index)
+  const labelColor = light ? '#111' : '#fff'
   return (
     <button
       onClick={() => onNavigate(page)}
       style={{
         position: 'relative', height: 104, overflow: 'hidden',
-        cursor: 'pointer', padding: 0, textAlign: 'left', background: '#111',
+        cursor: 'pointer', padding: 0, textAlign: 'left',
+        background: light ? '#fff' : '#111',
         width: '100%', border: 'none',
         clipPath: clip, WebkitClipPath: clip,
       }}
     >
-      <img src={img} alt="" aria-hidden="true" style={{
-        position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.58)',
-      }} />
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 100%)' }} />
+      {img && (
+        <img src={img} alt="" aria-hidden="true" style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.58)',
+        }} />
+      )}
+      {img && (
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 100%)' }} />
+      )}
       {/* label inset past both slanted edges so it never clips */}
       <div style={{ position: 'absolute', left: MSLANT + 14, right: MSLANT + 14, top: 0, bottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <span style={{ color: '#fff', fontSize: 17, fontWeight: 700, letterSpacing: '-0.3px' }}>{label} →</span>
-        <span style={{ display: 'block', color: 'rgba(255,255,255,0.65)', fontSize: 12, marginTop: 3 }}>{desc}</span>
+        <span style={{ color: labelColor, fontSize: 17, fontWeight: 700, letterSpacing: '-0.3px' }}>{label} →</span>
       </div>
     </button>
   )

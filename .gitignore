@@ -13,3 +13,6 @@ browserstack/*.log
 
 # Orb bake harness — raw recordings (intermediate; encoded clips live in public/orb/)
 bake-recordings/
+
+# Sailing trailer — raw iMovie master(s) (intermediate; web clips live in public/trailer/)
+trailer-src/
