@@ -804,23 +804,6 @@ function TitleSponsorBanner({ sponsor, isMobile, entranceStyle }) {
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
 
       <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
-        <p style={{
-          ...LABEL,
-          color: 'rgba(255,255,255,0.6)',
-          margin: '0 0 26px',
-        }}>
-          The Path to LA 2028
-        </p>
-        <p style={{
-          fontSize: 11,
-          fontWeight: 500,
-          letterSpacing: '3px',
-          textTransform: 'uppercase',
-          color: 'rgba(255,255,255,0.5)',
-          margin: '0 0 18px',
-        }}>
-          Presented by
-        </p>
         <img
           src={`${BASE}${sponsor.logo}`}
           alt={sponsor.name}
@@ -930,7 +913,7 @@ export default function Path({ onNavigate }) {
   return (
     <div style={{ background: 'rgb(12,14,18)' }}>
 
-    {/* ===== TITLE SPONSOR — presented by AA ENT ===== */}
+    {/* ===== TITLE SPONSOR — AA ENT (logo + blurb only, no kicker text) ===== */}
     <TitleSponsorBanner
       sponsor={SPONSORS[0]}
       isMobile={isMobile}
