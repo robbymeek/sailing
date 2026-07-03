@@ -165,7 +165,8 @@ const ORB_FRAG = /* glsl */ `
 //   options.baseUrl      import.meta.env.BASE_URL — MUST match the globe's, so the
 //                        pre-built earth's textures hit the same HTTP cache
 //   options.onReady      called once the photo is decoded and the orb is live
-//   options.onClick      called on a clean click ON the orb (starts the morph)
+//   options.onClick      called on a clean click ON the orb + halo (starts the morph)
+//   options.clickHaloPx  extra clickable ring beyond the orb's rest radius
 //   options.onMorph      called every morph frame with progress m∈[0,1]. MainView
 //                        watches this to drive the staged hand-off to Coming Soon.
 export default function createGlassOrbScene(
@@ -177,6 +178,7 @@ export default function createGlassOrbScene(
     boatImg, // fallback frame source if ImageDecoder is unavailable
     boatSize = 200,
     orbDiameterPx = 260, // on-screen size of the orb (≈130% of the boat)
+    clickHaloPx = 52, // clickable ring beyond the rest radius (see hitsOrbZone)
     baseUrl = '/',
     prefersReducedMotion = false,
     onReady,
@@ -521,16 +523,16 @@ export default function createGlassOrbScene(
   // + click; spinning a symmetric lens over a screen-fixed page does nothing, so
   // there's no drag-spin — the motion is the boat refracting behind it)
   const state = { px: 0, py: 0, tx: 0, ty: 0, cx: -1e6, cy: -1e6, downX: 0, downY: 0, downT: 0, moved: 0, down: false }
-  const raycaster = new THREE.Raycaster()
-  const ndc = new THREE.Vector2()
-  function hitsOrb(e) {
-    const rect = canvas.getBoundingClientRect()
-    ndc.set(
-      ((e.clientX - rect.left) / rect.width) * 2 - 1,
-      -(((e.clientY - rect.top) / rect.height) * 2 - 1)
-    )
-    raycaster.setFromCamera(ndc, camera)
-    return raycaster.intersectObject(orb, false).length > 0
+  // Clickable zone: a screen-space circle of the orb's REST radius + clickHaloPx.
+  // Static on purpose — it always contains the hover-grown sphere (so clickHaloPx
+  // must be ≥ rest radius × (HOVER_MAX_SCALE − 1)) and it exactly matches the
+  // grab-cursor circle MainView draws over the orb, so the cursor never lies
+  // about where a click will land.
+  const clickRadiusPx = orbDiameterPx / 2 + clickHaloPx
+  function hitsOrbZone(e) {
+    const ocx = orbFracX * canvas.clientWidth
+    const ocy = orbFracY * Math.max(1, canvas.clientHeight)
+    return Math.hypot(e.clientX - ocx, e.clientY - ocy) <= clickRadiusPx
   }
   const onMove = (e) => {
     if (prefersReducedMotion) return
@@ -545,13 +547,13 @@ export default function createGlassOrbScene(
   const onUp = (e) => {
     if (!state.down) return
     state.down = false
-    if (performance.now() - state.downT < CLICK_MS && state.moved < CLICK_PX && onClick && hitsOrb(e)) onClick()
+    if (performance.now() - state.downT < CLICK_MS && state.moved < CLICK_PX && onClick && hitsOrbZone(e)) onClick()
   }
   const onLeave = () => { state.tx = 0; state.ty = 0; state.cx = -1e6; state.cy = -1e6 } // park cursor far → orb eases back to rest
   // Listen on WINDOW, not the canvas: the canvas is a full-screen overlay set to
   // pointerEvents:none (so it never blocks the nav/links beneath it). The click
-  // only acts when it actually hits the orb sphere (hitsOrb raycast); every other
-  // click passes straight through to the DOM below.
+  // only acts inside the orb's clickable circle (orb + halo, hitsOrbZone); every
+  // other click is dead space and passes straight through to the DOM below.
   window.addEventListener('pointermove', onMove)
   window.addEventListener('pointerdown', onDown)
   window.addEventListener('pointerup', onUp)

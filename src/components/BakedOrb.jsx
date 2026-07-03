@@ -22,8 +22,10 @@ const BASE = import.meta.env.BASE_URL
 //    around the orb's lower rim — the tap target hint. Tapping the orb morphs.
 //  • DESKTOP-baked (rare: a desktop without WebGL2): the orb grows as the cursor
 //    nears the screen centre, mirroring the live orb's proximity scale.
-//  begin() is exposed via ref so MainView's click-anywhere handler can start the
-//  morph on the desktop-baked path too.
+//  Only the orb hotspot (orb + small halo, see the tap-hotspot constants) starts
+//  the morph — the rest of the full-bleed video field is DEAD SPACE, so stray
+//  background taps never navigate. begin() stays exposed via ref for imperative
+//  callers (none in-tree today).
 //
 //  ─── ACTIVATION ───
 //  This is OFF until you record + encode the clips. Until then the mobile home
@@ -58,6 +60,18 @@ const HOVER_MAX_SCALE = 1.3
 const HOVER_INFLUENCE_PX = 360
 const HOVER_EASE = 0.12
 
+// ---------- tap hotspot ----------
+// Baked-clip source geometry (same numbers as MainView's BakedOrbBackdropScrim):
+// the orb sits dead-centred in the 1080×1920 recordings with a ~130px radius, and
+// the clips render objectFit:cover, so on-screen radius = 130 × max(w/1080, h/1920).
+// Only the orb + CLICK_HALO_PX around it is tappable (mirrors the desktop live
+// orb's clickHaloPx); on phones the halo also covers the wrapped caption below
+// the orb, so tapping the hint text works too.
+const BAKE_W = 1080
+const BAKE_H = 1920
+const BAKE_ORB_R = 130
+const CLICK_HALO_PX = 52
+
 // Morph stall guards. The clip normally starts within a frame or two of play();
 // if it hasn't, we re-check every 900ms while data is still arriving (readyState ≥
 // HAVE_METADATA) up to MORPH_START_MAX_CHECKS — skipping on the first check would
@@ -73,7 +87,7 @@ const MORPH_TOTAL_TIMEOUT_PAD_MS = 1500
 //   onMorphEnd          fired when the morph clip finishes — navigate to /coming-soon
 //   prefersReducedMotion shows the static poster only (no autoplay); tap → onMorphEnd
 //   style               merged onto the full-bleed container
-//   ref.begin()         start the morph imperatively (MainView click-anywhere)
+//   ref.begin()         start the morph imperatively
 const BakedOrb = forwardRef(function BakedOrb(
   { onMorphBegin, onMorphEnd, prefersReducedMotion = false, style, revealBackground = false },
   ref
@@ -98,7 +112,7 @@ const BakedOrb = forwardRef(function BakedOrb(
     if (onMorphEnd) onMorphEnd()
   }
 
-  // Tap / click-anywhere: cross-fade to the preloaded morph and play it once. The
+  // Tap on the orb hotspot: cross-fade to the preloaded morph and play it once. The
   // morph's poster is the rest frame, so a correct first frame always paints
   // instantly; a short opacity cross-fade (not a hard cut) hides the boat's
   // rotation-phase difference between the two recordings. reduced-motion skips
@@ -138,7 +152,7 @@ const BakedOrb = forwardRef(function BakedOrb(
     )
   }
 
-  // Let MainView start the morph (its desktop click-anywhere handler calls this).
+  // Imperative escape hatch — begin() stays reachable via ref (no in-tree callers).
   useImperativeHandle(ref, () => ({ begin }))
 
   // Clear any pending morph watchdogs when the component unmounts (route swapped).
@@ -176,10 +190,25 @@ const BakedOrb = forwardRef(function BakedOrb(
     return () => { window.removeEventListener('pointermove', onMove); cancelAnimationFrame(raf) }
   }, [prefersReducedMotion, touch])
 
+  // Viewport-tracked orb radius → the tap hotspot's size. The box is full-bleed
+  // and viewport-sized in both uses (mobile home hero, desktop no-WebGL2 home),
+  // so window dimensions are the cover-fit reference — same math as the scrim.
+  const [vp, setVp] = useState(() => ({
+    w: typeof window !== 'undefined' ? window.innerWidth : 390,
+    h: typeof window !== 'undefined' ? window.innerHeight : 844,
+  }))
+  useEffect(() => {
+    const h = () => setVp({ w: window.innerWidth, h: window.innerHeight })
+    window.addEventListener('resize', h)
+    return () => window.removeEventListener('resize', h)
+  }, [])
+  const hotspotSize =
+    2 * (BAKE_ORB_R * Math.max(vp.w / BAKE_W, vp.h / BAKE_H) + CLICK_HALO_PX)
+
   const box = {
     position: 'relative', width: '100%', height: '100%',
     background: revealBackground ? 'transparent' : '#000',
-    overflow: 'hidden', cursor: 'pointer',
+    overflow: 'hidden',
     transformOrigin: 'center center', willChange: 'transform',
     // Reveal a background photo behind the orb (mobile): screen-blend so the video's
     // black field drops out and the orb sits over the (evenly-faded) photo. Dropped
@@ -191,10 +220,25 @@ const BakedOrb = forwardRef(function BakedOrb(
     position: 'absolute', inset: 0, width: '100%', height: '100%',
     objectFit: 'cover', display: 'block', ...extra,
   })
-  const a11y = {
-    onClick: begin, onKeyDown: onKey, tabIndex: 0, role: 'button',
-    'aria-label': 'Coming soon — the road to LA 2028',
-  }
+  // The tap target: a circle over the orb (+ halo), NOT the full-bleed box — taps
+  // on the background around it are dead space. It lives inside the proximity-
+  // scaled box, so on desktop-baked it grows with the orb automatically. z3: above
+  // the videos and the caption (which is pointerEvents:none anyway).
+  const hotspot = (
+    <div
+      onClick={begin}
+      onKeyDown={onKey}
+      tabIndex={0}
+      role="button"
+      aria-label="Coming soon — the road to LA 2028"
+      style={{
+        position: 'absolute', top: '50%', left: '50%',
+        width: hotspotSize, height: hotspotSize,
+        transform: 'translate(-50%, -50%)',
+        borderRadius: '50%', cursor: 'pointer', zIndex: 3,
+      }}
+    />
+  )
 
   // The faded caption wrapped around the orb (touch only, hidden during the morph).
   const caption = touch && !morphing ? (
@@ -216,15 +260,16 @@ const BakedOrb = forwardRef(function BakedOrb(
 
   if (prefersReducedMotion) {
     return (
-      <div ref={boxRef} style={box} {...a11y}>
+      <div ref={boxRef} style={box}>
         <img src={REST_POSTER} alt="" aria-hidden="true" style={layer()} />
         {caption}
+        {hotspot}
       </div>
     )
   }
 
   return (
-    <div ref={boxRef} style={box} {...a11y}>
+    <div ref={boxRef} style={box}>
       {/* REST — autoplaying idle loop. */}
       <video
         autoPlay muted loop playsInline preload="auto" poster={REST_POSTER}
@@ -248,6 +293,7 @@ const BakedOrb = forwardRef(function BakedOrb(
       </video>
 
       {caption}
+      {hotspot}
     </div>
   )
 })

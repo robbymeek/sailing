@@ -17,6 +17,14 @@ const BOAT_SIZE = 200
 // Desktop glass-orb on-screen diameter (mirrors the orbOverlay.attach call below).
 // Used to size the grab-cursor zone over the orb.
 const ORB_DIAMETER = BOAT_SIZE * 1.3 // 260px — orb ≈ 130% of the sailboat height
+// Clickable halo beyond the orb's rest RADIUS: the orb plus this ring is what
+// navigates to Coming Soon — everything else on the home is dead space (only the
+// labelled controls are interactive). Must be ≥ rest radius × 0.32 (the scene's
+// HOVER_MAX_SCALE growth) so the cursor-grown orb stays clickable edge-to-edge;
+// the remainder is the "little bit around the orb". Passed to glassOrbScene for
+// its hit-test AND sizes the grab-cursor circle below, so the pointer affordance
+// and the actual click zone are the same circle.
+const ORB_CLICK_HALO_PX = 52
 // The morph's final globe frame (baked). Used as the mobile hand-off bridge so the
 // globe stays on screen while the rest of the home fades to black.
 const GLOBE_POSTER = `${BASE}orb/orb-globe-poster.webp`
@@ -88,7 +96,6 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
     () => !embedded && !prefersReducedMotion && hasWebGL2()
   )
   const boatImgRef = useRef(null)
-  const bakedRef = useRef(null) // imperative handle to the phone-path BakedOrb (begin the morph)
   const [orbReady, setOrbReady] = useState(false)
   const [orbFailed, setOrbFailed] = useState(false)
   const [morph, setMorph] = useState(0) // 0→1 morph progress, drives the text-out
@@ -123,6 +130,7 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
         boatImg: boatImgRef.current,
         boatSize: BOAT_SIZE,
         orbDiameterPx: ORB_DIAMETER, // orb ≈ 130% of the sailboat height
+        clickHaloPx: ORB_CLICK_HALO_PX, // click zone = orb + halo (see constant above)
         prefersReducedMotion,
         onReady: () => { readyFired = true; clearTimeout(safety); setOrbReady(true) },
         onMorph: (m) => setMorph(m),
@@ -369,22 +377,11 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
   // replay the seamless arrival on every back/forward re-entry.
   navToRef.current = () => onNavigate('Coming Soon')
 
-  // Click-anywhere-to-enter (DESKTOP). Anywhere on the home that isn't an actual
-  // control — the bottom-left nav, the LA 2028 corner, or the top hover banner
-  // (all <button>s / tagged [data-orb-skip]) — plays the same orb→globe morph as
-  // clicking the orb itself. Mobile is intentionally excluded: there the orb is a
-  // baked video with its own tap target (per the wrapped "Click here" caption), so
-  // only an orb tap navigates and stray taps while scrolling to the bio don't.
-  const handlePageActivate = (e) => {
-    if (embedded) return // mobile home: only the orb tap navigates
-    if (!uiVisible || phase !== 'rest' || morph !== 0 || orbOverlay.holding) return
-    if (e.target.closest && e.target.closest('button, a, input, textarea, [data-orb-skip]')) return
-    // Don't hijack a click that was really a text selection drag.
-    if (typeof window !== 'undefined' && window.getSelection && String(window.getSelection())) return
-    if (showOrb) beginMorphRef.current() // live glass orb → morph
-    else if (BAKED_ORB_READY && bakedRef.current) bakedRef.current.begin() // desktop baked fallback
-    else onNavigate('Coming Soon')
-  }
+  // The home background is intentionally DEAD SPACE: clicking it does nothing.
+  // Only the orb (plus ORB_CLICK_HALO_PX around it — the scene's window-level
+  // hit-test → onClick → beginMorph) navigates to Coming Soon, and only the
+  // labelled controls (nav words, LA 2028, the fallback boat button) navigate
+  // elsewhere. The BakedOrb paths scope their own orb-sized tap hotspot.
 
   // As the morph grows the orb, the home text fades out and slides aside (early,
   // so the screen is clear before the orb is large). 0 → 1 across morph 0.08–0.32.
@@ -440,7 +437,10 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
     color: 'rgb(153,153,153)', fontSize: 16, fontWeight: 500, margin: 0,
   }
   const anchorButton = {
-    background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0,
+    background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+    // Generous hitbox: pad the target, pull it back out with negative margins so
+    // the visual layout doesn't move.
+    padding: '8px 10px', margin: '-8px -10px',
   }
   const countdownText = `${days} : ${String(hrs).padStart(2, '0')} : ${String(mins).padStart(2, '0')} : ${String(secs).padStart(2, '0')}`
 
@@ -453,7 +453,7 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
     : -1
 
   return (
-    <div onClick={handlePageActivate} style={{
+    <div style={{
       background: 'rgb(0,0,0)',
       height: '100dvh',
       width: '100%',
@@ -547,7 +547,6 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
           />
           <BakedOrbBackdropScrim />
           <BakedOrb
-            ref={bakedRef}
             prefersReducedMotion={prefersReducedMotion}
             revealBackground
             onMorphBegin={warmComingSoon}
@@ -603,17 +602,20 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
           Clicking it (window-level hit-test) plays the morph → Coming Soon. */}
 
       {/* Desktop "grabbing hand" cursor over the orb (over the z40 orb canvas,
-          under the z50 app nav). The whole home is click-to-enter (handled at the
-          root), so this is purely the affordance: a grab cursor on the round orb,
-          confined to the circle by clip-path. */}
+          under the z50 app nav). Sized to the orb's CLICKABLE zone — rest diameter
+          plus the click halo all around — so the grab cursor shows exactly where a
+          click will start the morph. Affordance only: the actual click is the
+          window-level hit-test in glassOrbScene, which uses the same circle. */}
       {showOrb && (
         <div
           className="orb-grab"
           aria-hidden="true"
           style={{
             position: 'fixed', top: '50%', left: '50%',
-            width: ORB_DIAMETER, height: ORB_DIAMETER,
-            marginTop: -ORB_DIAMETER / 2, marginLeft: -ORB_DIAMETER / 2,
+            width: ORB_DIAMETER + ORB_CLICK_HALO_PX * 2,
+            height: ORB_DIAMETER + ORB_CLICK_HALO_PX * 2,
+            marginTop: -(ORB_DIAMETER / 2 + ORB_CLICK_HALO_PX),
+            marginLeft: -(ORB_DIAMETER / 2 + ORB_CLICK_HALO_PX),
             borderRadius: '50%',
             clipPath: 'circle(50%)', // confine the grab cursor to the round orb
             cursor: 'grab',
@@ -627,7 +629,6 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
       {/* Bottom-left persistent nav — always visible after intro */}
       <nav
         aria-label="Primary"
-        data-orb-skip
         style={{
           position: embedded ? 'absolute' : 'fixed',
           bottom: 32,
@@ -744,7 +745,7 @@ function BakedOrbBackdropScrim() {
 function CountdownCorner({ onNavigate, uiVisible, morphOut = 0, snapOut = false, hoverNavOpen, embedded, anchorButton, anchorValue, anchorMeta, countdownText }) {
   const [hover, setHover] = useState(false)
   return (
-    <div data-orb-skip style={{
+    <div style={{
       position: embedded ? 'absolute' : 'fixed',
       top: hoverNavOpen ? 72 : 32,
       right: 32,
@@ -788,7 +789,10 @@ function HomeNavLink({ label, onClick, isSupport }) {
       style={{
         background: 'none',
         border: 'none',
-        padding: 0,
+        // Generous hitbox: pad the target, pull it back out with negative margins
+        // so the visual layout doesn't move (8px stays clear of the 20px nav gap).
+        padding: '8px 10px',
+        margin: '-8px -10px',
         cursor: 'pointer',
         color: hover ? '#1E40FF' : 'rgba(255,255,255,0.75)',
         fontSize: isSupport ? 14 : 13,
