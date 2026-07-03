@@ -16,3 +16,6 @@ bake-recordings/
 
 # Sailing trailer — raw iMovie master(s) (intermediate; web clips live in public/trailer/)
 trailer-src/
+
+# Stray macOS screenshots dropped into public/ — never deploy these
+/public/Screenshot*.png
