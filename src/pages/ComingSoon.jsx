@@ -7,6 +7,7 @@ import SailboatIcon from '../components/SailboatIcon'
 import ExitNav from '../components/ExitNav'
 import useCountdown from '../hooks/useCountdown'
 import usePageEntrance from '../hooks/usePageEntrance'
+import useTextSpray from '../hooks/useTextSpray'
 // Exit-banner cards — canonical definitions shared by every page's ExitNav.
 import { EXIT_CARDS } from '../components/exitCards'
 
@@ -434,7 +435,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
 
       {/* "Back to Biography" — only when arriving from the Biography page. Sits below
           the nav at the top, docks up with a little padding once scrolled, and fades
-          out at the finale so the sticky LA 2028 header takes the top spot. */}
+          out at the finale so the LA 2028 headline arrives on a clean top edge. */}
       {fromBiography && <BackButton onNavigate={onNavigate} docked={docked} finaleT={finaleT} />}
 
       {/* progress rail (desktop) — one clickable dot per stop; click flies the globe
@@ -571,8 +572,9 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
         </div>
       )}
 
-      {/* end block scrolls up over the fixed globe. The LA 2028 climax sits over the
-          zoomed globe (transparent), so the CTA + footer flow BELOW it, never over it. */}
+      {/* end block scrolls up over the fixed globe. The LA 2028 climax reads over the
+          zoomed globe (transparent lead-in), then everything scrolls through the top —
+          the headline dissolving into spray as it crosses (see EndBlock). */}
       <div style={{ position: 'relative', zIndex: 2 }}>
         <EndBlock onNavigate={onNavigate} isMobile={isMobile} />
       </div>
@@ -657,7 +659,7 @@ function RailDot({ top, name, dates, active, done, onClick }) {
 }
 
 // "Back to Biography" pill — centered at the top (below the nav), docks up with a
-// little padding once scrolled, fades out as the LA 2028 finale header takes over.
+// little padding once scrolled, fades out as the LA 2028 finale headline arrives.
 function BackButton({ onNavigate, docked, finaleT }) {
   const [hover, setHover] = useState(false)
   return (
@@ -773,36 +775,50 @@ const EXIT_LINKS = [EXIT_CARDS.home, EXIT_CARDS.biography, EXIT_CARDS.path, EXIT
 
 function EndBlock({ onNavigate, isMobile }) {
   const { days, hrs, mins, secs } = useCountdown(new Date('2028-07-14T00:00:00'))
+  const blockRef = useRef(null)
+  const h1Ref = useRef(null)
+  const countdownRef = useRef(null)
+
+  // LA 2028 chrome-spray dissolve — replaces the old sticky header. The
+  // headline scrolls straight through the top of the viewport; as its letters
+  // cross the edge they atomize into shimmer-matched chrome spray
+  // (useTextSpray → lib/textSpray) and reassemble on scroll-back. The
+  // countdown fades out just before the edge instead of clipping flatly.
+  useTextSpray(h1Ref, {
+    palette: 'chrome',
+    containerRef: blockRef,
+    zIndex: 10,
+    fadeRefs: [countdownRef],
+  })
+
   return (
     <>
-      {/* END SECTION — the LA 2028 chrome rises, then FREEZES as a clean header
-          pinned to the TOP of the page. Its solid-black band occludes anything that
-          scrolls up beneath it, so the exit nav + support never overlap the headline.
-          The sticky scope spans the whole block; LA 2028 releases into the footer. */}
-      <div style={{ position: 'relative' }}>
-        {/* brief lead-in so LA 2028 reads over the zoomed globe before it docks up top */}
+      {/* END SECTION — the LA 2028 chrome rises over the zoomed globe on its
+          solid-black band and keeps scrolling: no pinning. The exit nav +
+          footer flow below it as ordinary content. */}
+      <div ref={blockRef} style={{ position: 'relative' }}>
+        {/* brief lead-in so LA 2028 reads over the zoomed globe before it reaches the top */}
         <div style={{ height: '46vh' }} />
 
         <div style={{
-          position: 'sticky', top: 0, zIndex: 3,
           background: 'rgb(0,0,0)',
-          boxShadow: '0 12px 34px rgba(0,0,0,0.6)',
           textAlign: 'center', padding: '54px 20px 32px',
         }}>
-          <h1 className="chrome-text" style={{
+          <h1 ref={h1Ref} className="chrome-text" style={{
             fontSize: 'clamp(48px, 9vw, 104px)', fontWeight: 800,
             letterSpacing: '-4px', margin: '0 0 10px',
           }}>
-            LA 2028
+            {/* per-glyph spans: the spray module measures each glyph's box */}
+            {'LA 2028'.split('').map((ch, i) => (ch === ' ' ? ' ' : <span key={i}>{ch}</span>))}
           </h1>
-          <p style={{ color: '#fff', fontSize: 18, fontWeight: 400, letterSpacing: '1px', margin: 0 }}>
+          <p ref={countdownRef} style={{ color: '#fff', fontSize: 18, fontWeight: 400, letterSpacing: '1px', margin: 0 }}>
             {days} : {String(hrs).padStart(2, '0')} : {String(mins).padStart(2, '0')} : {String(secs).padStart(2, '0')}
           </p>
         </div>
 
-        {/* exit nav scrolls up UNDER the frozen header, on solid black */}
+        {/* exit nav on solid black (keeps the fixed globe canvas covered) */}
         <div style={{
-          position: 'relative', zIndex: 2, background: 'rgb(0,0,0)',
+          background: 'rgb(0,0,0)',
           padding: '72px 0 90px',
         }}>
           <ExitNav links={EXIT_LINKS} onNavigate={onNavigate} isMobile={isMobile} />

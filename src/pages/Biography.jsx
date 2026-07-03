@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import Nav from '../components/Nav'
 import Footer from '../components/Footer'
 import useCountdown from '../hooks/useCountdown'
+import useTextSpray from '../hooks/useTextSpray'
 import EVENTS from '../data/events'
 import { EventRow, BridgeRow, EventModal } from '../components/eventUI'
 import ExitNav from '../components/ExitNav'
@@ -112,13 +113,26 @@ function ComingSoonCard({ isMid, isMobile, onNavigate, img }) {
   )
 }
 
-export default function Biography({ onNavigate, scrollOffsetRef }) {
+// preload: App mounts a hidden off-screen copy for snappier transitions —
+// that copy must never boot the LA 2028 spray effect (see useTextSpray).
+export default function Biography({ onNavigate, scrollOffsetRef, preload = false }) {
   const [selectedEvent, setSelectedEvent] = useState(null)
   const imageRef = useRef(null)
   const text1Ref = useRef(null)
   const text2Ref = useRef(null)
   const ilcaRef = useRef(null)
   const eventsRef = useRef(null)
+  const la2028Ref = useRef(null)
+  const countdownRef = useRef(null)
+  const nextEventRef = useRef(null)
+  const hintRef = useRef(null)
+  // Mirror for the spray module: pause the overlay while the event modal is
+  // open (the modal shares the events section's stacking context, and spray
+  // must not drift over it).
+  const sprayPausedRef = useRef(false)
+  useEffect(() => {
+    sprayPausedRef.current = selectedEvent !== null
+  }, [selectedEvent])
 
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' && window.innerWidth < 700
@@ -131,6 +145,18 @@ export default function Biography({ onNavigate, scrollOffsetRef }) {
 
   const olympic = useCountdown(new Date('2028-07-14T00:00:00'))
   const nextEvent = useCountdown(new Date('2026-07-20T00:00:00'))
+
+  // LA 2028 sea-spray dissolve — replaces the old sticky banner. The headline
+  // scrolls naturally; as its letters cross the top edge of the viewport they
+  // atomize into wind-blown spray, and scrolling back reassembles them.
+  useTextSpray(la2028Ref, {
+    enabled: !preload,
+    palette: 'white',
+    containerRef: eventsRef,
+    zIndex: 20,
+    fadeRefs: [countdownRef, nextEventRef, hintRef],
+    pausedRef: sprayPausedRef,
+  })
 
   // Parallax: text moves faster than image, image moves faster than page
   // When embedded (scrollOffsetRef), subtract the container's top so
@@ -416,74 +442,57 @@ export default function Biography({ onNavigate, scrollOffsetRef }) {
       {/* ===== EVENTS SECTION — black background ===== */}
       <div ref={eventsRef} style={{ background: 'rgb(0,0,0)', position: 'relative', zIndex: 5 }}>
 
-        {/* Sticky scope: header + first batch of events. The sticky header
-             naturally releases when this wrapper ends, before the last 4 events. */}
-        <div>
-          <div style={{
-            position: 'sticky',
-            top: 0,
-            zIndex: 10,
-            background: 'rgb(0,0,0)',
-            textAlign: 'center',
-            padding: '40px 20px 20px',
+        {/* LA 2028 headline — no longer sticky. It scrolls with the page; as
+             the letters cross the top edge they dissolve into wind-blown spray
+             (useTextSpray → lib/textSpray) and reassemble on scroll-back. The
+             lines below fade out just before the edge instead of clipping. */}
+        <div style={{ textAlign: 'center', padding: '40px 20px 20px' }}>
+          <h1 ref={la2028Ref} style={{
+            color: '#fff', fontSize: 80, fontWeight: 800,
+            letterSpacing: '-4px', margin: '0 0 10px',
           }}>
-            <h1 style={{
-              color: '#fff', fontSize: 80, fontWeight: 800,
-              letterSpacing: '-4px', margin: '0 0 10px',
-            }}>LA 2028</h1>
-            <p style={{
-              color: 'rgb(153,153,153)', fontSize: 18, fontWeight: 500, margin: '0 0 8px',
-            }}>
-              {olympic.days} : {String(olympic.hrs).padStart(2, '0')} : {String(olympic.mins).padStart(2, '0')} : {String(olympic.secs).padStart(2, '0')}
-            </p>
+            {/* per-glyph spans: the spray module measures each glyph's box */}
+            {'LA 2028'.split('').map((ch, i) => (ch === ' ' ? ' ' : <span key={i}>{ch}</span>))}
+          </h1>
+          <p ref={countdownRef} style={{
+            color: 'rgb(153,153,153)', fontSize: 18, fontWeight: 500, margin: '0 0 8px',
+          }}>
+            {olympic.days} : {String(olympic.hrs).padStart(2, '0')} : {String(olympic.mins).padStart(2, '0')} : {String(olympic.secs).padStart(2, '0')}
+          </p>
 
-            <div style={{ margin: '28px 0 12px' }}>
-              <p
-                className="chrome-text"
-                style={{
-                  fontSize: 'clamp(12px, 1.8vw, 16px)',
-                  fontWeight: 600,
-                  letterSpacing: '-0.3px',
-                  margin: 0,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                Next Event: San Pedro OCR in {nextEvent.days} Days
-              </p>
-            </div>
-
-            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, margin: '16px 0 0' }}>
-              Click on event to learn more.
+          <div ref={nextEventRef} style={{ margin: '28px 0 12px' }}>
+            <p
+              className="chrome-text"
+              style={{
+                fontSize: 'clamp(12px, 1.8vw, 16px)',
+                fontWeight: 600,
+                letterSpacing: '-0.3px',
+                margin: 0,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Next Event: San Pedro OCR in {nextEvent.days} Days
             </p>
           </div>
 
-          {/* Events that scroll under the sticky header */}
-          <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 40px 0' }}>
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-              {/* The chrome "door" into the future campaign tour, pinned to the top. */}
-              <BridgeRow onNavigate={onNavigate} />
-              {EVENTS.slice(0, EVENTS.length - 4).map((e, i) => (
-                <EventRow
-                  key={i}
-                  event={e}
-                  isActive={selectedEvent === e}
-                  onActivate={() => setSelectedEvent(e)}
-                />
-              ))}
-            </div>
-          </div>
+          <p ref={hintRef} style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, margin: '16px 0 0' }}>
+            Click on event to learn more.
+          </p>
         </div>
 
-        {/* Last 4 events — outside the sticky scope, header scrolls away */}
-        <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 40px 40px' }}>
-          {EVENTS.slice(EVENTS.length - 4).map((e, i) => (
-            <EventRow
-              key={i + EVENTS.length - 4}
-              event={e}
-              isActive={selectedEvent === e}
-              onActivate={() => setSelectedEvent(e)}
-            />
-          ))}
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 40px' }}>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            {/* The chrome "door" into the future campaign tour, pinned to the top. */}
+            <BridgeRow onNavigate={onNavigate} />
+            {EVENTS.map((e, i) => (
+              <EventRow
+                key={i}
+                event={e}
+                isActive={selectedEvent === e}
+                onActivate={() => setSelectedEvent(e)}
+              />
+            ))}
+          </div>
         </div>
 
         {selectedEvent && (

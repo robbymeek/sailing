@@ -505,7 +505,7 @@ export default function App() {
         visibility: 'hidden', pointerEvents: 'none', overflow: 'hidden',
         zIndex: -1,
       }}>
-        {displayLocation.pathname !== '/biography' && <Biography onNavigate={() => {}} />}
+        {displayLocation.pathname !== '/biography' && <Biography onNavigate={() => {}} preload />}
         {displayLocation.pathname !== '/event-calendar' && <EventCalendar onNavigate={() => {}} />}
       </div>
     </div>
