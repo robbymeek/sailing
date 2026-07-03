@@ -3,83 +3,85 @@ import { useRef, useState, useEffect } from 'react'
 const BASE = import.meta.env.BASE_URL
 
 // ============================================================================
-//  SailingBanner — the cinematic strip that bridges the Biography page's white
-//  hero into the deep-blue stats/bio section below it.
+//  SailingBanner — a silent, cinematic-wide sailing strip that separates the
+//  Biography page's near-white hero from the deep-blue stats/bio section below.
 // ============================================================================
-//  A muted, autoplaying, looping sailing trailer (built from real footage, cut
-//  in iMovie, graded + web-encoded by scripts/encode-trailer.mjs). Video handling
-//  mirrors BakedOrb.jsx: <source webm> → <source mp4>, objectFit cover, a poster
-//  for instant paint, and a prefers-reduced-motion fallback to the still poster.
+//  Design (owner brief): a hard-edged CINEMATIC band, framed by sharp WHITE rule
+//  lines top and bottom (NO gradient melt), reading as:
+//      white hero ─ hard white line ─ wide cool video ─ hard white line ─ blue bio
+//  The clip is a COOL-graded, muted, autoplaying, looping H.264 (no audio track,
+//  no unmute control). The site is sharp-edged (no border-radius), so square
+//  corners + solid white rules are on-brand — they REPLACE the old gradient seams.
 //
-//  Two gradient "seam" overlays make it read as a SEPARATOR rather than a boxed
-//  rectangle: the top fades out of the hero's near-white (rgb(230,235,240)) and
-//  the bottom sinks into the blue section (rgb(18,0,120)).
+//  Video handling mirrors BakedOrb.jsx: autoPlay muted loop playsInline, poster
+//  for instant paint, objectFit cover full-bleed, and a reduced-motion fallback
+//  to the still poster. It is kept OFF the first-paint critical path with
+//  preload="none": browsers natively defer the download until the muted-autoplay
+//  clip scrolls into view, so no IntersectionObserver is needed just to load it.
+//  An IO is layered on only as a battery nicety (pause fully off-screen), and it
+//  can never *prevent* playback — native muted-autoplay is the source of truth.
 //
-//  Browsers only autoplay MUTED video, so an unmute button (bottom-right) lets a
-//  visitor turn the music on with a click. An IntersectionObserver pauses the
-//  clip while it's scrolled off-screen to save battery/CPU.
-//
-//  Assets (produced by `npm run trailer:encode`):
-//    public/trailer/trailer.webm, trailer.mp4, trailer-poster.jpg
-//  Until those exist the container's light→blue gradient shows through, so the
-//  page never looks broken while the trailer is still being cut.
+//  Assets (produced by `npm run trailer:encode`, H.264-only — WebM/VP9 came out
+//  LARGER than H.264 on this high-motion water, so it is intentionally dropped):
+//     public/trailer/trailer.mp4        (cool-graded, silent, ~24fps loop)
+//     public/trailer/trailer-poster.jpg (cool-graded still)
+//  Until those exist the container's HERO→BLUE gradient shows through, so the page
+//  never looks broken while the clip is still being encoded.
 // ============================================================================
 
-const SRC = `${BASE}trailer/trailer` //          .webm + .mp4
+const MP4 = `${BASE}trailer/trailer.mp4`
 const POSTER = `${BASE}trailer/trailer-poster.jpg`
 
-const HERO = 'rgb(230,235,240)' // light hero above
-const BLUE = 'rgb(18,0,120)' //     blue section below
-const ACCENT = 'rgb(0,80,255)' //   site electric blue
-
-function SpeakerIcon({ muted }) {
-  const common = {
-    width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none',
-    stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round',
-  }
-  return muted ? (
-    <svg {...common} aria-hidden="true">
-      <path d="M11 5 6 9H2v6h4l5 4z" />
-      <line x1="23" y1="9" x2="17" y2="15" />
-      <line x1="17" y1="9" x2="23" y2="15" />
-    </svg>
-  ) : (
-    <svg {...common} aria-hidden="true">
-      <path d="M11 5 6 9H2v6h4l5 4z" />
-      <path d="M15.5 8.5a5 5 0 0 1 0 7" />
-      <path d="M19.1 5a9 9 0 0 1 0 14" />
-    </svg>
-  )
-}
+const HERO = 'rgb(230,235,240)' // near-white hero above
+const BLUE = 'rgb(18,0,120)' //     deep royal-blue section below
+const RULE = 4 //                   hard white rule thickness (px)
 
 export default function SailingBanner({ isMobile = false }) {
   const videoRef = useRef(null)
   const containerRef = useRef(null)
-  const [muted, setMuted] = useState(true)
-  const [hoverBtn, setHoverBtn] = useState(false)
-  const [reduced, setReduced] = useState(false)
+  const [lite, setLite] = useState(false) //   reduced-motion / save-data / slow net → poster only
   const [posterOk, setPosterOk] = useState(true)
-  // Only show the unmute button once the trailer can actually play — until the
-  // encoded clips exist (see header comment) the button would be a dead control
-  // floating over the fallback gradient.
-  const [canPlay, setCanPlay] = useState(false)
 
-  // Respect prefers-reduced-motion → show the still poster, no autoplay.
+  // Poster-only mode: reduced-motion, Save-Data, or a slow (2g) connection. These
+  // visitors (and iOS Low-Power-Mode, which blocks autoplay) get the still, no video.
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return undefined
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const set = () => setReduced(mq.matches)
-    set()
-    mq.addEventListener?.('change', set)
-    return () => mq.removeEventListener?.('change', set)
+    if (typeof window === 'undefined') return undefined
+    const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)')
+    const conn = navigator.connection || navigator.webkitConnection || navigator.mozConnection
+    const evaluate = () => {
+      const reduce = !!mq?.matches
+      const saveData = !!conn?.saveData
+      const slow = /(^|-)2g$/.test(conn?.effectiveType || '')
+      setLite(reduce || saveData || slow)
+    }
+    evaluate()
+    mq?.addEventListener?.('change', evaluate)
+    conn?.addEventListener?.('change', evaluate)
+    return () => {
+      mq?.removeEventListener?.('change', evaluate)
+      conn?.removeEventListener?.('change', evaluate)
+    }
   }, [])
 
-  // Pause while scrolled off-screen; resume when it comes back into view.
+  // React does not reliably render the `muted` attribute, and iOS/Chrome refuse to
+  // autoplay a non-muted element — so force it on the DOM node and kick off play.
   useEffect(() => {
-    if (reduced) return undefined
+    if (lite) return undefined
     const v = videoRef.current
+    if (!v) return undefined
+    v.muted = true
+    const p = v.play()
+    if (p && p.catch) p.catch(() => {}) // autoplay may be deferred until in-view; that's fine
+    return undefined
+  }, [lite])
+
+  // Battery nicety only: pause when the strip is fully off-screen, resume in view.
+  // Never gates loading — if IO never fires, native muted-autoplay still plays it.
+  useEffect(() => {
+    if (lite) return undefined
     const c = containerRef.current
-    if (!v || !c || typeof IntersectionObserver === 'undefined') return undefined
+    const v = videoRef.current
+    if (!c || !v || typeof IntersectionObserver === 'undefined') return undefined
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -89,34 +91,40 @@ export default function SailingBanner({ isMobile = false }) {
           v.pause()
         }
       },
-      { threshold: 0.15 }
+      { rootMargin: '200px 0px', threshold: 0.01 }
     )
     io.observe(c)
     return () => io.disconnect()
-  }, [reduced])
+  }, [lite])
 
-  const toggleMute = () => {
-    const v = videoRef.current
-    if (!v) return
-    const next = !muted
-    v.muted = next
-    if (!next) {
-      v.volume = 1
-      const p = v.play() // a click is a user gesture → sound is allowed
-      if (p && p.catch) p.catch(() => {})
+  // Pause while the tab is hidden (CPU/battery), resume when it returns.
+  useEffect(() => {
+    if (lite) return undefined
+    const onVis = () => {
+      const v = videoRef.current
+      if (!v) return
+      if (document.hidden) v.pause()
+      else { const p = v.play(); if (p && p.catch) p.catch(() => {}) }
     }
-    setMuted(next)
-  }
-
-  const height = isMobile ? 'clamp(240px, 52vh, 460px)' : 'clamp(340px, 65vh, 720px)'
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [lite])
 
   const container = {
     position: 'relative',
     width: '100%',
-    height,
+    boxSizing: 'border-box',
+    // Cinematic-wide strip: a 2.35:1 letterbox, floored on mobile and capped tall.
+    aspectRatio: '2.35 / 1',
+    minHeight: isMobile ? 220 : 260,
+    maxHeight: '60vh',
     overflow: 'hidden',
     lineHeight: 0,
-    // Fallback shown until the encoded clips exist (and behind letterboxing).
+    // Hard WHITE rule lines — the "harsh line" separators (no gradient).
+    borderTop: `${RULE}px solid #ffffff`,
+    borderBottom: `${RULE}px solid #ffffff`,
+    // Fallback shown until the encoded clip exists / behind any cover letterboxing:
+    // the page's own white→blue transition, so a pre-load flash reads as intentional.
     background: `linear-gradient(to bottom, ${HERO}, ${BLUE})`,
     zIndex: 4,
   }
@@ -124,42 +132,14 @@ export default function SailingBanner({ isMobile = false }) {
     position: 'absolute', inset: 0, width: '100%', height: '100%',
     objectFit: 'cover', display: 'block',
   }
-  // Seam overlays: emerge from the white hero, sink into the blue section.
-  const topFade = {
-    position: 'absolute', top: 0, left: 0, right: 0, height: '30%',
-    background: `linear-gradient(to bottom, ${HERO} 0%, rgba(230,235,240,0) 100%)`,
-    pointerEvents: 'none', zIndex: 2,
-  }
-  const bottomFade = {
-    position: 'absolute', bottom: 0, left: 0, right: 0, height: '42%',
-    background: `linear-gradient(to top, ${BLUE} 0%, rgba(18,0,120,0) 100%)`,
-    pointerEvents: 'none', zIndex: 2,
-  }
-  const btnSize = isMobile ? 40 : 46
-  const button = {
-    position: 'absolute',
-    bottom: isMobile ? 14 : 22, right: isMobile ? 14 : 22,
-    zIndex: 3,
-    width: btnSize, height: btnSize, borderRadius: '50%',
-    border: '1px solid rgba(255,255,255,0.25)',
-    background: hoverBtn ? ACCENT : 'rgba(0,0,0,0.45)',
-    color: '#fff', cursor: 'pointer',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
-    transition: 'background 0.2s ease, transform 0.2s ease',
-    transform: hoverBtn ? 'scale(1.06)' : 'scale(1)',
-    boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
-  }
 
-  // Reduced motion: just the graded still, framed by the same seam gradients.
-  if (reduced) {
+  // Poster-only (reduced-motion / save-data / slow net): the still, same white rules.
+  if (lite) {
     return (
       <section aria-label="Sailing highlights" style={container}>
         {posterOk && (
           <img src={POSTER} alt="Robby Meek sailing" style={media} onError={() => setPosterOk(false)} />
         )}
-        <div style={topFade} />
-        <div style={bottomFade} />
       </section>
     )
   }
@@ -168,36 +148,17 @@ export default function SailingBanner({ isMobile = false }) {
     <section ref={containerRef} aria-label="Sailing highlights" style={container}>
       <video
         ref={videoRef}
+        src={MP4}
         autoPlay
         muted
         loop
         playsInline
         preload="none"
         poster={posterOk ? POSTER : undefined}
+        disablePictureInPicture
         onError={() => setPosterOk(false)}
-        onCanPlay={() => setCanPlay(true)}
         style={media}
-      >
-        <source src={`${SRC}.webm`} type="video/webm" />
-        <source src={`${SRC}.mp4`} type="video/mp4" />
-      </video>
-
-      <div style={topFade} />
-      <div style={bottomFade} />
-
-      {canPlay && (
-        <button
-          type="button"
-          onClick={toggleMute}
-          onMouseEnter={() => setHoverBtn(true)}
-          onMouseLeave={() => setHoverBtn(false)}
-          aria-label={muted ? 'Unmute video' : 'Mute video'}
-          aria-pressed={!muted}
-          style={button}
-        >
-          <SpeakerIcon muted={muted} />
-        </button>
-      )}
+      />
     </section>
   )
 }
