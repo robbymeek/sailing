@@ -687,7 +687,7 @@ function BackButton({ onNavigate, docked, finaleT }) {
 function Hero({ visible, seamless }) {
   // After a seamless morph, hold the hero text back so it fades in LAST — after
   // the overlay has dissolved to the globe and the pins have faded in.
-  const entrance = usePageEntrance(2, { staggerMs: 150, initialDelayMs: seamless ? 1450 : 200 })
+  const entrance = usePageEntrance(3, { staggerMs: 150, initialDelayMs: seamless ? 1450 : 200 })
   return (
     <div
       style={{
@@ -708,8 +708,20 @@ function Hero({ visible, seamless }) {
       <h1 style={{ ...entrance.style(0), color: '#fff', fontSize: 'clamp(40px, 7vw, 88px)', fontWeight: 800, letterSpacing: '-3px', margin: 0 }}>
         The Road to LA 2028
       </h1>
-      {/* scroll cue — right beneath the title, large + white so it's obvious */}
-      <div style={{ ...entrance.style(1), marginTop: 30 }}>
+      {/* tagline — same typeface as the title, italic */}
+      <p style={{
+        ...entrance.style(1),
+        color: 'rgba(255,255,255,0.85)',
+        fontStyle: 'italic',
+        fontSize: 'clamp(17px, 2.2vw, 26px)',
+        fontWeight: 500,
+        letterSpacing: '-0.3px',
+        margin: '14px 0 0',
+      }}>
+        And every stop in between
+      </p>
+      {/* scroll cue — right beneath the tagline, large + white so it's obvious */}
+      <div style={{ ...entrance.style(2), marginTop: 30 }}>
         <div style={{
           color: '#fff', fontSize: 22, fontWeight: 500, letterSpacing: '0.5px',
           animation: 'scrollHint 1.6s ease-in-out infinite',
@@ -840,6 +852,10 @@ function StaticTimeline({ onNavigate }) {
         <h1 style={{ ...entrance.style(1), color: '#fff', fontSize: 'clamp(36px, 6vw, 64px)', fontWeight: 800, letterSpacing: '-2px', margin: 0 }}>
           The Road to LA 2028
         </h1>
+        {/* same tagline as the globe hero, so the fallback doesn't drift */}
+        <p style={{ ...entrance.style(1), color: 'rgba(255,255,255,0.85)', fontStyle: 'italic', fontSize: 'clamp(15px, 2vw, 20px)', fontWeight: 500, margin: '12px 0 0' }}>
+          And every stop in between
+        </p>
       </div>
 
       <div style={{ ...entrance.style(2), maxWidth: 720, margin: '0 auto', padding: '0 24px 50px' }}>
