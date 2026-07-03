@@ -194,3 +194,16 @@ button {
 .orb-grab:active {
   cursor: grabbing;
 }
+
+/* Baked orb clips: never show a native play glyph (iOS paints one on a video
+   whose autoplay was refused, e.g. Low Power Mode). BakedOrb also swaps to the
+   poster frame when playback stalls — this is the belt-and-braces layer. */
+.baked-orb-video::-webkit-media-controls,
+.baked-orb-video::-webkit-media-controls-start-playback-button,
+.baked-orb-video::-webkit-media-controls-overlay-play-button,
+.baked-orb-video::-webkit-media-controls-panel {
+  display: none !important;
+  -webkit-appearance: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}

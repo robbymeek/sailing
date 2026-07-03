@@ -8,8 +8,15 @@ frames, it looks pixel-identical to desktop; because it's opaque H.264/VP9 video
 it's bulletproof and light, and it animates the boat on every browser (no GIF, no
 WebCodecs).
 
-It's recorded on an **opaque black field** — the desktop morph already blacks the
-page out, so there's no transparency to fake, and we avoid fragile alpha video.
+It's recorded **over the real rest backdrop** — the sailing photo (cover-fit into
+the 1080×1920 frame) under the desktop's flat rgba(0,0,0,0.88) rest scrim — so the
+orb's interior refraction and rim glow are genuine desktop pixels, with no blend
+modes or fragile alpha video. At rest, `BakedOrb` shows the clip through a
+feathered circular mask at the orb's rim; `MainView`'s `BakedOrbBackdrop` draws
+the same photo with the same cover math behind it, so the seam is invisible. The
+morph clip plays full-bleed: the harness bakes in the desktop's background fade
+(0.88 → black once morph progress ≥ 0.9), so it still ends globe-on-black for the
+/coming-soon hand-off.
 
 ```
 rest loop ──tap──▶ morph clip ──ends──▶ /coming-soon

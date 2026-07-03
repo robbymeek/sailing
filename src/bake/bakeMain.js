@@ -2,15 +2,20 @@
 //  BAKE HARNESS  —  records the REAL orb + morph to video (dev only).
 // ============================================================================
 //  Mounts the actual glassOrbScene (same shader the desktop home uses) at a fixed
-//  phone-portrait size on an OPAQUE BLACK field, then uses MediaRecorder to capture
-//  two clips that BakedOrb plays on phones:
+//  phone-portrait size over the REAL rest-state backdrop — the sailing photo
+//  (cover-fit) under the desktop's flat rgba(0,0,0,0.88) rest scrim — then uses
+//  MediaRecorder to capture two clips that BakedOrb plays on phones:
 //     • orb-rest.webm   — one boat cycle of the idle orb (BakedOrb loops it)
 //     • orb-morph.webm  — the full orb→globe morph, ending on the globe hero pose
 //  Encode them to mp4/webm/posters with `npm run bake:encode` (scripts/encode-orb.mjs).
 //
-//  Because we record the genuine GPU frames, the phone clip is pixel-identical to
-//  the desktop orb. Opaque-on-black means we ship plain H.264 (no fragile alpha
-//  video), matching the desktop morph (which blacks the page out anyway).
+//  Because we record the genuine GPU frames OVER the genuine page backdrop, the
+//  phone clip is pixel-identical to the desktop orb — interior refraction, rim
+//  glow and all. BakedOrb shows the rest clip through a feathered circular mask
+//  (no blend modes); the DOM behind it draws the same photo with the same cover
+//  math, so the mask rim is invisible. During the morph the harness replays the
+//  desktop's background fade (0.88 → full black once morph progress ≥ 0.9), so
+//  the morph clip can play full-bleed and end globe-on-black for the hand-off.
 //
 //  IMPORTANT while recording:
 //   • Use CHROME (it has ImageDecoder, so the boat actually spins in the capture).
@@ -60,6 +65,30 @@ document.body.appendChild(orbCanvas)
 const boatImg = new Image()
 boatImg.src = `${import.meta.env.BASE_URL}[0001-0250].gif`
 
+// The rest-state backdrop, identical to the home page behind the orb: the photo
+// cover-fit into the 1080×1920 frame + the desktop rest overlay's flat 0.88 black.
+// MUST be fully loaded before recording (gates ready()) or early frames bake out
+// as orb-on-black.
+const bgImg = new Image()
+let bgReady = false
+bgImg.onload = () => { bgReady = true }
+bgImg.src = hikingBg
+
+// Desktop morph choreography (MainView): once morph progress m ≥ 0.9 the page
+// background fades 0.88 → full black over 0.6s, so the formed globe lands on pure
+// black before the route swap. Replicate it here so the fade is IN the morph clip.
+const BG_BLACK_AT = 0.9
+const BG_BLACK_MS = 600
+let blackStart = 0 // performance.now() when m first crossed BG_BLACK_AT
+
+const REST_SCRIM = 0.88
+function scrimAlpha(now) {
+  if (!blackStart) return REST_SCRIM
+  const t = Math.min(1, (now - blackStart) / BG_BLACK_MS)
+  const eased = t * t * (3 - 2 * t)
+  return REST_SCRIM + (1 - REST_SCRIM) * eased
+}
+
 let bootedAt = 0
 const scene = createGlassOrbScene(orbCanvas, {
   isMobile: true, // phone framing: the morph slides UP to the hero offset
@@ -71,11 +100,21 @@ const scene = createGlassOrbScene(orbCanvas, {
   baseUrl: import.meta.env.BASE_URL,
   prefersReducedMotion: false, // no cursor-lean during bake (deterministic, loopable)
   onReady: () => { bootedAt = performance.now(); setStatus('Orb ready — globe preloading…') },
+  onMorph: (m) => { if (m >= BG_BLACK_AT && !blackStart) blackStart = performance.now() },
 })
 
-// Continuously composite the orb over black → the stream source.
+// Continuously composite backdrop (photo + scrim) then the orb → the stream source.
 function copyFrame() {
+  const now = performance.now()
   octx.fillStyle = '#000'
+  octx.fillRect(0, 0, W, H)
+  if (bgReady) {
+    const s = Math.max(W / bgImg.naturalWidth, H / bgImg.naturalHeight)
+    const dw = bgImg.naturalWidth * s
+    const dh = bgImg.naturalHeight * s
+    octx.drawImage(bgImg, (W - dw) / 2, (H - dh) / 2, dw, dh)
+  }
+  octx.fillStyle = `rgba(0,0,0,${scrimAlpha(now)})`
   octx.fillRect(0, 0, W, H)
   octx.drawImage(orbCanvas, 0, 0, W, H)
   requestAnimationFrame(copyFrame)
@@ -90,7 +129,7 @@ const stream = out.captureStream(FPS)
 window.__BAKE__ = {
   out,
   startMorph: () => scene.startMorph(),
-  ready: () => !!bootedAt && performance.now() - bootedAt > EARTH_READY_MS,
+  ready: () => bgReady && !!bootedAt && performance.now() - bootedAt > EARTH_READY_MS,
 }
 
 function pickMime() {

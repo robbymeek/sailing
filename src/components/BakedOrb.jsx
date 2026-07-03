@@ -11,8 +11,13 @@ const BASE = import.meta.env.BASE_URL
 //  a desktop GPU — see BAKE.md. Because it's the actual rendered frames, it looks
 //  identical; because it's opaque H.264/VP9 video, it's bulletproof and light.
 //
-//  The clips are recorded on an OPAQUE BLACK field (the desktop morph already
-//  blacks the page out, so there's no transparency to fake). A short cross-fade
+//  The clips are recorded over the REAL rest backdrop — the sailing photo under
+//  the desktop's flat 0.88 rest scrim (see bakeMain.js) — so the orb's interior
+//  refraction and rim glow are the genuine desktop pixels, no blend-mode faking.
+//  At rest the clip shows through a feathered circular MASK just past the orb's
+//  rim; outside it, MainView's BakedOrbBackdrop draws the same photo with the
+//  same cover math, so the seam is invisible. The morph clip plays FULL-BLEED
+//  (its backdrop + the desktop's fade-to-black are baked in). A short cross-fade
 //  bridges rest→morph (the boat's rotation phase won't match exactly across two
 //  separate recordings), and the morph ENDS on the globe's hero pose so the land
 //  is seamless:  rest ──tap──▶ morph ──ends──▶ /coming-soon.
@@ -60,10 +65,11 @@ const HOVER_MAX_SCALE = 1.3
 const HOVER_INFLUENCE_PX = 360
 const HOVER_EASE = 0.12
 
-// ---------- tap hotspot ----------
-// Baked-clip source geometry (same numbers as MainView's BakedOrbBackdropScrim):
-// the orb sits dead-centred in the 1080×1920 recordings with a ~130px radius, and
-// the clips render objectFit:cover, so on-screen radius = 130 × max(w/1080, h/1920).
+// ---------- baked-clip geometry (tap hotspot + rest mask) ----------
+// The orb sits dead-centred in the 1080×1920 recordings with a ~130px radius, and
+// the clips render objectFit:cover, so on-screen radius = 130 × max(w/1080, h/1920)
+// (same cover math as MainView's BakedOrbBackdrop, which keeps the DOM photo
+// pixel-aligned with the clip's baked backdrop).
 // Only the orb + CLICK_HALO_PX around it is tappable (mirrors the desktop live
 // orb's clickHaloPx); on phones the halo also covers the wrapped caption below
 // the orb, so tapping the hint text works too.
@@ -71,6 +77,11 @@ const BAKE_W = 1080
 const BAKE_H = 1920
 const BAKE_ORB_R = 130
 const CLICK_HALO_PX = 52
+// Rest-clip mask: solid past the orb's rim (room for edge AA + dispersion
+// speckle), feathered out a little further. Beyond the rim the clip contains the
+// same backdrop the DOM draws, so the feather band blends over matching pixels.
+const MASK_SOLID_PX = 10
+const MASK_FADE_PX = 26
 
 // Morph stall guards. The clip normally starts within a frame or two of play();
 // if it hasn't, we re-check every 900ms while data is still arriving (readyState ≥
@@ -89,11 +100,17 @@ const MORPH_TOTAL_TIMEOUT_PAD_MS = 1500
 //   style               merged onto the full-bleed container
 //   ref.begin()         start the morph imperatively
 const BakedOrb = forwardRef(function BakedOrb(
-  { onMorphBegin, onMorphEnd, prefersReducedMotion = false, style, revealBackground = false },
+  { onMorphBegin, onMorphEnd, prefersReducedMotion = false, style },
   ref
 ) {
   const [morphing, setMorphing] = useState(false)
   const morphRef = useRef(null)
+  const restRef = useRef(null)
+  // Autoplay refused or playback paused outside the morph (iOS Low Power Mode,
+  // Data Saver, app backgrounding). While frozen the rest VIDEO is hidden and the
+  // poster <img> shows instead, so iOS's native play glyph can never appear on a
+  // stalled video. Cleared automatically when playback (re)starts.
+  const [restFrozen, setRestFrozen] = useState(false)
   const endedRef = useRef(false)
   const boxRef = useRef(null) //   container we proximity-scale on desktop-baked
   const morphingRef = useRef(false) // freeze the scale once the morph starts
@@ -105,6 +122,52 @@ const BakedOrb = forwardRef(function BakedOrb(
     if (typeof window === 'undefined' || !window.matchMedia) return
     setTouch(window.matchMedia('(pointer: coarse)').matches)
   }, [])
+
+  // Never show a native play glyph on the rest loop. React doesn't render the
+  // `muted` ATTRIBUTE (only sets the property — same quirk SailingBanner works
+  // around), and iOS judges autoplay eligibility by the attribute, so set it by
+  // hand; then drive play() ourselves so a refusal (Low Power Mode, Data Saver)
+  // is observable → freeze to the poster instead of leaving a paused video for
+  // Safari to decorate. Any later touch / return-to-foreground retries, since a
+  // user gesture re-permits playback in Low Power Mode.
+  useEffect(() => {
+    if (prefersReducedMotion) return undefined // poster-only branch, no video
+    const v = restRef.current
+    if (!v) return undefined
+    v.muted = true
+    v.defaultMuted = true
+    v.setAttribute('muted', '')
+    let cancelled = false
+    const tryPlay = () => {
+      const p = v.play()
+      if (p && p.then) {
+        p.then(
+          () => { if (!cancelled) setRestFrozen(false) },
+          () => { if (!cancelled) setRestFrozen(true) }
+        )
+      }
+    }
+    // A pause outside the morph (backgrounding, OS media interruption) would
+    // strand a paused video → freeze to the poster until a retry succeeds.
+    const onPause = () => { if (!morphingRef.current) setRestFrozen(true) }
+    const onPlaying = () => { if (!cancelled) setRestFrozen(false) }
+    const retry = () => { if (!morphingRef.current && v.paused) tryPlay() }
+    const onVisible = () => { if (!document.hidden) retry() }
+    v.addEventListener('pause', onPause)
+    v.addEventListener('playing', onPlaying)
+    window.addEventListener('touchstart', retry, { passive: true })
+    window.addEventListener('pointerdown', retry, { passive: true }) // desktop-baked / occluded-window recovery
+    document.addEventListener('visibilitychange', onVisible)
+    tryPlay()
+    return () => {
+      cancelled = true
+      v.removeEventListener('pause', onPause)
+      v.removeEventListener('playing', onPlaying)
+      window.removeEventListener('touchstart', retry)
+      window.removeEventListener('pointerdown', retry)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [prefersReducedMotion])
 
   const finish = () => {
     if (endedRef.current) return
@@ -126,6 +189,9 @@ const BakedOrb = forwardRef(function BakedOrb(
     setMorphing(true)
     const v = morphRef.current
     if (!v) { finish(); return }
+    v.muted = true // same React muted-attribute quirk as the rest loop
+    v.defaultMuted = true
+    v.setAttribute('muted', '')
     v.currentTime = 0
     const p = v.play()
     if (p && p.catch) p.catch(() => finish())
@@ -202,18 +268,21 @@ const BakedOrb = forwardRef(function BakedOrb(
     window.addEventListener('resize', h)
     return () => window.removeEventListener('resize', h)
   }, [])
-  const hotspotSize =
-    2 * (BAKE_ORB_R * Math.max(vp.w / BAKE_W, vp.h / BAKE_H) + CLICK_HALO_PX)
+  const orbR = BAKE_ORB_R * Math.max(vp.w / BAKE_W, vp.h / BAKE_H)
+  const hotspotSize = 2 * (orbR + CLICK_HALO_PX)
+  // Feathered circle over the orb — the rest clip (and its frozen-poster stand-in)
+  // renders only through this; everything outside is the DOM backdrop.
+  const maskImage = `radial-gradient(circle at 50% 50%, #000 ${Math.round(orbR + MASK_SOLID_PX)}px, transparent ${Math.round(orbR + MASK_FADE_PX)}px)`
+  const restMask = { WebkitMaskImage: maskImage, maskImage }
 
+  // Transparent box: at rest only the masked orb circle paints (the DOM backdrop
+  // shows everywhere else); during the morph the full-bleed clip covers it —
+  // its backdrop and fade-to-black are baked in, no blend modes anywhere.
   const box = {
     position: 'relative', width: '100%', height: '100%',
-    background: revealBackground ? 'transparent' : '#000',
+    background: 'transparent',
     overflow: 'hidden',
     transformOrigin: 'center center', willChange: 'transform',
-    // Reveal a background photo behind the orb (mobile): screen-blend so the video's
-    // black field drops out and the orb sits over the (evenly-faded) photo. Dropped
-    // during the morph so the growing globe blacks the screen out for the handoff.
-    ...(revealBackground && !morphing ? { mixBlendMode: 'screen' } : {}),
     ...style,
   }
   const layer = (extra) => ({
@@ -261,7 +330,7 @@ const BakedOrb = forwardRef(function BakedOrb(
   if (prefersReducedMotion) {
     return (
       <div ref={boxRef} style={box}>
-        <img src={REST_POSTER} alt="" aria-hidden="true" style={layer()} />
+        <img src={REST_POSTER} alt="" aria-hidden="true" style={layer(restMask)} />
         {caption}
         {hotspot}
       </div>
@@ -270,20 +339,31 @@ const BakedOrb = forwardRef(function BakedOrb(
 
   return (
     <div ref={boxRef} style={box}>
-      {/* REST — autoplaying idle loop. */}
+      {/* REST — autoplaying idle loop, visible only through the orb-rim mask.
+          Hidden while restFrozen (autoplay refused / paused): the poster <img>
+          below shows the same first frame through the same mask instead, so the
+          OS can never paint a play glyph over a stalled video. */}
       <video
+        ref={restRef}
+        className="baked-orb-video"
         autoPlay muted loop playsInline preload="auto" poster={REST_POSTER}
-        style={layer({ opacity: morphing ? 0 : 1, transition: 'opacity 150ms linear' })}
+        style={layer({ opacity: morphing || restFrozen ? 0 : 1, transition: 'opacity 150ms linear', ...restMask })}
       >
         <source src={`${REST}.webm`} type="video/webm" />
         <source src={`${REST}.mp4`} type="video/mp4" />
       </video>
+      {restFrozen && !morphing && (
+        <img src={REST_POSTER} alt="" aria-hidden="true" style={layer(restMask)} />
+      )}
 
-      {/* MORPH — preloaded; poster is the rest frame so the cross-fade always paints
-          a correct first frame instantly. Plays once on tap, ends on the globe hero
-          pose, then hands off to /coming-soon. */}
+      {/* MORPH — preloaded, FULL-BLEED (unmasked: its backdrop + fade-to-black are
+          baked in, and frame 0 matches the composed rest state because the DOM
+          backdrop uses the same cover math). Poster is the rest frame so the
+          cross-fade always paints a correct first frame instantly. Plays once on
+          tap, ends on the globe hero pose, then hands off to /coming-soon. */}
       <video
         ref={morphRef}
+        className="baked-orb-video"
         muted playsInline preload="auto" poster={REST_POSTER}
         onEnded={finish}
         style={layer({ opacity: morphing ? 1 : 0, transition: 'opacity 150ms linear' })}

@@ -462,8 +462,8 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
     }}>
       {/* Rest-state background — hiking shot, sits under everything and only
           shows through the near-black overlay once the intro settles. Toggled
-          while hidden behind the fully-black overlay, so no visible pop. On mobile
-          the orb reveals it around the edges (see BakedOrb revealBackground). */}
+          while hidden behind the fully-black overlay, so no visible pop. On the
+          baked path, BakedOrbBackdrop draws its own clip-aligned copy above it. */}
       <img
         src={embedded ? hikingBgMobile : hikingBg}
         alt=""
@@ -535,20 +535,14 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
           opacity: boatVisible ? 1 : 0, transition: 'opacity 0.8s ease',
           pointerEvents: uiVisible ? 'auto' : 'none',
         }}>
-          {/* The sailing photo sits behind the orb, in the SAME layer so the orb's
-              screen-blend lands on it (drops the video's black). The scrim over it is
-              the desktop rest overlay's flat 0.88 — no vignette — EXCEPT an orb-sized
-              bright porthole exactly behind the orb (see BakedOrbBackdropScrim). */}
-          <img
-            src={embedded ? hikingBgMobile : hikingBg}
-            alt=""
-            aria-hidden="true"
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-          <BakedOrbBackdropScrim />
+          {/* The sailing photo + flat 0.88 scrim behind the orb, laid out with the
+              SAME cover math as the baked clips (see BakedOrbBackdrop) so the DOM
+              pixels line up with the backdrop baked INTO the video — the orb's
+              mask rim and the morph's first frame are then seamless. No porthole,
+              no blend modes: the lit-glass interior is real shader output now. */}
+          <BakedOrbBackdrop embedded={embedded} />
           <BakedOrb
             prefersReducedMotion={prefersReducedMotion}
-            revealBackground
             onMorphBegin={warmComingSoon}
             onMorphEnd={() => {
               // morph ends on the globe → fade the rest of the home to black but KEEP
@@ -703,21 +697,18 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
   )
 }
 
-// ---------- baked-orb backdrop scrim ----------
-// Baked-clip source geometry: in the 1080×1920 recordings the orb is dead-centred
-// with a ~130px radius (measured from orb-rest-poster.jpg). The clips render with
-// objectFit:cover, so on-screen scale = max(vw/1080, vh/1920) and the orb's centre
-// stays at the viewport centre.
+// ---------- baked-orb backdrop ----------
+// The baked clips (bakeMain.js) composite the sailing photo cover-fit into a
+// 1080×1920 frame under a flat rgba(0,0,0,0.88) scrim — the desktop rest look.
+// This draws the SAME thing in the DOM with the SAME two-step cover math (photo →
+// 1080×1920 frame → frame cover-fit to the viewport), so DOM pixels line up with
+// the clip's baked backdrop on every device aspect. That alignment is what makes
+// the rest clip's mask rim (BakedOrb) and the full-bleed morph's first frame
+// read as one continuous image. No porthole: the lit glass is in the clip itself.
 const BAKE_W = 1080
 const BAKE_H = 1920
-const BAKE_ORB_R = 130
 
-// Flat desktop-style darkening over the backdrop photo (one colour, no vignette —
-// mirrors the live home's rest overlay at 0.88) with a circular PORTHOLE exactly
-// the orb's on-screen size: inside it the photo stays bright, and since the orb
-// video is screen-blended, that brightness shows through the glass — the same
-// "orb lights up the scene behind it" read as the desktop orb's live refraction.
-function BakedOrbBackdropScrim() {
+function BakedOrbBackdrop({ embedded }) {
   const [vp, setVp] = useState(() => ({
     w: typeof window !== 'undefined' ? window.innerWidth : 390,
     h: typeof window !== 'undefined' ? window.innerHeight : 844,
@@ -727,16 +718,25 @@ function BakedOrbBackdropScrim() {
     window.addEventListener('resize', h)
     return () => window.removeEventListener('resize', h)
   }, [])
-  const r = BAKE_ORB_R * Math.max(vp.w / BAKE_W, vp.h / BAKE_H)
-  // Porthole darkening: 0 = raw photo (orb reads as a see-through bubble),
-  // 0.88 = same as the surroundings (orb reads flat/dead). ~0.5 keeps the
-  // glass lit like the desktop refraction while the orb body stays solid.
-  const PORTHOLE_DARKEN = 0.62
+  const s = Math.max(vp.w / BAKE_W, vp.h / BAKE_H)
   return (
-    <div style={{
-      position: 'absolute', inset: 0,
-      background: `radial-gradient(circle ${r}px at 50% 50%, rgba(0,0,0,${PORTHOLE_DARKEN}) ${r - 4}px, rgba(0,0,0,0.88) ${r}px)`,
-    }} />
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+      {/* the clip's 1080×1920 frame, cover-fit to the viewport and centred */}
+      <div style={{
+        position: 'absolute', left: '50%', top: '50%',
+        width: BAKE_W * s, height: BAKE_H * s,
+        transform: 'translate(-50%, -50%)',
+      }}>
+        <img
+          src={embedded ? hikingBgMobile : hikingBg}
+          alt=""
+          aria-hidden="true"
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+      </div>
+      {/* desktop rest overlay: one flat colour, no vignette */}
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.88)' }} />
+    </div>
   )
 }
 
