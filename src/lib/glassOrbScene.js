@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-// Camera primitives AND the earth itself are shared with the Coming Soon globe
+// Camera primitives AND the earth itself are shared with the The Road globe
 // (buildEarth) so the orb and the globe frame/render identically — the basis of
 // the seamless orb→globe morph.
 import { FOV, SUN_WORLD, fitCameraZ, quaternionForPoint, buildEarth } from './buildEarth'
@@ -79,10 +79,10 @@ const HOVER_MAX_SCALE = 1.32 // orb size (× rest) when the cursor is right on i
 const HOVER_INFLUENCE_PX = 360 // cursor distance (px) past which it's back to rest
 const HOVER_EASE = 0.12 // per-frame easing toward the target scale (springiness)
 
-// ---------- morph (glass orb → Coming Soon globe) ----------
+// ---------- morph (glass orb → The Road globe) ----------
 const MORPH_MS = 3200
 const HERO_LAT = 10
-const HERO_LNG = -170 // the globe's opening orientation on Coming Soon
+const HERO_LNG = -170 // the globe's opening orientation on The Road
 const IDENTITY_Q = new THREE.Quaternion()
 const clamp01 = (x) => Math.min(1, Math.max(0, x))
 const win = (a, b, x) => clamp01((x - a) / (b - a)) // 0→1 ramp across [a,b]
@@ -168,7 +168,7 @@ const ORB_FRAG = /* glsl */ `
 //   options.onClick      called on a clean click ON the orb + halo (starts the morph)
 //   options.clickHaloPx  extra clickable ring beyond the orb's rest radius
 //   options.onMorph      called every morph frame with progress m∈[0,1]. MainView
-//                        watches this to drive the staged hand-off to Coming Soon.
+//                        watches this to drive the staged hand-off to The Road.
 export default function createGlassOrbScene(
   canvas,
   {
@@ -410,9 +410,9 @@ export default function createGlassOrbScene(
   syncResolution()
 
   // ============================================================================
-  //  MORPH  —  glass orb → Coming Soon globe
+  //  MORPH  —  glass orb → The Road globe
   // ============================================================================
-  //  Pre-builds the SAME earth the Coming Soon page uses (shared buildEarth),
+  //  Pre-builds the SAME earth the The Road page uses (shared buildEarth),
   //  invisible, NOW — so its textures decode on home load and the reveal is
   //  instant on click. startMorph() plays one timeline that: grows the orb to
   //  globe size (the boat grows inside it), slides it to the globe's hero
@@ -420,7 +420,7 @@ export default function createGlassOrbScene(
   //  earth texture + atmosphere at the globe's exact opening pose — holding on
   //  that finished frame. MainView drives the hand-off from there (fade bg to
   //  black → navigate); the body-level overlay (orbOverlay.js) then cross-fades
-  //  this finished frame out over the real Coming Soon globe booted underneath.
+  //  this finished frame out over the real The Road globe booted underneath.
   const globe = new THREE.Group() // carries the earth's orientation, like globeScene
   anchor.add(globe)
   const baseOffset = isMobile ? new THREE.Vector3(0, 0.4, 0) : new THREE.Vector3(-0.55, 0, 0)
@@ -714,7 +714,7 @@ export default function createGlassOrbScene(
     resize, // re-fit to the current canvas size — call on window 'resize'
     setPosition, // setPosition(fracX, fracY): move the orb's centre (0..1 of the
     // viewport; 0.5,0.5 = middle). Refraction follows it; the background morphs.
-    startMorph, // play the one-shot glass-orb → Coming Soon globe transition
+    startMorph, // play the one-shot glass-orb → The Road globe transition
     dispose, // tear down: WebGL context, listeners, GIF decoder, GPU resources
   }
 }

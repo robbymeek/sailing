@@ -21,7 +21,7 @@
 //
 //  One small WebGL2 context on a fixed top-band canvas (~300px tall, NOT the
 //  full viewport — compositing bandwidth is the real cost, especially on the
-//  Coming Soon page where the globe context is also live). The canvas lives
+//  The Road page where the globe context is also live). The canvas lives
 //  inside the page's own stacking context (`container`) so route fades apply
 //  and page modals can layer above it. Callers gate on hasWebGL2() +
 //  prefers-reduced-motion + Save-Data (see hooks/useTextSpray) and wrap in
@@ -462,7 +462,12 @@ export function createTextSpray(h1El, opts = {}) {
     else staleness *= Math.exp(-dt / 0.15)
 
     for (const { el, dy } of fadeOffsets) {
-      el.style.opacity = String(Math.min(1, Math.max(0, (rect.top + dy - 50) / 90)))
+      const o = Math.min(1, Math.max(0, (rect.top + dy - 50) / 90))
+      el.style.opacity = String(o)
+      // A fully faded element must also leave hit-testing and tab order:
+      // opacity:0 alone keeps buttons inside it clickable and focusable
+      // (an invisible click target parked at the top of the viewport).
+      el.style.visibility = o <= 0 ? 'hidden' : ''
     }
 
     const paused = isPaused && isPaused()
@@ -507,7 +512,10 @@ export function createTextSpray(h1El, opts = {}) {
     canvas.style.display = 'none'
     rule.style.display = 'none'
     ruleO = 0
-    for (const { el } of fadeOffsets) el.style.opacity = ''
+    for (const { el } of fadeOffsets) {
+      el.style.opacity = ''
+      el.style.visibility = ''
+    }
   }
 
   // Idle watcher: a cheap rAF-throttled scroll check restarts the loop when
@@ -557,7 +565,7 @@ export function createTextSpray(h1El, opts = {}) {
   document.addEventListener('visibilitychange', onVisibility)
 
   // iOS Safari drops WebGL contexts under memory pressure; with the globe
-  // context alive on Coming Soon this small cosmetic one is the likely
+  // context alive on The Road this small cosmetic one is the likely
   // eviction victim. Pause while it's gone, resume when restored (three
   // re-uploads its tracked resources lazily).
   const onContextLost = (e) => { e.preventDefault(); stopLoop() }

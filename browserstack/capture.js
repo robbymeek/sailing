@@ -1,6 +1,6 @@
 // One-off: capture scrolled phone views of a page on a real iPhone (BrowserStack
 // Local → local dev server). Unlike run.js (orb verdict), this just scrolls to a
-// few positions and screenshots, so we can eyeball the scroll-driven Coming Soon
+// few positions and screenshots, so we can eyeball the scroll-driven The Road
 // tour on a phone.  Usage:  node capture.js
 import fs from 'node:fs'
 import path from 'node:path'
@@ -19,8 +19,8 @@ for (const line of fs.readFileSync(path.join(__dirname, '.env'), 'utf8').split('
 const user = process.env.BROWSERSTACK_USERNAME
 const key = process.env.BROWSERSTACK_ACCESS_KEY
 
-const PAGE = '/coming-soon'
-const LOAD_WAIT = 22000 // Coming Soon lazy-loads the globe engine + Earth textures — slow over the tunnel
+const PAGE = '/the-road'
+const LOAD_WAIT = 22000 // The Road lazy-loads the globe engine + Earth textures — slow over the tunnel
 // (name, scroll fraction of full scrollHeight, settle ms after scrolling)
 const SHOTS = [
   { name: 'cs-hero', frac: 0, settle: 2500 },

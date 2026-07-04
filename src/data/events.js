@@ -2,17 +2,17 @@
 //  EVENTS  —  single source of truth for the results calendar.
 // ============================================================================
 //  Past regattas + results, newest first. FUTURE events are intentionally NOT
-//  here: the 2026 → 2028 campaign lives on the Coming Soon globe tour
+//  here: the 2026 → 2028 campaign lives on The Road globe tour
 //  (src/data/campaignStops.js), so a stop that's on the tour is deliberately
-//  left off this list. The calendar's one forward-looking row is the chrome
-//  "Full-Time Olympic Training" bridge (OLYMPIC_BRIDGE), which links to the
-//  Coming Soon page instead of opening a modal.
+//  left off this list. The one forward-looking row is the chrome
+//  "Full-Time Olympic Training" bridge (OLYMPIC_BRIDGE), which links to
+//  The Road instead of opening a modal.
 //
-//  Shared by the standalone Event Calendar page and the Biography events section
-//  so the two never drift. Add past results here as they happen.
+//  Consumed by the Biography RESULTS section (the site's single home for past
+//  results). Add past results here as they happen.
 
 // The chrome-shimmer "door" into the future tour. Rendered specially (BridgeRow
-// in components/eventUI.jsx): LA 2028-style chrome text; click → Coming Soon.
+// in components/eventUI.jsx): LA 2028-style chrome text; click → The Road.
 export const OLYMPIC_BRIDGE = {
   id: 'olympic-training',
   n: 'Upcoming: Full-Time Olympic Training',

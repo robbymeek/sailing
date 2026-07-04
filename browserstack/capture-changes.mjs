@@ -79,7 +79,7 @@ try {
       }
 
       // iPhone only: tap the baked orb and photograph the morph → curtain →
-      // Coming Soon hand-off (the transition this change set reworks).
+      // The Road hand-off (the transition this change set reworks).
       if (device.id === 'iphone15') {
         await driver.get(`http://bs-local.com:${PORT}/`)
         await driver.sleep(14000)

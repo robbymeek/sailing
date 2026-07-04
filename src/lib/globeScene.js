@@ -6,7 +6,7 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 // the home orb→globe morph are identical (seamless transition between them).
 import { FOV, SUN_WORLD, fitCameraZ, latLngToVector3, quaternionForPoint, buildEarth } from './buildEarth'
 
-// Plain-JS three.js scene for the Coming Soon globe tour. No React in here:
+// Plain-JS three.js scene for the The Road globe tour. No React in here:
 // the page hands us a flat list of frames (one orientation per waypoint), the
 // chapter-tour SEGMENTS table (typed segments with plain-data pose
 // descriptors, resolved to quaternions ONCE here), and a getProgress()

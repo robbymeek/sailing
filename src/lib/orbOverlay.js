@@ -1,9 +1,9 @@
 // ============================================================================
 //  ORB OVERLAY  —  body-level singleton that owns the glass-orb canvas + scene.
 // ============================================================================
-//  The home→Coming Soon transition is seamless because the orb canvas NEVER
+//  The home→The Road transition is seamless because the orb canvas NEVER
 //  unmounts across the route change. It lives here, appended to document.body
-//  (not in any React route), so when App swaps Home → Coming Soon, React never
+//  (not in any React route), so when App swaps Home → The Road, React never
 //  touches it: no remount, no WebGL-context loss, no GIF re-decode, no blank
 //  frame. The full earth reveal plays out on this canvas; once the real Coming
 //  Soon globe has booted underneath, the overlay cross-fades out over it.

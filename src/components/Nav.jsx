@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-const PAGES = ['Home', 'Biography', 'Path', 'Coming Soon', 'Contact', 'Support']
+const PAGES = ['Home', 'Biography', 'Path', 'The Road', 'Contact', 'Support']
 
 const SHORT_LABELS = {
   'Path': 'Path & Team',

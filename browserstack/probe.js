@@ -59,7 +59,7 @@ export function pageProbe() {
     },
     orbCanvasPresent: !!orb,
     orbCanvasOpacity: orb ? window.getComputedStyle(orb).opacity : null,
-    flatBoatButton: !!document.querySelector('button[aria-label^="Coming soon"]'),
+    flatBoatButton: !!document.querySelector('button[aria-label^="The Road"]'),
     orbDebug: window.__ORB_DEBUG__ || null,
   }
 }

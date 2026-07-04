@@ -1,6 +1,6 @@
 // ============================================================================
-//  WebGL capability gate  —  shared by the home orb (MainView) and the Coming
-//  Soon globe (ComingSoon), which previously each carried their own weaker copy.
+//  WebGL capability gate  —  shared by the home orb (MainView) and The
+//  Road globe (TheRoad), which previously each carried their own weaker copy.
 // ============================================================================
 //  Three.js 0.180 REQUIRES a WebGL2 context (it dropped WebGL1 support), so both
 //  scenes must gate on real WebGL2 availability. A naive `webgl2 || webgl` probe

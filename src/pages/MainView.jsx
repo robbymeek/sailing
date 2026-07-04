@@ -18,7 +18,7 @@ const BOAT_SIZE = 200
 // Used to size the grab-cursor zone over the orb.
 const ORB_DIAMETER = BOAT_SIZE * 1.3 // 260px — orb ≈ 130% of the sailboat height
 // Clickable halo beyond the orb's rest RADIUS: the orb plus this ring is what
-// navigates to Coming Soon — everything else on the home is dead space (only the
+// navigates to The Road — everything else on the home is dead space (only the
 // labelled controls are interactive). Must be ≥ rest radius × 0.32 (the scene's
 // HOVER_MAX_SCALE growth) so the cursor-grown orb stays clickable edge-to-edge;
 // the remainder is the "little bit around the orb". Passed to glassOrbScene for
@@ -41,7 +41,7 @@ const ORB_READY_TIMEOUT_MS = 10000
 // to /. No storage APIs — this lives for the tab's lifetime only.
 let introHasPlayed = false
 
-// WebGL2 capability gate lives in ../lib/webglSupport (shared with ComingSoon).
+// WebGL2 capability gate lives in ../lib/webglSupport (shared with TheRoad).
 
 export default function MainView({ onNavigate, hoverNavOpen, skipIntro, embedded }) {
   const target = new Date('2028-07-14T00:00:00')
@@ -107,13 +107,13 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
   const navToRef = useRef(() => {})
 
   // Mount the orb into the BODY-LEVEL overlay (orbOverlay), so the canvas survives
-  // the Home → Coming Soon route swap for the seamless morph handoff.
+  // the Home → The Road route swap for the seamless morph handoff.
   useEffect(() => {
     if (!useOrb) return undefined
     // Safety net: a thrown context rejects the attach() promise (handled below),
     // but a scene that simply never signals onReady would leave a blank orb with
     // no fallback. Flip to the flat boat if ready hasn't fired in time. Mirrors
-    // the Coming Soon overlay's net in App.jsx. Cleared the instant onReady fires.
+    // The Road overlay's net in App.jsx. Cleared the instant onReady fires.
     let readyFired = false
     const safety = setTimeout(() => {
       if (readyFired) return
@@ -315,7 +315,7 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
   }, [embedded, prefersReducedMotion, useOrb, orbFailed, orbReady, showOrb, phase, morph])
 
   // Baked-orb path: the moment the user taps the orb, start pulling everything the
-  // Coming Soon page needs — the lazy route chunk (three.js + globe code are static
+  // The Road page needs — the lazy route chunk (three.js + globe code are static
   // imports of it) and the exact texture set buildEarth will request (-2k on phones),
   // plus the curtain's globe poster. All land in the HTTP cache while the ~2.5s morph
   // clip plays, so the globe's onReady fires almost immediately after the route swap
@@ -325,7 +325,7 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
   // wholesale — otherwise the nav/countdown would sit on top of the growing orb.
   const [bakedMorphOut, setBakedMorphOut] = useState(false)
 
-  // The bridge → Coming Soon navigation timer. Cancelled on unmount so a user who
+  // The bridge → The Road navigation timer. Cancelled on unmount so a user who
   // clicks a nav link mid-morph can't have their navigation overridden 480ms later.
   const bridgeNavTimerRef = useRef(0)
   useEffect(() => () => clearTimeout(bridgeNavTimerRef.current), [])
@@ -339,11 +339,11 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
   }, [showOrb, uiVisible])
 
   const warmedRef = useRef(false)
-  const warmComingSoon = () => {
+  const warmTheRoad = () => {
     setBakedMorphOut(true)
     if (warmedRef.current) return
     warmedRef.current = true
-    import('./ComingSoon').catch(() => {}) // warm only — the route's own lazy() surfaces real failures
+    import('./TheRoad').catch(() => {}) // warm only — the route's own lazy() surfaces real failures
     new Image().src = GLOBE_POSTER // the curtain paints this; never let it flash black
     // Textures only help the WebGL globe — reduced-motion / no-WebGL2 devices get
     // the static timeline and must not pay ~1.6MB for nothing. Deferred + marked
@@ -369,17 +369,17 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
     if (!uiVisible || orbOverlay.holding) return // only at rest, once
     orbOverlay.holding = true // overlay must survive the upcoming route swap
     orbOverlay.pendingFromOrb = true
-    import('./ComingSoon') // load Coming Soon ASAP so it's ready under the overlay
+    import('./TheRoad') // load The Road ASAP so it's ready under the overlay
     orbOverlay.startMorph()
   }
   // Stateless: the hand-off signal is orbOverlay.pendingFromOrb (set in beginMorph),
   // which App consumes once — router state would persist on the history entry and
   // replay the seamless arrival on every back/forward re-entry.
-  navToRef.current = () => onNavigate('Coming Soon')
+  navToRef.current = () => onNavigate('The Road')
 
   // The home background is intentionally DEAD SPACE: clicking it does nothing.
   // Only the orb (plus ORB_CLICK_HALO_PX around it — the scene's window-level
-  // hit-test → onClick → beginMorph) navigates to Coming Soon, and only the
+  // hit-test → onClick → beginMorph) navigates to The Road, and only the
   // labelled controls (nav words, LA 2028, the fallback boat button) navigate
   // elsewhere. The BakedOrb paths scope their own orb-sized tap hotspot.
 
@@ -527,7 +527,7 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
       ) : BAKED_ORB_READY ? (
         // Phone path: the pixel-identical baked orb + morph (see BAKE.md). Full-bleed
         // so the morph can grow to fill the screen. Inert until the clips are baked.
-        // The morph clip runs ~2.5s — warmComingSoon() uses that window to pull the
+        // The morph clip runs ~2.5s — warmTheRoad() uses that window to pull the
         // route chunk, the globe's textures, and the curtain poster into cache so the
         // globe is ready (or nearly so) the moment the route swaps underneath.
         <div style={{
@@ -543,14 +543,14 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
           <BakedOrbBackdrop embedded={embedded} />
           <BakedOrb
             prefersReducedMotion={prefersReducedMotion}
-            onMorphBegin={warmComingSoon}
+            onMorphBegin={warmTheRoad}
             onMorphEnd={() => {
               // morph ends on the globe → fade the rest of the home to black but KEEP
               // the globe (the bridge shows the globe-on-black poster), then swap routes
-              // underneath. Coming Soon lifts the bridge once loaded (App's onGlobeReady
+              // underneath. The Road lifts the bridge once loaded (App's onGlobeReady
               // → blackBridge.fadeOut), revealing its globe at the same pose.
               // pendingFromOrb (one-shot; App consumes it right after the swap): App
-              // swaps routes synchronously (no 350ms exit fade) and mounts Coming Soon
+              // swaps routes synchronously (no 350ms exit fade) and mounts The Road
               // with seamless=true, so its globe paints opaque at the exact pose of the
               // curtain poster — the crossfade reads as the globe waking up. A module
               // flag, NOT navigation state: state would persist on the history entry
@@ -558,15 +558,15 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
               blackBridge.fadeIn(450, { image: GLOBE_POSTER })
               bridgeNavTimerRef.current = setTimeout(() => {
                 orbOverlay.pendingFromOrb = true
-                onNavigate('Coming Soon')
+                onNavigate('The Road')
               }, 480)
             }}
           />
         </div>
       ) : (
         <button
-          onClick={() => onNavigate('Coming Soon')}
-          aria-label="Coming soon — see the road to LA 2028"
+          onClick={() => onNavigate('The Road')}
+          aria-label="The Road — see the road to LA 2028"
           disabled={!uiVisible}
           style={{
             position: 'absolute',
@@ -593,7 +593,7 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
 
       {/* The glass orb renders into a BODY-LEVEL overlay canvas (orbOverlay.js),
           NOT here — so it survives the route swap during the orb→globe morph.
-          Clicking it (window-level hit-test) plays the morph → Coming Soon. */}
+          Clicking it (window-level hit-test) plays the morph → The Road. */}
 
       {/* Desktop "grabbing hand" cursor over the orb (over the z40 orb canvas,
           under the z50 app nav). Sized to the orb's CLICKABLE zone — rest diameter
@@ -741,7 +741,8 @@ function BakedOrbBackdrop({ embedded }) {
 }
 
 // Top-right countdown corner — LA 2028 hovers royal blue and click-throughs
-// to Event Calendar. The countdown line below is a non-interactive sibling.
+// to The Road (the campaign tour). The countdown line below is a
+// non-interactive sibling.
 function CountdownCorner({ onNavigate, uiVisible, morphOut = 0, snapOut = false, hoverNavOpen, embedded, anchorButton, anchorValue, anchorMeta, countdownText }) {
   const [hover, setHover] = useState(false)
   return (
@@ -757,7 +758,7 @@ function CountdownCorner({ onNavigate, uiVisible, morphOut = 0, snapOut = false,
       zIndex: 20,
     }}>
       <button
-        onClick={() => onNavigate('Event Calendar')}
+        onClick={() => onNavigate('The Road')}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
         onFocus={() => setHover(true)}
