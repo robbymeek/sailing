@@ -8,7 +8,8 @@
     "build": "vite build && cp dist/index.html dist/404.html",
     "preview": "vite preview",
     "bake:encode": "node scripts/encode-orb.mjs",
-    "trailer:encode": "node scripts/encode-trailer.mjs"
+    "trailer:encode": "node scripts/encode-trailer.mjs",
+    "tour:photos": "node scripts/prep-tour-photos.mjs"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
