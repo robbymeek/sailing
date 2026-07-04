@@ -31,7 +31,7 @@ const INNER_BG = {
 
 const VARIANT_MAP = {
   '/': 'dark',
-  '/biography': 'light',
+  '/biography': 'dark', // white nav text — it floats over the dark video hero
   '/event-calendar': 'dark',
   '/team': 'blue',
   '/contact': 'light',
@@ -58,6 +58,10 @@ function getNavMode(pathname) {
   // narrow screens — see the isHomeRoute gates below.
   if (pathname === '/') return 'hover'
   if (pathname === '/path') return 'overlay'
+  // Biography opens on the full-bleed sailing video: the nav floats over it
+  // with a TRANSPARENT background (unlike 'overlay', whose solid navBg is
+  // color-matched to each dark hero) and scrolls away with the page.
+  if (pathname === '/biography') return 'overlay-clear'
   // Coming Soon is a fixed-canvas scrollytelling page — overlay the nav over
   // the dark hero and let it scroll away with the page.
   if (pathname === '/coming-soon') return 'overlay'
@@ -277,6 +281,8 @@ export default function App() {
   let navBg
   if (targetMode === 'hover') {
     navBg = 'transparent'
+  } else if (targetMode === 'overlay-clear') {
+    navBg = 'transparent' // floats over the biography video (its scrim carries legibility)
   } else if (targetMode === 'sticky') {
     navBg = 'rgba(20,110,240,0.92)'
   } else {

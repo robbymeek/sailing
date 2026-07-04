@@ -73,14 +73,16 @@ button {
     top: 8vh !important;
   }
 
-  /* Events wrapper: below image, centered */
+  /* Events wrapper: below image, centered. In this stacked/column layout the
+     cards have the full page width, so let them run FATTER (owner request) —
+     the skinny-tower proportions only apply to the desktop side-by-side row. */
   .bio-events-wrapper {
     position: relative !important;
     right: auto !important;
     top: auto !important;
     transform: none !important;
     max-width: 100% !important;
-    width: 60% !important;
+    width: min(94%, 640px) !important;
     min-width: 320px !important;
     align-items: center !important;
     align-self: center !important;
@@ -201,7 +203,14 @@ button {
 .baked-orb-video::-webkit-media-controls,
 .baked-orb-video::-webkit-media-controls-start-playback-button,
 .baked-orb-video::-webkit-media-controls-overlay-play-button,
-.baked-orb-video::-webkit-media-controls-panel {
+.baked-orb-video::-webkit-media-controls-panel,
+/* Sailing banner hero: same guard — it autoplays at the top of /biography and
+   iOS Low Power Mode would otherwise paint a play glyph on the refused video
+   (the wordmark/poster layers beneath are the intended fallback look). */
+.sailing-banner-video::-webkit-media-controls,
+.sailing-banner-video::-webkit-media-controls-start-playback-button,
+.sailing-banner-video::-webkit-media-controls-overlay-play-button,
+.sailing-banner-video::-webkit-media-controls-panel {
   display: none !important;
   -webkit-appearance: none !important;
   opacity: 0 !important;

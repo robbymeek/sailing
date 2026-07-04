@@ -57,6 +57,8 @@ const GRADE = process.env.GRADE !== 'off'
 const TRIM_START = process.env.TRIM_START // seconds, optional
 const TRIM_DUR = process.env.TRIM_DUR //     seconds, optional (needs TRIM_START)
 const POSTER_TIME = process.env.POSTER_TIME || '18'
+const OUTFILE = process.env.OUTFILE || 'trailer.mp4' // e.g. trailer-mobile.mp4
+const SKIP_POSTER = process.env.SKIP_POSTER === '1' // secondary encodes reuse the main poster
 
 // Cool cinematic grade, validated frame-by-frame on the real footage:
 //   format=gbrp10le ........ grade in 10-bit to keep the smooth sky/water gradient
@@ -75,8 +77,11 @@ const GRADE_FILTER = process.env.GRADE_FILTER ||
   'eq=saturation=1.06,unsharp=5:5:0.5:5:5:0.0,' +
   'format=yuv420p'
 
-// Prefer an optional local ffmpeg-static; otherwise a system `ffmpeg` on PATH.
+// Prefer an explicit FFMPEG=/path pin (grade-banner.mjs sets this so analysis
+// and encode run on the SAME binary), then an optional local ffmpeg-static,
+// otherwise a system `ffmpeg` on PATH.
 async function resolveFfmpeg() {
+  if (process.env.FFMPEG) return process.env.FFMPEG
   try {
     const mod = await import('ffmpeg-static')
     if (mod?.default) return mod.default
@@ -146,27 +151,34 @@ console.log(`Encoding banner → ${OUT}\n  source : ${src}\n  ffmpeg : ${ffmpegP
 //   -g 240      → one keyframe every ~10s; the loop only plays start→end, never seeks
 //   -maxrate/-bufsize → hard peak cap = the size governor on spiky water
 //   +faststart  → moov atom up front so playback starts before full download
+//   bt709 tags → the grade's RGB round-trip can drop the colour-matrix tag
+//   (the previously shipped file had color_space=unknown), and untagged
+//   1280-wide video is exactly where players guess bt601 and desaturate.
 ff([...trimInArgs, '-i', src, ...trimOutArgs, '-vf', VF, '-an',
   '-c:v', 'libx264', '-profile:v', 'high', '-level', '4.0', '-pix_fmt', 'yuv420p',
   '-preset', 'slow', '-tune', 'film', '-crf', CRF,
   '-maxrate', MAXRATE, '-bufsize', BUFSIZE, '-g', '240',
-  '-movflags', '+faststart', resolve(OUT, 'trailer.mp4')])
+  '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709',
+  '-color_range', 'tv',
+  '-movflags', '+faststart', resolve(OUT, OUTFILE)])
 
-// Poster — a graded frame → instant <video poster> paint AND the still shown to
-// prefers-reduced-motion visitors, so pick a strong frame. Clamp into the trim.
-let posterAt = POSTER_TIME
-if (TRIM_START) {
-  const start = Number(TRIM_START)
-  const dLen = TRIM_DUR ? Number(TRIM_DUR) : 4
-  posterAt = String(start + Math.min(2, Math.max(0, dLen / 2)))
+if (!SKIP_POSTER) {
+  // Poster — a graded frame → instant <video poster> paint AND the still shown to
+  // prefers-reduced-motion visitors, so pick a strong frame. Clamp into the trim.
+  let posterAt = POSTER_TIME
+  if (TRIM_START) {
+    const start = Number(TRIM_START)
+    const dLen = TRIM_DUR ? Number(TRIM_DUR) : 4
+    posterAt = String(start + Math.min(2, Math.max(0, dLen / 2)))
+  }
+  // Poster VF omits the fps step (single frame) but keeps the grade so the still is
+  // on-brand cool; -q:v 6 keeps it under ~60KB (it is off the critical path).
+  const posterVF = GRADE ? `scale=${WIDTH}:-2:flags=lanczos,${GRADE_FILTER}` : `scale=${WIDTH}:-2:flags=lanczos`
+  ff(['-ss', posterAt, '-i', src, '-vf', posterVF, '-frames:v', '1', '-q:v', '6',
+    '-update', '1', resolve(OUT, 'trailer-poster.jpg')])
 }
-// Poster VF omits the fps step (single frame) but keeps the grade so the still is
-// on-brand cool; -q:v 6 keeps it under ~60KB (it is off the critical path).
-const posterVF = GRADE ? `scale=${WIDTH}:-2:flags=lanczos,${GRADE_FILTER}` : `scale=${WIDTH}:-2:flags=lanczos`
-ff(['-ss', posterAt, '-i', src, '-vf', posterVF, '-frames:v', '1', '-q:v', '6',
-  '-update', '1', resolve(OUT, 'trailer-poster.jpg')])
 
 const mb = (p) => (statSync(p).size / 1048576).toFixed(1)
-console.log(`\nDone.\n  trailer.mp4        ${mb(resolve(OUT, 'trailer.mp4'))} MB` +
-  `\n  trailer-poster.jpg ${mb(resolve(OUT, 'trailer-poster.jpg'))} MB` +
+console.log(`\nDone.\n  ${OUTFILE.padEnd(18)} ${mb(resolve(OUT, OUTFILE))} MB` +
+  (SKIP_POSTER ? '' : `\n  trailer-poster.jpg ${mb(resolve(OUT, 'trailer-poster.jpg'))} MB`) +
   `\nInspect public/trailer/, then load the Biography page (npm run dev).`)

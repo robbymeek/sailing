@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import Nav from '../components/Nav'
 import Footer from '../components/Footer'
 import useCountdown from '../hooks/useCountdown'
 import useTextSpray from '../hooks/useTextSpray'
@@ -35,6 +34,7 @@ const REGATTAS = [
     name: 'World Championship',
     league: 'Senior Worlds',
     location: 'Dún Laoghaire, Ireland',
+    blue: true, // owner: the right card gets the blue treatment (greys read boring)
   },
 ]
 
@@ -67,8 +67,9 @@ function ComingSoonCard({ isMid, isMobile, onNavigate, img }) {
       style={{
         cursor: 'pointer', background: 'rgb(18,0,120)',
         flex: isMid ? '1.2 1 0' : '1 1 0', minWidth: 0,
-        minHeight: isMid ? 480 : 320,
+        minHeight: isMid ? 'min(580px, 54vw)' : 'min(430px, 42vw)',
         position: 'relative', overflow: 'hidden',
+        boxShadow: '0 14px 30px rgba(0,0,0,0.22)',
         display: 'flex', flexDirection: 'column',
         transition: 'transform 0.25s ease',
         transform: hover && !isMobile ? 'translateY(-4px)' : 'none',
@@ -117,6 +118,7 @@ function ComingSoonCard({ isMid, isMobile, onNavigate, img }) {
 // that copy must never boot the LA 2028 spray effect (see useTextSpray).
 export default function Biography({ onNavigate, scrollOffsetRef, preload = false }) {
   const [selectedEvent, setSelectedEvent] = useState(null)
+  const rootRef = useRef(null)
   const imageRef = useRef(null)
   const text1Ref = useRef(null)
   const text2Ref = useRef(null)
@@ -158,16 +160,19 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
     pausedRef: sprayPausedRef,
   })
 
-  // Parallax: text moves faster than image, image moves faster than page
-  // When embedded (scrollOffsetRef), subtract the container's top so
-  // parallax starts from zero when the biography section scrolls into view.
+  // Parallax: text moves faster than image, image moves faster than page.
+  // Based on the PAGE ROOT's top edge (owner request): the effect starts the
+  // second you scroll — while the video banner is still on screen — not only
+  // once the white hero reaches the viewport top. One formula for both modes
+  // (standalone: root top == -scrollY; embedded in MobileHome: root top is
+  // the biography section's own offset).
   useEffect(() => {
+    if (preload) return undefined // hidden preload copy: no rAF churn
     let rafId
     const update = () => {
-      let y = window.scrollY
-      if (scrollOffsetRef?.current) {
-        const rect = scrollOffsetRef.current.getBoundingClientRect()
-        y = Math.max(0, -rect.top)
+      let y = 0
+      if (rootRef.current) {
+        y = Math.max(0, -rootRef.current.getBoundingClientRect().top)
       }
       if (imageRef.current) {
         imageRef.current.style.transform = `translateY(-${y * 0.3}px)`
@@ -185,18 +190,33 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
     }
     rafId = requestAnimationFrame(update)
     return () => cancelAnimationFrame(rafId)
-  }, [scrollOffsetRef])
+  }, [preload])
 
 
   return (
-    <div style={{ background: 'rgb(230,235,240)', minHeight: '100vh' }}>
+    <div ref={rootRef} style={{ background: 'rgb(230,235,240)', minHeight: '100vh' }}>
 
-      {/* ===== HERO SECTION — Messi-inspired parallax ===== */}
+      {/* ===== OPENING HERO — the sailing film, nav floating over it =====
+           hero only on the standalone route (embedded MobileHome plays it
+           mid-page; the hidden preload copy renders it inert — no <video>,
+           or every route would download the film). */}
+      <SailingBanner
+        isMobile={isMobile}
+        hero={!scrollOffsetRef && !preload}
+        inert={preload}
+      />
+
+      {/* ===== INTRO SECTION — Messi-inspired parallax =====
+           overflow visible + z2 (> banner's z1): the parallax bars and photo
+           rise OVER the film strip as you scroll instead of clipping at the
+           hero's top edge. Downward photo bleed is covered by the blue bio
+           section (z5). */}
       <div style={{
         position: 'relative',
         minHeight: '100vh',
-        overflow: 'hidden',
+        overflow: 'visible',
         background: 'rgb(230,235,240)',
+        zIndex: 2,
       }}
         className="bio-hero"
       >
@@ -233,14 +253,15 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
             <div style={{
               background: 'rgba(255,255,255,0.85)',
               padding: '12px 40px 12px 40px',
-              marginBottom: 4,
+              marginBottom: 12,
               display: 'inline-block',
+              boxShadow: '0 12px 32px rgba(8,12,60,0.30)',
             }}>
               <span style={{
-                color: 'rgb(18,0,120)', fontSize: 'clamp(20px, 3vw, 36px)',
+                color: 'rgb(18,0,120)', fontSize: 'clamp(18px, 2.6vw, 28px)',
                 fontWeight: 800, textTransform: 'uppercase', letterSpacing: '-1px',
               }}>
-                Welcome to Robby Meek's
+                3x Continental Champion
               </span>
             </div>
           </div>
@@ -248,14 +269,15 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
             <div style={{
               background: 'rgb(18,0,120)',
               padding: '14px 40px 14px 40px',
-              marginBottom: 4,
+              marginBottom: 12,
               display: 'inline-block',
+              boxShadow: '0 12px 32px rgba(8,12,60,0.30)',
             }}>
               <span style={{
-                color: '#fff', fontSize: 'clamp(24px, 3.5vw, 44px)',
+                color: '#fff', fontSize: 'clamp(20px, 2.9vw, 34px)',
                 fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-1px',
               }}>
-                Website and Biography
+                6x National Champion
               </span>
             </div>
           </div>
@@ -263,13 +285,22 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
             <div style={{
               background: 'rgb(0,80,255)',
               padding: '10px 40px',
-              display: 'inline-block',
+              display: 'inline-flex', alignItems: 'center', gap: 14,
+              boxShadow: '0 12px 32px rgba(8,12,60,0.30)',
             }}>
+              <span style={{
+                color: '#fff', fontSize: 'clamp(16px, 2.2vw, 28px)',
+                fontWeight: 800, textTransform: 'uppercase', letterSpacing: '-0.5px',
+                lineHeight: 1,
+              }}>
+                9+ Years in the
+              </span>
               <img
                 src={`${BASE}ilca-logo.png`}
                 alt="ILCA"
                 style={{
-                  height: 'clamp(24px, 3vw, 40px)',
+                  // sized to the same clamp as the text so logo == "font size"
+                  height: 'clamp(16px, 2.2vw, 28px)',
                   filter: 'brightness(0) invert(1)',
                   display: 'block',
                 }}
@@ -284,7 +315,11 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
           transform: 'translateY(-50%)',
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           zIndex: 2,
-          maxWidth: '60%',
+          // Reserve a 620px lane for the text banners on the left: the widest
+          // bar tops out ≈550px (font caps chosen to guarantee it), so the
+          // cards can never overlap the stats at rest (owner: the collision
+          // looked messy). Wide screens cap at 58% / the cards' max-content.
+          maxWidth: 'min(58%, calc(100% - 620px))',
         }}>
         <div style={{
           display: 'flex', flexDirection: 'row', gap: 14,
@@ -300,11 +335,14 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
             return (
             <div key={i} className="bio-regatta-card" onClick={() => eventsRef.current?.scrollIntoView({ behavior: 'smooth' })} style={{
               cursor: 'pointer',
-              background: r.current ? 'rgb(18,0,120)' : 'rgb(50,55,65)',
+              background: (r.current || r.blue) ? 'rgb(18,0,120)' : 'rgb(50,55,65)',
               padding: '0',
               flex: isMid ? '1.2 1 0' : '1 1 0',
               minWidth: 0,
-              minHeight: isMid ? 480 : 320,
+              // Skinny-and-TALL towers (owner request) — vw caps keep the
+              // proportions sane as the banner lane squeezes the row.
+              minHeight: isMid ? 'min(580px, 54vw)' : 'min(430px, 42vw)',
+              boxShadow: '0 14px 30px rgba(0,0,0,0.22)',
               display: 'flex',
               flexDirection: 'column',
               position: 'relative',
@@ -312,7 +350,7 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
             }}>
               {/* Date badge */}
               <div className="card-date-badge" style={{
-                background: r.current ? 'rgb(0,80,255)' : 'rgba(255,255,255,0.1)',
+                background: (r.current || r.blue) ? 'rgb(0,80,255)' : 'rgba(255,255,255,0.1)',
                 padding: isMid ? '24px 16px' : '18px 16px',
                 textAlign: 'center',
               }}>
@@ -333,7 +371,7 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
                 flexDirection: 'column',
               }}>
                 <div className="card-status" style={{
-                  color: r.current ? 'rgb(0,180,255)' : r.past ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.5)',
+                  color: (r.current || r.blue) ? 'rgb(0,180,255)' : r.past ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.5)',
                   fontSize: 10, fontWeight: 700, letterSpacing: '1px',
                   marginBottom: 10, textTransform: 'uppercase',
                 }}>{r.status}</div>
@@ -394,26 +432,11 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
 
       </div>
 
-      {/* ===== SAILING TRAILER BANNER — bridges the white hero into the blue section ===== */}
-      <SailingBanner isMobile={isMobile} />
-
-      {/* ===== BIO CONTENT — blue section ===== */}
-      <div style={{ background: 'rgb(18,0,120)', position: 'relative', zIndex: 5 }}>
-
-        {/* Stats — bold, immediate */}
-        <div style={{
-          display: 'flex', justifyContent: 'center', gap: 'clamp(40px, 8vw, 100px)',
-          padding: '60px 20px 50px', maxWidth: 900, margin: '0 auto', flexWrap: 'wrap',
-        }}>
-          {[['6x', 'National Champion'], ['3x', 'Continental Champion'], ['9+', 'Years in ILCA']].map(([n, l]) => (
-            <div key={l} style={{ textAlign: 'center' }}>
-              <div style={{ color: '#fff', fontSize: 56, fontWeight: 800, letterSpacing: '-2px' }}>{n}</div>
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: 500, marginTop: 4, textTransform: 'uppercase', letterSpacing: '1px' }}>{l}</div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', maxWidth: 900, margin: '0 auto' }} />
+      {/* ===== BIO CONTENT — blue section. Just the bio in words (the stats
+           moved up into the hero text banners) + the resume quick link. The
+           hard white rule keeps the seam language the film strip used to
+           carry here. ===== */}
+      <div style={{ background: 'rgb(18,0,120)', position: 'relative', zIndex: 5, borderTop: '4px solid #ffffff' }}>
 
         {/* Bio text — clean two-column on desktop */}
         <div style={{
@@ -436,6 +459,28 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
               I'm incredibly grateful for the opportunity to accomplish my Olympic dream and excited for everything the journey ahead holds.
             </p>
           </div>
+        </div>
+
+        {/* Resume quick link — sharp-cornered bordered CTA, on-brand (no radius) */}
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 40px 56px' }}>
+          <a
+            href={`${BASE}resume/Robby-Meek-Sailing-Resume.pdf`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-block',
+              padding: '13px 28px',
+              border: '2px solid rgba(255,255,255,0.85)',
+              color: '#fff', textDecoration: 'none',
+              fontSize: 13, fontWeight: 700,
+              letterSpacing: '1.5px', textTransform: 'uppercase',
+              transition: 'background 0.25s ease, color 0.25s ease',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = 'rgb(18,0,120)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff' }}
+          >
+            View Sailing Résumé (PDF) →
+          </a>
         </div>
       </div>
 
