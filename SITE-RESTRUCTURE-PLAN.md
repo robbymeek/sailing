@@ -236,6 +236,16 @@ the Support page.
   letter (stays last, before the exits — it shows prospects how sponsors are
   treated here).
 
+### Hero roll call (owner-directed 2026-07-04)
+
+The roster's names appear on BOTH statement beats: quiet white italic on the
+right side of "The singlehanded class." (below the statement on mobile), then
+the SAME list comes alive on "Never sailed alone." — v1 uses the site's
+chrome-text shimmer over a soft right-edge scrim. **Follow-up to explore:**
+the owner suggested a liquid-logo treatment for the beat-2 list — see
+`~/Desktop/reference-repos/` (liquid-logo clone) before building any WebGL
+version; decide after visual review whether chrome shimmer suffices.
+
 ### Bottom-of-page treatment (proposed, described 2026-07-03 — confirm on review)
 
 Three beats after the last chapter, so the spine *resolves* instead of just

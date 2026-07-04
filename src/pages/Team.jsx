@@ -437,8 +437,10 @@ function SupporterRow({ supporter }) {
   return row
 }
 
-// Hollow square = open berth. Click → inline name input → Support with the
-// name prefilled. The conversion moment is literally a gap in the crew line.
+// Hollow square = open berth. Click → inline name input → Support, which
+// greets the typed name ("Reserving a berth for …" — donations happen on the
+// external SFNY platform, so an acknowledgment is the honest maximum). The
+// conversion moment is literally a gap in the crew line.
 // showBoat: the small sailboat resting beside the first open berth (desktop).
 function YourNameInput({ onNavigate, showBoat = false }) {
   const [editing, setEditing] = useState(false)
@@ -551,6 +553,54 @@ function YourNameInput({ onNavigate, showBoat = false }) {
 
 // ---------- Chapter content ----------
 
+// The roll call — the roster's names, present on BOTH statement beats. On
+// "The singlehanded class." they sit quiet in white italic (the crew is
+// there even when the water looks empty); on "Never sailed alone." the same
+// list comes alive in the site's chrome shimmer. Right column on desktop,
+// below the statement on mobile.
+function SponsorRollCall({ colored, isMobile }) {
+  const names = SUPPORTERS.map((s) => s.name)
+  const list = (
+    <div style={{ textAlign: isMobile ? 'left' : 'right' }}>
+      {names.map((n) => (
+        <p
+          key={n}
+          className={colored ? 'chrome-text' : undefined}
+          style={{
+            color: colored ? undefined : 'rgba(255,255,255,0.92)',
+            fontStyle: 'italic',
+            fontSize: isMobile ? 13 : 'clamp(14px, 1.15vw, 17px)',
+            fontWeight: colored ? 600 : 400,
+            letterSpacing: '-0.2px',
+            lineHeight: 1.5,
+            margin: isMobile ? '0 0 7px' : '0 0 9px',
+          }}
+        >
+          {n}
+        </p>
+      ))}
+    </div>
+  )
+
+  if (isMobile) {
+    return <div style={{ marginTop: 30 }}>{list}</div>
+  }
+  return (
+    <div style={{
+      position: 'absolute',
+      right: 0,
+      top: '50%',
+      transform: 'translateY(-50%)',
+      // Soft scrim keeps the names legible over the busy team photo without
+      // boxing them in (square edges, fades to nothing leftward — on-brand).
+      background: 'linear-gradient(to right, transparent, rgba(0,0,0,0.5) 55%)',
+      padding: '36px clamp(40px, 5vw, 100px) 36px 120px',
+    }}>
+      {list}
+    </div>
+  )
+}
+
 // Statement chapters: the hero argument, two beats. Flat declarative type —
 // no italics, no exclamation, no nautical kitsch. The photos argue: chapter 0
 // is one boat on open water; the scroll to chapter 1 crossfades to the team.
@@ -572,6 +622,7 @@ function StatementChapter({ beat, isMobile, onMeetTeam }) {
         ? '110px 28px 30px 56px'
         : '0 calc(50% + 60px) 0 clamp(48px, 6vw, 100px)',
       justifyContent: isMobile ? 'flex-start' : 'center',
+      overflowY: isMobile ? 'auto' : 'visible',
     }}>
       <div>
         <h1 style={{ ...lineStyle, color: beat === 1 ? 'rgba(255,255,255,0.4)' : '#fff' }}>
@@ -618,7 +669,13 @@ function StatementChapter({ beat, isMobile, onMeetTeam }) {
             Meet the full team ↓
           </button>
         )}
+        {/* Mobile: the roll call flows below the statement */}
+        {isMobile && <SponsorRollCall colored={beat === 1} isMobile />}
       </div>
+      {/* Desktop: the roll call holds the right column on both beats —
+          quiet white on "The singlehanded class.", chrome on "Never sailed
+          alone." — the names were there the whole time. */}
+      {!isMobile && <SponsorRollCall colored={beat === 1} isMobile={false} />}
     </div>
   )
 }
@@ -913,8 +970,10 @@ export default function Team({ onNavigate }) {
     </section>
 
     {/* ===== THE PARTNERS — the gallery lands right after the story, so each
-        card is a character the reader recognizes, not a logo in a wall. ===== */}
-    <div style={{ background: 'rgb(0,0,0)', paddingTop: 56 }}>
+        card is a character the reader recognizes, not a logo in a wall.
+        teamSectionRef lands HERE: "Meet the full team" must arrive at the
+        partners first, then flow into the roster — not skip past them. ===== */}
+    <div ref={teamSectionRef} style={{ background: 'rgb(0,0,0)', paddingTop: 56 }}>
       <p style={{
         ...LABEL,
         color: 'rgba(255,255,255,0.45)',
@@ -932,7 +991,7 @@ export default function Team({ onNavigate }) {
     />
 
     {/* ===== THE ROSTER — the spine's continuation. ===== */}
-    <div ref={teamSectionRef} style={{ background: 'rgb(22,24,28)' }}>
+    <div style={{ background: 'rgb(22,24,28)' }}>
 
       <div style={{
         ...entrance.style(1),
@@ -1005,53 +1064,56 @@ export default function Team({ onNavigate }) {
             maxWidth: 440,
             margin: '0 auto',
             textAlign: 'left',
-            position: 'relative',
             paddingLeft: isMobile ? 0 : undefined,
           }}>
-            {/* The rail — the spine, continued. Runs through the square
-                markers (6px squares, centers at x=3) down into the closing
-                stop. */}
-            <div aria-hidden="true" style={{
-              position: 'absolute',
-              left: 2.5,
-              top: 8,
-              bottom: 8,
-              width: 1,
-              background: 'rgba(255,255,255,0.15)',
-            }} />
-
-            {SUPPORTERS.map((s) => (
-              <SupporterRow key={s.name} supporter={s} />
-            ))}
-            {Array.from({ length: EMPTY_SLOTS }).map((_, i) => (
-              <YourNameInput
-                key={`empty-${i}`}
-                onNavigate={onNavigate}
-                showBoat={!isMobile && i === 0}
-              />
-            ))}
-
-            {/* Terminal stop — the last entry on the crew line is the
-                destination. */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 14,
-              padding: '18px 0 6px',
-            }}>
-              <span style={{
-                width: 8, height: 8,
-                marginLeft: -1,
-                background: '#fff',
-                boxShadow: '0 0 14px rgba(10,85,235,0.9), 0 0 4px rgba(255,255,255,0.8)',
-                flexShrink: 0,
+            {/* Rail scope: the line must END at the terminal stop, so the
+                closing-actions row lives OUTSIDE this positioning context. */}
+            <div style={{ position: 'relative' }}>
+              {/* The rail — the spine, continued. Runs through the square
+                  markers (6px squares, centers at x=3) down into the closing
+                  stop. */}
+              <div aria-hidden="true" style={{
+                position: 'absolute',
+                left: 2.5,
+                top: 8,
+                bottom: 10,
+                width: 1,
+                background: 'rgba(255,255,255,0.15)',
               }} />
-              <span style={{
-                fontSize: 14,
-                fontWeight: 600,
-                letterSpacing: '-0.2px',
-                color: '#fff',
+
+              {SUPPORTERS.map((s) => (
+                <SupporterRow key={s.name} supporter={s} />
+              ))}
+              {Array.from({ length: EMPTY_SLOTS }).map((_, i) => (
+                <YourNameInput
+                  key={`empty-${i}`}
+                  onNavigate={onNavigate}
+                  showBoat={!isMobile && i === 0}
+                />
+              ))}
+
+              {/* Terminal stop — the last entry on the crew line is the
+                  destination. */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 14,
+                padding: '18px 0 6px',
               }}>
-                This team sails for LA in 2028.
-              </span>
+                <span style={{
+                  width: 8, height: 8,
+                  marginLeft: -1,
+                  background: '#fff',
+                  boxShadow: '0 0 14px rgba(10,85,235,0.9), 0 0 4px rgba(255,255,255,0.8)',
+                  flexShrink: 0,
+                }} />
+                <span style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  letterSpacing: '-0.2px',
+                  color: '#fff',
+                }}>
+                  This team sails for LA in 2028.
+                </span>
+              </div>
             </div>
 
             {/* Closing actions — join the crew, or see where it's going. */}
