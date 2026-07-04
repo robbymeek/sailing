@@ -707,7 +707,9 @@ function RollCallOverlay() {
     }
 
     // Scroll choreography windows, in viewport-heights of scrollY:
-    //   0.10 → 0.78  white → spray → chrome (finishes before beat 1 snaps)
+    //   0.12 → 1.00  white → spray → chrome. The reform COMPLETES exactly at
+    //                the beat-2 snap (owner-directed): the chrome is only
+    //                fully formed once the boat is fully at the next stop.
     //   1.45 → 1.92  whole roll call fades out as the first era arrives
     const draw = (t, vis) => {
       const canvas = canvasRef.current
@@ -748,7 +750,7 @@ function RollCallOverlay() {
       if (!wrap || !white || !chrome || !canvas) return
       const vh = window.innerHeight || 1
       const y = window.scrollY / vh
-      const t = sstep(0.1, 0.78, y)
+      const t = sstep(0.12, 1, y)
       const vis = 1 - sstep(1.45, 1.92, y)
       wrap.style.opacity = String(vis)
       if (reduced || particlesRef.current.length === 0) {
