@@ -19,7 +19,17 @@ Opens at `http://localhost:5173`
 npm run build
 ```
 
-Output goes to `dist/` — deploy to Vercel, Netlify, or GitHub Pages.
+Output goes to `dist/`. Deployment is automatic: every push to `main` builds and publishes to robbysailing.com via GitHub Pages (`.github/workflows/deploy.yml`).
+
+## Development workflow
+
+`main` is production — it deploys on every push, so nothing lands there directly.
+
+1. Branch off `main` per piece of work: `feat/<name>`, `fix/<name>`, or `chore/<name>`.
+2. Open a PR: `gh pr create --fill`. CI builds the branch (`.github/workflows/ci.yml`); the merge is blocked until it passes.
+3. Merge: `gh pr merge --squash --auto` — squash-merges the moment CI goes green and auto-deletes the branch. One PR = one commit on `main`.
+
+Big site-wide features are still feature branches: slice them into independently mergeable PRs where possible; when a branch genuinely can't ship in pieces, rebase it onto `main` every day or two (`git fetch && git rebase origin/main`) and keep unrelated fixes on their own branches.
 
 ## Project Structure
 
