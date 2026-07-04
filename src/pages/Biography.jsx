@@ -24,8 +24,8 @@ const REGATTAS = [
     past: true,
   },
   {
-    // Centre card is the "Road to LA 2028" promo → the Coming Soon tour (see ComingSoonCard).
-    comingSoon: true,
+    // Centre card is the "Road to LA 2028" promo → The Road tour (see RoadCard).
+    roadPromo: true,
     current: true,
   },
   {
@@ -54,14 +54,14 @@ const PRESS = [
 
 // Centre regatta card, repurposed as a chrome "Road to LA 2028" promo: a sailing
 // photo fades in from the bottom (transparent up top), chrome shimmer text, and a
-// tap sends people to the Coming Soon tour.
-function ComingSoonCard({ isMid, isMobile, onNavigate, img }) {
+// tap sends people to The Road tour.
+function RoadCard({ isMid, isMobile, onNavigate, img }) {
   const [hover, setHover] = useState(false)
   const imgFade = 'linear-gradient(to bottom, transparent 8%, #000 58%)'
   return (
     <div
       className="bio-regatta-card"
-      onClick={() => onNavigate('Coming Soon', { from: 'Biography' })}
+      onClick={() => onNavigate('The Road', { from: 'Biography' })}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
@@ -101,7 +101,7 @@ function ComingSoonCard({ isMid, isMobile, onNavigate, img }) {
           fontSize: isMobile ? 8 : 11, letterSpacing: '2px', textTransform: 'uppercase',
           marginBottom: isMobile ? 6 : 12,
         }}>
-          Coming Soon
+          Up Next
         </div>
         <h3 className="chrome-text" style={{
           fontSize: isMobile ? 15 : 26, fontWeight: 800, letterSpacing: '-0.6px',
@@ -115,7 +115,7 @@ function ComingSoonCard({ isMid, isMobile, onNavigate, img }) {
 }
 
 // preload: App mounts a hidden off-screen copy for snappier transitions —
-// that copy must never boot the LA 2028 spray effect (see useTextSpray).
+// that copy must never boot the RESULTS spray effect (see useTextSpray).
 export default function Biography({ onNavigate, scrollOffsetRef, preload = false }) {
   const [selectedEvent, setSelectedEvent] = useState(null)
   const rootRef = useRef(null)
@@ -124,8 +124,7 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
   const text2Ref = useRef(null)
   const ilcaRef = useRef(null)
   const eventsRef = useRef(null)
-  const la2028Ref = useRef(null)
-  const countdownRef = useRef(null)
+  const resultsRef = useRef(null)
   const nextEventRef = useRef(null)
   const hintRef = useRef(null)
   // Mirror for the spray module: pause the overlay while the event modal is
@@ -145,18 +144,17 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
     return () => window.removeEventListener('resize', h)
   }, [])
 
-  const olympic = useCountdown(new Date('2028-07-14T00:00:00'))
   const nextEvent = useCountdown(new Date('2026-07-20T00:00:00'))
 
-  // LA 2028 sea-spray dissolve — replaces the old sticky banner. The headline
+  // RESULTS sea-spray dissolve — replaces the old sticky banner. The headline
   // scrolls naturally; as its letters cross the top edge of the viewport they
   // atomize into wind-blown spray, and scrolling back reassembles them.
-  useTextSpray(la2028Ref, {
+  useTextSpray(resultsRef, {
     enabled: !preload,
     palette: 'white',
     containerRef: eventsRef,
     zIndex: 20,
-    fadeRefs: [countdownRef, nextEventRef, hintRef],
+    fadeRefs: [nextEventRef, hintRef],
     pausedRef: sprayPausedRef,
   })
 
@@ -329,8 +327,8 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
         >
           {REGATTAS.map((r, i) => {
             const isMid = r.current
-            if (r.comingSoon) {
-              return <ComingSoonCard key={i} isMid={isMid} isMobile={isMobile} onNavigate={onNavigate} img={ctaBg} />
+            if (r.roadPromo) {
+              return <RoadCard key={i} isMid={isMid} isMobile={isMobile} onNavigate={onNavigate} img={ctaBg} />
             }
             return (
             <div key={i} className="bio-regatta-card" onClick={() => eventsRef.current?.scrollIntoView({ behavior: 'smooth' })} style={{
@@ -487,37 +485,44 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
       {/* ===== EVENTS SECTION — black background ===== */}
       <div ref={eventsRef} style={{ background: 'rgb(0,0,0)', position: 'relative', zIndex: 5 }}>
 
-        {/* LA 2028 headline — no longer sticky. It scrolls with the page; as
+        {/* RESULTS headline — no longer sticky. It scrolls with the page; as
              the letters cross the top edge they dissolve into wind-blown spray
              (useTextSpray → lib/textSpray) and reassemble on scroll-back. The
-             lines below fade out just before the edge instead of clipping. */}
+             lines below fade out just before the edge instead of clipping.
+             The Olympic countdown moved with the LA 2028 climax to The Road —
+             one page, one climax; this header owns the record instead. */}
         <div style={{ textAlign: 'center', padding: '40px 20px 20px' }}>
-          <h1 ref={la2028Ref} style={{
+          <h1 ref={resultsRef} style={{
             color: '#fff', fontSize: 80, fontWeight: 800,
             letterSpacing: '-4px', margin: '0 0 10px',
           }}>
             {/* per-glyph spans: the spray module measures each glyph's box */}
-            {'LA 2028'.split('').map((ch, i) => (ch === ' ' ? ' ' : <span key={i}>{ch}</span>))}
+            {'RESULTS'.split('').map((ch, i) => (ch === ' ' ? ' ' : <span key={i}>{ch}</span>))}
           </h1>
-          <p ref={countdownRef} style={{
-            color: 'rgb(153,153,153)', fontSize: 18, fontWeight: 500, margin: '0 0 8px',
-          }}>
-            {olympic.days} : {String(olympic.hrs).padStart(2, '0')} : {String(olympic.mins).padStart(2, '0')} : {String(olympic.secs).padStart(2, '0')}
-          </p>
 
-          <div ref={nextEventRef} style={{ margin: '28px 0 12px' }}>
-            <p
-              className="chrome-text"
+          {/* Next Event — chrome shimmer, clicks through to The Road */}
+          <div ref={nextEventRef} style={{ margin: '20px 0 12px' }}>
+            <button
+              onClick={() => onNavigate('The Road')}
+              aria-label="Next event: San Pedro OCR — see The Road"
               style={{
-                fontSize: 'clamp(12px, 1.8vw, 16px)',
-                fontWeight: 600,
-                letterSpacing: '-0.3px',
-                margin: 0,
-                whiteSpace: 'nowrap',
+                background: 'none', border: 'none', padding: 0,
+                cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
-              Next Event: San Pedro OCR in {nextEvent.days} Days
-            </p>
+              <p
+                className="chrome-text"
+                style={{
+                  fontSize: 'clamp(12px, 1.8vw, 16px)',
+                  fontWeight: 600,
+                  letterSpacing: '-0.3px',
+                  margin: 0,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Next Event: San Pedro OCR in {nextEvent.days} Days
+              </p>
+            </button>
           </div>
 
           <p ref={hintRef} style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, margin: '16px 0 0' }}>

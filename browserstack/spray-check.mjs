@@ -1,6 +1,6 @@
 // One-off: sanity-check the LA 2028 sea-spray dissolve on a real iPhone.
 //   node spray-check.mjs [--port 5210]
-// Scrubs the headline across the top edge on /biography and /coming-soon and
+// Scrubs the headline across the top edge on /biography and /the-road and
 // photographs mid-burst, the hanging oval, and reassembly.
 // Shots land in screenshots/spray/<name>.png
 //
@@ -44,7 +44,7 @@ const PAGES = [
     ],
   },
   {
-    pagePath: '/coming-soon', settle: 12000,
+    pagePath: '/the-road', settle: 12000,
     steps: [
       ['arm', `${FIND_H1} window.scrollTo(0, window.__top - window.innerHeight);`, 3000, false],
       ['cs-mid', `window.scrollTo(0, window.__top + 60); ${WIGGLE_ON}`, 900, true],

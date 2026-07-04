@@ -1,5 +1,5 @@
-// The 2026 → 2028 campaign tour, in order. This single array drives the
-// Coming Soon globe. Edit dates/venues/coords here as the circuit firms up.
+// The 2026 → 2028 campaign tour, in order. This single array drives The Road
+// globe. Edit dates/venues/coords here as the circuit firms up.
 //
 // Each stop is one card, displayed as:
 //   {ordinal} of 18 Stops        — position in the tour

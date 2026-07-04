@@ -20,7 +20,7 @@ const BASE = import.meta.env.BASE_URL
 //  (its backdrop + the desktop's fade-to-black are baked in). A short cross-fade
 //  bridges rest→morph (the boat's rotation phase won't match exactly across two
 //  separate recordings), and the morph ENDS on the globe's hero pose so the land
-//  is seamless:  rest ──tap──▶ morph ──ends──▶ /coming-soon.
+//  is seamless:  rest ──tap──▶ morph ──ends──▶ /the-road.
 //
 //  ─── AFFORDANCES ───
 //  • TOUCH (iPhone): a small, faded "Click here to learn more" caption curves
@@ -36,7 +36,7 @@ const BASE = import.meta.env.BASE_URL
 //  This is OFF until you record + encode the clips. Until then the mobile home
 //  keeps its current boat (so nothing tries to play a missing video). To turn it
 //  on: run the bake (BAKE.md) so public/orb/ has the clips, then set
-//  BAKED_ORB_READY = true below and ship it. Verify framing + the /coming-soon
+//  BAKED_ORB_READY = true below and ship it. Verify framing + the /the-road
 //  hand-off on a real phone first (see BAKE.md).
 // ============================================================================
 
@@ -95,7 +95,7 @@ const MORPH_TOTAL_TIMEOUT_PAD_MS = 1500
 
 // BakedOrb({ onMorphBegin, onMorphEnd, prefersReducedMotion, style }, ref)
 //   onMorphBegin        fired the instant a tap starts the morph — preload hook
-//   onMorphEnd          fired when the morph clip finishes — navigate to /coming-soon
+//   onMorphEnd          fired when the morph clip finishes — navigate to /the-road
 //   prefersReducedMotion shows the static poster only (no autoplay); tap → onMorphEnd
 //   style               merged onto the full-bleed container
 //   ref.begin()         start the morph imperatively
@@ -299,7 +299,7 @@ const BakedOrb = forwardRef(function BakedOrb(
       onKeyDown={onKey}
       tabIndex={0}
       role="button"
-      aria-label="Coming soon — the road to LA 2028"
+      aria-label="The Road — see the road to LA 2028"
       style={{
         position: 'absolute', top: '50%', left: '50%',
         width: hotspotSize, height: hotspotSize,
@@ -360,7 +360,7 @@ const BakedOrb = forwardRef(function BakedOrb(
           baked in, and frame 0 matches the composed rest state because the DOM
           backdrop uses the same cover math). Poster is the rest frame so the
           cross-fade always paints a correct first frame instantly. Plays once on
-          tap, ends on the globe hero pose, then hands off to /coming-soon. */}
+          tap, ends on the globe hero pose, then hands off to /the-road. */}
       <video
         ref={morphRef}
         className="baked-orb-video"

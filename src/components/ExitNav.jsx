@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 // ============================================================================
 //  ExitNav — image-backed "where to next" banner shared across page ends
-//  (Coming Soon tour, Event Calendar, Biography). Desktop: parallelogram cards
+//  (The Road tour, Biography). Desktop: parallelogram cards
 //  that share a slanted seam (square outer edges) and enlarge + lift on hover.
 //  Mobile: plain stacked tiles (slanted-thin cards don't work on a phone).
 //

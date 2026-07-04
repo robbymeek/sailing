@@ -3,11 +3,11 @@ import * as THREE from 'three'
 // ============================================================================
 //  SHARED EARTH  —  the single source of truth for the 3D globe.
 // ============================================================================
-//  Both the Coming Soon page (globeScene.js) and the home orb→globe MORPH
+//  Both the The Road page (globeScene.js) and the home orb→globe MORPH
 //  (glassOrbScene.js) build their earth from HERE, so the two globes are
-//  byte-identical. That identity is what lets the home→Coming Soon transition
+//  byte-identical. That identity is what lets the home→The Road transition
 //  cross the route boundary with NO pop: the orb scene's last frame and the
-//  Coming Soon globe's first frame render the same pixels.
+//  The Road globe's first frame render the same pixels.
 //
 //  Exports the camera primitives (shared so the framing matches too) plus
 //  buildEarth(), which creates the meshes/materials/lights and returns them for

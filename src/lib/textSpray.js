@@ -21,7 +21,7 @@
 //
 //  One small WebGL2 context on a fixed top-band canvas (~300px tall, NOT the
 //  full viewport — compositing bandwidth is the real cost, especially on the
-//  Coming Soon page where the globe context is also live). The canvas lives
+//  The Road page where the globe context is also live). The canvas lives
 //  inside the page's own stacking context (`container`) so route fades apply
 //  and page modals can layer above it. Callers gate on hasWebGL2() +
 //  prefers-reduced-motion + Save-Data (see hooks/useTextSpray) and wrap in
@@ -557,7 +557,7 @@ export function createTextSpray(h1El, opts = {}) {
   document.addEventListener('visibilitychange', onVisibility)
 
   // iOS Safari drops WebGL contexts under memory pressure; with the globe
-  // context alive on Coming Soon this small cosmetic one is the likely
+  // context alive on The Road this small cosmetic one is the likely
   // eviction victim. Pause while it's gone, resume when restored (three
   // re-uploads its tracked resources lazily).
   const onContextLost = (e) => { e.preventDefault(); stopLoop() }

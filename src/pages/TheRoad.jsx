@@ -491,7 +491,7 @@ function playYOfU(u) {
 // seamless: arrived via the home orb→globe morph. The body-level orb overlay is
 // already showing the finished globe, so this page's globe must paint opaque from
 // the first frame (no 1.2s black-in) and relay onReady up so the overlay dissolves.
-export default function ComingSoon({ onNavigate, seamless = false, onGlobeReady, fromBiography = false }) {
+export default function TheRoad({ onNavigate, seamless = false, onGlobeReady, fromBiography = false }) {
   // Capture seamless ONCE at mount: the flag is a one-shot hand-off signal that
   // App consumes right after the route swap, so the prop can flip false while
   // we're mounted — the staged reveal must keep the value it started with.
@@ -1489,9 +1489,6 @@ function StaticTimeline({ onNavigate }) {
   return (
     <div style={{ background: 'rgb(0,0,0)', minHeight: '100vh' }}>
       <div style={{ textAlign: 'center', padding: '110px 20px 30px' }}>
-        <p style={{ ...entrance.style(0), fontStyle: 'italic', color: 'rgba(255,255,255,0.45)', fontSize: 14, margin: '0 0 12px' }}>
-          coming soon
-        </p>
         <h1 style={{ ...entrance.style(1), color: '#fff', fontSize: 'clamp(36px, 6vw, 64px)', fontWeight: 800, letterSpacing: '-2px', margin: 0 }}>
           The Road to LA 2028
         </h1>

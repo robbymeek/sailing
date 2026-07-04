@@ -56,10 +56,12 @@ Touch points (all references to the internal page key `'Coming Soon'` and the
   something like "Up Next" or "The Road").
 - Optional, cosmetic: rename `ComingSoon.jsx` → `TheRoad.jsx` and the lazy import.
 
-URL strategy: route becomes `/the-road`; keep a redirect route
-`/coming-soon` → `/the-road` (a `<Navigate>` in App.jsx) so old links/bookmarks
-survive. GitHub Pages SPA routing already funnels unknown paths through
-404.html→index.html, so the in-app redirect is sufficient.
+URL strategy: route becomes `/the-road`; keep an in-app redirect
+`/coming-soon` → `/the-road` so old links/bookmarks survive. GitHub Pages SPA
+routing already funnels unknown paths through 404.html→index.html, so the
+in-app redirect is sufficient. **CORRECTED (2026-07-04): do NOT use a
+`<Navigate>` route element** — see "Execution notes" below for why and for the
+safe mechanism.
 
 Low-risk fallback if a full rename feels heavy: change only the *displayed*
 label via `SHORT_LABELS` in Nav.jsx and keep internal keys/URL. But the full
@@ -263,6 +265,103 @@ stopping:
 - The Biography hero's hand-coded `REGATTAS` cards are handled by the "Event
   data unification" section above (derived last-result / Road promo /
   next-race), not by this rework.
+
+---
+
+## Execution notes — verified against the code 2026-07-04
+
+A full-repo verification sweep (8 parallel readers) before implementation found
+the plan directionally correct but with five substantive errors/gaps. Line
+numbers in the sections above are stale (Biography/ComingSoon/App were all
+reworked Jul 3); the findings below are authoritative.
+
+### 1. The `<Navigate>` redirect would break the route-transition machine
+
+App.jsx renders `<Routes location={displayLocation}>` — routes match a
+*lagging* location so pages can fade out over 350ms before the swap. A
+`<Navigate>` element only fires when its route mounts, i.e. AFTER a full fade
+toward a blank page, then a second fade — ~700ms, a blank flash, and worst
+case it consumes the one-shot `orbOverlay.pendingFromOrb` flag on the blank
+hop, replaying the orb hand-off as a curtainless fade (the exact failure the
+fromOrb comment warns about). A bare `<Navigate>` also drops `location.state`
+(`fromOrb`, `from: 'Biography'`).
+
+**Correct mechanism** (all in App.jsx): a `REDIRECTS` map
+(`'/coming-soon': '/the-road'`, `'/event-calendar': '/biography'`,
+`'/path': '/team'`) applied in three places: (a) the `displayLocation`
+useState initializer resolves redirects so a cold load at an old URL paints
+the target page on the first frame; (b) a `useLayoutEffect` declared BEFORE
+the transition effect does `navigate(target, { replace: true, state:
+location.state })`; (c) the transition effect's first line returns early when
+`REDIRECTS[location.pathname]` is set, so the machine never fades toward a
+redirect source and never consumes `pendingFromOrb` on one.
+
+### 2. `/team` is not a free slot — it has live map entries for the old page
+
+Deleting Team.jsx is necessary but not sufficient. `/team` already has:
+`INNER_BG['/team'] = 'rgb(22,24,28)'` (must become Path's `'rgb(12,14,18)'`),
+`VARIANT_MAP['/team'] = 'blue'` (must become `'dark'`), `CURRENT_MAP['/team']
+= 'Team'` (must become `'The Team'`), and `getNavMode` has NO `/team` case
+(falls to `'static'` — must return `'overlay'` like `/path` does today, or
+the nav breaks over the dark hero). `go()`'s map has both `'Path': '/path'`
+and `'Team': '/team'` entries; both are replaced by `'The Team': '/team'`.
+
+### 3. The caller/label list was incomplete
+
+Beyond Nav.jsx and exitCards.js, the 'Path'/'Path & Team' label appears in:
+`Footer.jsx:15` (`['Path', 'Path & Team']`), `MainView.jsx:652` (home nav
+`['PATH & TEAM', 'Path']`), and `App.jsx:465` (compact-overlay label remap
+`{'Path': 'Path & Team'}[item]` — becomes dead code unless removed).
+`go()` falls back to `'/'` for unknown page keys — a missed caller silently
+navigates HOME, no error — so every `onNavigate` string must flip in the same
+commit as the map. Confirmed 'Coming Soon' callers: `eventUI.jsx:44`,
+`Biography.jsx:64`, `MainView.jsx:378,561,568`. 'Event Calendar' caller:
+`MainView.jsx:760` (the LA 2028 corner — retargets to The Road per step 2).
+
+### 4. The BrowserStack harness hardcodes the old route and aria-labels
+
+The plan said "re-test with the harness" but missed that the harness itself
+breaks: `run.js:187` (regex polls for `/coming-soon` after the orb morph —
+would falsely report the hand-off broken), `capture.js:22`
+(`PAGE = '/coming-soon'`), `spray-check.mjs:47` (`pagePath`), and two selector
+contracts: `probe.js:62` selects `button[aria-label^="Coming soon"]` (device
+classifier — misclassifies every fallback device if the labels change without
+it) and `capture-changes.mjs:87` selects `[aria-label*="road to LA"]`
+(case-sensitive). **Aria-label strategy:** the orb/flat-boat labels in
+`MainView.jsx:569` and `BakedOrb.jsx:302` become "The Road — see the road to
+LA 2028" (keeps the lowercase "road to LA" substring so capture-changes needs
+no edit), and `probe.js:62` flips to `^="The Road"` in the same commit.
+
+### 5. Docs/comments that must track the rename
+
+`README.md:43` (pages inventory: drop EventCalendar, rename ComingSoon/Path),
+`BAKE.md:19,22,75,77,85,87` (`/coming-soon`, `onNavigate('Coming Soon')`,
+`ComingSoon.jsx`), stale comments in `events.js`, `eventUI.jsx`,
+`exitCards.js`, `ExitNav.jsx`, `tourChapters.js:1`, `campaignStops.js:2`.
+The only user-visible "coming soon" text on the tour page itself is the
+StaticTimeline fallback kicker (`ComingSoon.jsx:1493`) — delete it (the
+"coming soon" framing is obsolete). Biography's ComingSoonCard kicker
+(line 104) becomes "Up Next". File renames: `ComingSoon.jsx → TheRoad.jsx`
+requires exactly four import updates (`App.jsx:20,188`,
+`MainView.jsx:346,372` — lazy + idle-prefetch + two morph warms, which must
+stay pointed at ONE chunk).
+
+Also verified: no sitemap/robots/manifest exist (GH Pages can't 301 — the
+in-app redirect is the only mechanism, accepted); CI on PRs is `npm ci +
+vite build` only, so deleting a page file and its import in different commits
+would fail the build — do them together; `index.html` meta needs no changes;
+Team.jsx is confirmed imported ONLY by App.jsx.
+
+### Results-header removal details (step 3)
+
+Removing the Olympic countdown also removes: the `countdownRef` declaration,
+its entry in the spray `fadeRefs` array, and the now-unused
+`olympic = useCountdown(...)` hook call. The RESULTS headline keeps the
+per-glyph `<span>` structure (`'RESULTS'.split('')`) and `palette: 'white'`.
+The Next Event line becomes a real `<button>` (a11y) wrapping the chrome-text,
+navigating to The Road. The mobile home embeds the same Biography component,
+so all of this appears there automatically — and the hidden preload copy's
+`enabled: !preload` spray guard must survive the edit untouched.
 
 ---
 

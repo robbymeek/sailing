@@ -5,7 +5,7 @@ import exitContact from '../assets/home-intro/p1177244.jpeg'
 
 // ============================================================================
 //  Canonical "where to next" cards — ONE definition per destination so every
-//  page's ExitNav (Biography, Event Calendar, Coming Soon) shows the same
+//  page's ExitNav (Biography, The Road) shows the same
 //  card. Pages compose the subset they need from EXIT_CARDS; the Support card
 //  goes LAST everywhere (far right on desktop, bottom of the mobile stack).
 //

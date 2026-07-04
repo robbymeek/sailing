@@ -1,9 +1,9 @@
 import { useState } from 'react'
 
 // ============================================================================
-//  Shared events-calendar UI — used by BOTH the standalone Event Calendar page
-//  and the Biography events section so they never drift. Data lives in
-//  src/data/events.js.
+//  Results-list UI — used by the Biography RESULTS section (the site's single
+//  home for past results since the standalone Event Calendar page was
+//  retired). Data lives in src/data/events.js.
 // ============================================================================
 
 // One clickable past-event row → opens the modal.
@@ -33,7 +33,7 @@ export function EventRow({ event, isActive, onActivate }) {
 }
 
 // The chrome "door" into the future campaign tour. Styled with the same LA 2028
-// shimmer (chrome-text) so it invites the click, and navigates to Coming Soon
+// shimmer (chrome-text) so it invites the click, and navigates to The Road
 // instead of opening a modal.
 export function BridgeRow({ onNavigate }) {
   const [hovered, setHovered] = useState(false)
@@ -41,7 +41,7 @@ export function BridgeRow({ onNavigate }) {
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => onNavigate('Coming Soon')}
+      onClick={() => onNavigate('The Road')}
       style={{
         padding: hovered ? '22px 20px' : '18px 0',
         borderBottom: '1px solid rgba(255,255,255,0.1)',

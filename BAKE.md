@@ -16,10 +16,10 @@ feathered circular mask at the orb's rim; `MainView`'s `BakedOrbBackdrop` draws
 the same photo with the same cover math behind it, so the seam is invisible. The
 morph clip plays full-bleed: the harness bakes in the desktop's background fade
 (0.88 → black once morph progress ≥ 0.9), so it still ends globe-on-black for the
-/coming-soon hand-off.
+/the-road hand-off.
 
 ```
-rest loop ──tap──▶ morph clip ──ends──▶ /coming-soon
+rest loop ──tap──▶ morph clip ──ends──▶ /the-road
 (cross-fades into the morph)  (ends on the globe hero pose)
 ```
 
@@ -72,19 +72,19 @@ In `src/components/BakedOrb.jsx` set:
 export const BAKED_ORB_READY = true
 ```
 Then `npm run dev`, shrink the window < 700px (or use BrowserStack iPhone), and tap
-the orb — it should play the morph and land on `/coming-soon`.
+the orb — it should play the morph and land on `/the-road`.
 
-> **Hand-off:** the phone path navigates with a plain `onNavigate('Coming Soon')`
+> **Hand-off:** the phone path navigates with a plain `onNavigate('The Road')`
 > (a ~350ms fade), NOT the desktop `{ fromOrb: true }` path. That desktop path is
 > bridged by the body-level WebGL overlay canvas, which phones don't have — copying
-> it would make Coming Soon expect an overlay handoff that never arrives. For a
+> it would make The Road expect an overlay handoff that never arrives. For a
 > zero-flash land, use the poster bridge in step 4 instead.
 
 ### 4. (Optional — NOT wired yet) Perfectly seamless land — the poster bridge
 This is a manual enhancement you add yourself; nothing references `orb-globe-poster`
-in `ComingSoon.jsx` today. For a zero-flash hand-off into Coming Soon on phones, make
+in `TheRoad.jsx` today. For a zero-flash hand-off into The Road on phones, make
 the page's **first mobile paint** the morph's final frame, then fade the live globe in
-over it. In `src/pages/ComingSoon.jsx`, when it falls back to the static timeline (or
+over it. In `src/pages/TheRoad.jsx`, when it falls back to the static timeline (or
 before the globe boots) on mobile, render:
 ```jsx
 <img src={`${import.meta.env.BASE_URL}orb/orb-globe-poster.webp`} alt="" aria-hidden="true"

@@ -1,4 +1,4 @@
-// Half-year chapters of the 2026 → 2028 campaign tour. The Coming Soon page
+// Half-year chapters of the 2026 → 2028 campaign tour. The Road page
 // scrolls through these five chapters — each opens with a full-screen
 // interstitial (kicker / title / subtitle / roll-call) while the globe pulls
 // back and constellates that chapter's pins. Copy lives here; the stop data

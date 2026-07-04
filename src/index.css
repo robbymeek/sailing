@@ -153,7 +153,7 @@ button {
   50% { transform: translateY(4px); }
 }
 
-/* Coming Soon: waypoint label pop as the dot lands on a new point */
+/* The Road: waypoint label pop as the dot lands on a new point */
 @keyframes csPop {
   0% { opacity: 0; transform: translateY(3px) scale(0.96); }
   60% { opacity: 1; transform: translateY(0) scale(1.02); }

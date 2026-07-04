@@ -5,50 +5,55 @@ import orbOverlay from './lib/orbOverlay'
 import blackBridge from './lib/blackBridge'
 
 // Pages shown in the compact (narrow-viewport) overlay nav.
-const COMPACT_PAGES = ['Home', 'Biography', 'Path', 'Coming Soon', 'Contact', 'Support']
+const COMPACT_PAGES = ['Home', 'Biography', 'Path', 'The Road', 'Contact', 'Support']
 import MainView from './pages/MainView'
 import Biography from './pages/Biography'
-import EventCalendar from './pages/EventCalendar'
 import Path from './pages/Path'
 import Team from './pages/Team'
 import Contact from './pages/Contact'
 import Support from './pages/Support'
 
-// Lazy: Coming Soon carries three.js (~150KB gz) — keep it out of the main
+// Lazy: The Road carries three.js (~150KB gz) — keep it out of the main
 // bundle. Do NOT add it to the offscreen preload div below; that would boot
 // a hidden WebGL context permanently.
-const ComingSoon = lazy(() => import('./pages/ComingSoon'))
+const TheRoad = lazy(() => import('./pages/TheRoad'))
+
+// Old URLs → new homes. Resolved BEFORE the route-transition machine ever
+// sees them (see the displayLocation initializer + redirect effect below), so
+// a stale link never fades toward a blank page and never consumes the
+// one-shot orb hand-off flag mid-hop.
+const REDIRECTS = {
+  '/coming-soon': '/the-road',
+  '/event-calendar': '/biography',
+}
 
 const INNER_BG = {
   '/biography': 'rgb(230,235,240)',
-  '/event-calendar': 'rgb(0,0,0)',
   '/team': 'rgb(22,24,28)',
   '/contact': 'rgb(240,240,240)',
   '/path': 'rgb(12,14,18)',
   '/support': 'rgb(240,240,240)',
-  '/coming-soon': 'rgb(0,0,0)',
+  '/the-road': 'rgb(0,0,0)',
 }
 
 const VARIANT_MAP = {
   '/': 'dark',
   '/biography': 'dark', // white nav text — it floats over the dark video hero
-  '/event-calendar': 'dark',
   '/team': 'blue',
   '/contact': 'light',
   '/path': 'dark',
   '/support': 'light',
-  '/coming-soon': 'dark',
+  '/the-road': 'dark',
 }
 
 const CURRENT_MAP = {
   '/': 'Home',
   '/biography': 'Biography',
-  '/event-calendar': 'Event Calendar',
   '/team': 'Team',
   '/contact': 'Contact',
   '/path': 'Path',
   '/support': 'Support',
-  '/coming-soon': 'Coming Soon',
+  '/the-road': 'The Road',
 }
 
 function getNavMode(pathname) {
@@ -62,9 +67,9 @@ function getNavMode(pathname) {
   // with a TRANSPARENT background (unlike 'overlay', whose solid navBg is
   // color-matched to each dark hero) and scrolls away with the page.
   if (pathname === '/biography') return 'overlay-clear'
-  // Coming Soon is a fixed-canvas scrollytelling page — overlay the nav over
+  // The Road is a fixed-canvas scrollytelling page — overlay the nav over
   // the dark hero and let it scroll away with the page.
-  if (pathname === '/coming-soon') return 'overlay'
+  if (pathname === '/the-road') return 'overlay'
   if (pathname === '/support') return 'static'
   // Contact is a single-viewport page — overlay the nav so the nav's height
   // counts toward the 100dvh and the page can stay exactly one screen tall.
@@ -108,9 +113,8 @@ export default function App() {
     const routes = {
       'Home': '/',
       'Biography': '/biography',
-      'Event Calendar': '/event-calendar',
       'Path': '/path',
-      'Coming Soon': '/coming-soon',
+      'The Road': '/the-road',
       'Team': '/team',
       'Contact': '/contact',
       'Support': '/support',
@@ -118,16 +122,35 @@ export default function App() {
     navigate(routes[page] || '/', { state })
   }
 
-  // Exit/enter animation state
-  const [displayLocation, setDisplayLocation] = useState(location)
+  // Exit/enter animation state. The initializer resolves redirects so a cold
+  // load at an old URL paints the target page on the very first frame — no
+  // fade, no blank flash, no extra history entry beyond the replace below.
+  const [displayLocation, setDisplayLocation] = useState(() =>
+    REDIRECTS[location.pathname]
+      ? { ...location, pathname: REDIRECTS[location.pathname] }
+      : location
+  )
   const [transitionStage, setTransitionStage] = useState('entered')
+
+  // Redirect BEFORE the transition machine (layout effects run in declaration
+  // order). replace keeps the dead URL out of history; forwarding state
+  // preserves fromOrb / from:'Biography' through the hop.
+  const redirectTo = REDIRECTS[location.pathname]
+  useLayoutEffect(() => {
+    if (redirectTo) navigate(redirectTo, { replace: true, state: location.state })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [redirectTo])
 
   // fromOrb: the home orb→globe morph is mid-handoff. The body-level orb overlay
   // is showing the finished globe; swap routes SYNCHRONOUSLY with NO fade-to-black
   // (the overlay hides the swap), land at scroll 0 (= the globe's hero pose), and
-  // let Coming Soon boot underneath. The overlay dissolves once its globe is ready.
+  // let The Road boot underneath. The overlay dissolves once its globe is ready.
   const fromOrb = location.state?.fromOrb || orbOverlay.pendingFromOrb
   useLayoutEffect(() => {
+    // Never start a transition toward a redirect source — the redirect effect
+    // above is about to replace it, and consuming pendingFromOrb here would
+    // replay the orb hand-off as a curtainless fade after the hop.
+    if (REDIRECTS[location.pathname]) return
     if (location.pathname === displayLocation.pathname) return
     if (fromOrb) {
       try { history.scrollRestoration = 'manual' } catch { /* older browsers */ }
@@ -135,7 +158,7 @@ export default function App() {
       setDisplayLocation(location) // pre-paint swap
       setTransitionStage('entered')
       // Consume the one-shot hand-off flag AFTER the swap render commits (macro
-      // task), so Coming Soon's first render still sees seamless=true. Without
+      // task), so The Road's first render still sees seamless=true. Without
       // this, a back/forward re-entry would replay the seamless choreography
       // (scroll lock, held-back hero) with no curtain on screen.
       setTimeout(() => { orbOverlay.pendingFromOrb = false }, 0)
@@ -151,20 +174,21 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location])
 
-  // Safety net: if Coming Soon's globe never signals ready (texture error →
+  // Safety net: if The Road's globe never signals ready (texture error →
   // StaticTimeline), dissolve the overlay anyway so it can't get stuck on screen.
   useEffect(() => {
-    if (displayLocation.pathname !== '/coming-soon' || !orbOverlay.holding) return undefined
+    if (displayLocation.pathname !== '/the-road' || !orbOverlay.holding) return undefined
     const t = setTimeout(() => orbOverlay.crossfadeOut(250), 1800)
     return () => clearTimeout(t)
   }, [displayLocation.pathname])
 
-  // Leaving (or never reaching) /coming-soon clears the hand-off curtain — a
+  // Leaving (or never reaching) /the-road clears the hand-off curtain — a
   // no-op when none is up. Covers the user backing out mid-hold (browser
   // back/edge-swipe bypasses the curtain), which otherwise strands the home
   // under a tap-swallowing black layer until the curtain's safety timer.
+  // (The /coming-soon redirect source is exempt: it forwards to /the-road.)
   useEffect(() => {
-    if (location.pathname !== '/coming-soon') blackBridge.fadeOut(300)
+    if (location.pathname !== '/the-road' && !REDIRECTS[location.pathname]) blackBridge.fadeOut(300)
   }, [location.pathname])
 
   function handleExitComplete(e) {
@@ -182,10 +206,10 @@ export default function App() {
     document.body.style.transition = 'background 0.4s ease'
   }, [location.pathname])
 
-  // Idle-prefetch the lazy Coming Soon chunk so the 350ms route transition
+  // Idle-prefetch the lazy The Road chunk so the 350ms route transition
   // never waits on the network.
   useEffect(() => {
-    const t = setTimeout(() => { import('./pages/ComingSoon') }, 2500)
+    const t = setTimeout(() => { import('./pages/TheRoad') }, 2500)
     return () => clearTimeout(t)
   }, [])
 
@@ -486,14 +510,13 @@ export default function App() {
             )
           } />
           <Route path="/biography" element={<Biography onNavigate={go} />} />
-          <Route path="/event-calendar" element={<EventCalendar onNavigate={go} />} />
           <Route path="/team" element={<Team onNavigate={go} />} />
           <Route path="/contact" element={<Contact onNavigate={go} />} />
           <Route path="/path" element={<Path onNavigate={go} />} />
           <Route path="/support" element={<Support onNavigate={go} />} />
-          <Route path="/coming-soon" element={
+          <Route path="/the-road" element={
             <Suspense fallback={<div style={{ height: '100dvh', background: 'rgb(0,0,0)' }} />}>
-              <ComingSoon
+              <TheRoad
                 onNavigate={go}
                 seamless={fromOrb}
                 fromBiography={location.state?.from === 'Biography'}
@@ -504,7 +527,7 @@ export default function App() {
         </Routes>
       </div>
 
-      {/* Preload Biography + Event Calendar off-screen for snappier page transitions */}
+      {/* Preload Biography off-screen for snappier page transitions */}
       <div aria-hidden="true" style={{
         position: 'fixed', top: '-200vh', left: '-200vw',
         width: '100vw', height: '100vh',
@@ -512,7 +535,6 @@ export default function App() {
         zIndex: -1,
       }}>
         {displayLocation.pathname !== '/biography' && <Biography onNavigate={() => {}} preload />}
-        {displayLocation.pathname !== '/event-calendar' && <EventCalendar onNavigate={() => {}} />}
       </div>
     </div>
   )

@@ -40,7 +40,7 @@ src/
   hooks/        useCountdown, usePageEntrance, useTextSpray
   lib/          Text spray effect
   bake/         Mobile orb bake pipeline (see BAKE.md)
-  pages/        MainView (home), Biography, ComingSoon, Path, Support, Contact, EventCalendar
+  pages/        MainView (home), Biography, TheRoad, Path, Support, Contact
   App.jsx       Router
   main.jsx      Entry point
   index.css     Global styles

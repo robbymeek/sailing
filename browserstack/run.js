@@ -48,7 +48,7 @@ function parseArgs(argv) {
     // no StrictMode double-mount, optimized assets. Implies --serve + --local.
     else if (k === '--preview') { a.preview = true; a.serve = true; a.local = true }
     // --morph: on LIVE_ORB devices, click the orb and confirm it morphs/navigates
-    // to Coming Soon (the seamless-handoff regression guard). Implies --debug.
+    // to The Road (the seamless-handoff regression guard). Implies --debug.
     else if (k === '--morph') { a.morph = true; a.debug = true }
     else if (k === '--debug') a.debug = true
     else if (k === '--url') a.url = argv[++i]
@@ -173,7 +173,7 @@ async function runDevice(device, { url, common, waitMs, morph }) {
     // --morph: exercise the orb→globe handoff on a real device. The orb's click
     // handler is window-level (the canvas is pointer-events:none), so a click at
     // the viewport centre (= the orb's screen position) triggers it. We then poll
-    // for the route swap to /coming-soon and record peak morph progress.
+    // for the route swap to /the-road and record peak morph progress.
     if (morph && out.verdict === 'LIVE_ORB') {
       try {
         const body = await driver.findElement(By.css('body'))
@@ -184,7 +184,7 @@ async function runDevice(device, { url, common, waitMs, morph }) {
         while (Date.now() < md) {
           const st = await driver.executeScript('return { path: location.pathname, m: (window.__ORB_DEBUG__ && window.__ORB_DEBUG__.morph) }')
           if (typeof st.m === 'number') maxProgress = Math.max(maxProgress, st.m)
-          if (/coming-soon/.test(st.path || '')) { navigated = true; break }
+          if (/the-road/.test(st.path || '')) { navigated = true; break }
           await driver.sleep(400)
         }
         await driver.sleep(1500) // let the globe paint + overlay cross-fade
@@ -211,7 +211,7 @@ async function runDevice(device, { url, common, waitMs, morph }) {
     if (driver) { try { await driver.quit() } catch { /* ignore */ } }
   }
   const tag = out.verdict || (out.error ? 'ERROR' : '?')
-  const morphTag = out.morph ? `  morph→${out.morph.navigated ? 'coming-soon ✓' : `peak ${out.morph.maxProgress ?? '?'}${out.morph.error ? ' ' + out.morph.error.slice(0, 40) : ''}`}` : ''
+  const morphTag = out.morph ? `  morph→${out.morph.navigated ? 'the-road ✓' : `peak ${out.morph.maxProgress ?? '?'}${out.morph.error ? ' ' + out.morph.error.slice(0, 40) : ''}`}` : ''
   console.log(`  ${out.ok ? '✓' : '✗'} ${device.label.padEnd(34)} → ${tag}${morphTag}${out.error ? '  (' + out.error.slice(0, 80) + ')' : ''}`)
   return out
 }

@@ -1,5 +1,5 @@
 // Shared sailboat marker — used on the Path & Team timeline spine and as the
-// traveling marker on the Coming Soon progress rail. Variants tint the sail/hull
+// traveling marker on The Road progress rail. Variants tint the sail/hull
 // and add a glow: 'default' | 'active' (blue) | 'glow' (white) | 'ghost' (faint).
 export default function SailboatIcon({ variant = 'default', size = 22 }) {
   const scale = size / 22
