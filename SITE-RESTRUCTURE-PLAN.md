@@ -1,7 +1,12 @@
 # Site Restructure Plan — the temporal spine
 
-_Drafted 2026-07-03 from a brainstorm session. This is the agreed direction for
-resolving the page overlaps. No code has been changed yet._
+_Drafted 2026-07-03 from a brainstorm session; execution began 2026-07-04._
+
+**Status:** steps 1–3 (The Road rename, LA 2028 corner retarget, Event
+Calendar deletion + redirects, Biography → RESULTS) landed in PR #11. The
+Team rework (step 5) is implemented in `feat/the-team` — bottom-of-page
+treatment pending the owner's visual confirmation. Step 4 (event data
+unification) remains deferred until the pages settle.
 
 ## The problem being solved
 
@@ -230,6 +235,21 @@ the Support page.
   supporters roster with the "Your Name" empty slots, and the thank-you
   letter (stays last, before the exits — it shows prospects how sponsors are
   treated here).
+
+### Hero roll call (owner-directed 2026-07-04, iterated same night)
+
+The roster's names appear on BOTH statement beats. Final form (built):
+ONE list fixed in the timeline's sticky layer (desktop) — a padded box on
+the right, text CENTER-aligned, **no scrim/shader behind the text (owner
+style rule)**. Scrolling beat 1 → beat 2 pixelates the white italic names
+into a downward spray (canvas-2D, same motion family as the headline
+sprays, chrome gradient stops duplicated from index.css — keep in sync)
+and regathers the same pixels as chrome lettering; the animated
+.chrome-text DOM takes over at rest. Pure closed form of scrollY; reduced
+motion gets a plain crossfade. Mobile centers the list below each beat's
+statement. **Follow-up to explore:** the owner suggested a liquid-logo
+treatment — see `~/Desktop/Code/reference-repos/` (liquid-logo clone)
+before building any WebGL version.
 
 ### Bottom-of-page treatment (proposed, described 2026-07-03 — confirm on review)
 

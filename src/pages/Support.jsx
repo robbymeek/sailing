@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import usePageEntrance from '../hooks/usePageEntrance'
 import Footer from '../components/Footer'
 import portrait from '../assets/support/portrait.jpg'
@@ -50,6 +51,10 @@ function DonateButton() {
 
 export default function Support({ onNavigate }) {
   const entrance = usePageEntrance(1, { staggerMs: 100, initialDelayMs: 60 })
+  // Arriving from The Team's open-berth input: greet the typed name so the
+  // roster gesture lands somewhere real (the donation itself happens on the
+  // external SFNY platform, so an acknowledgment is the honest maximum).
+  const prefillName = useLocation().state?.prefillName
   const [narrow, setNarrow] = useState(typeof window !== 'undefined' && window.innerWidth <= 900)
   useEffect(() => {
     const h = () => setNarrow(window.innerWidth <= 900)
@@ -78,6 +83,14 @@ export default function Support({ onNavigate }) {
             padding: 'clamp(32px, 4vw, 56px)',
             display: 'flex', flexDirection: 'column', justifyContent: 'center',
           }}>
+            {prefillName && (
+              <p style={{
+                color: 'rgba(255,255,255,0.7)', fontSize: 14,
+                letterSpacing: '0.4px', margin: '0 0 10px',
+              }}>
+                Reserving a berth for <strong style={{ color: '#fff' }}>{prefillName}</strong>
+              </p>
+            )}
             <h1 style={{
               color: '#fff', fontSize: 'clamp(30px, 4vw, 50px)', fontWeight: 800,
               letterSpacing: '-1.5px', lineHeight: 1.05, margin: '0 0 20px',

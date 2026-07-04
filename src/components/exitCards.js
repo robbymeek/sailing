@@ -11,7 +11,7 @@ import exitContact from '../assets/home-intro/p1177244.jpeg'
 //
 //  • home      — fleet aerial photo
 //  • biography — solo shot of Robby
-//  • path      — team photo (2025 ICSA Open Team Race National Champions)
+//  • team      — team photo (2025 ICSA Open Team Race National Champions)
 //  • support   — white card, black text (ExitNav renders via `light`)
 //  • contact   — sailing photo (unchanged)
 // ============================================================================
@@ -19,7 +19,7 @@ import exitContact from '../assets/home-intro/p1177244.jpeg'
 export const EXIT_CARDS = {
   home: { label: 'Home', page: 'Home', img: exitHome },
   biography: { label: 'Biography', page: 'Biography', img: exitBio },
-  path: { label: 'Path & Team', page: 'Path', img: exitPath },
+  team: { label: 'The Team', page: 'The Team', img: exitPath },
   support: { label: 'Support', page: 'Support', light: true },
   contact: { label: 'Contact', page: 'Contact', img: exitContact },
 }

@@ -1349,7 +1349,7 @@ function TourControls({ tour, playing }) {
 // Fancy image-backed exit cards for the end of the tour — richer than the flat
 // Biography "explore" cards: a sailing photo per destination, dark scrim, and a
 // lift + zoom + royal-blue glow on hover.
-const EXIT_LINKS = [EXIT_CARDS.home, EXIT_CARDS.biography, EXIT_CARDS.path, EXIT_CARDS.support]
+const EXIT_LINKS = [EXIT_CARDS.home, EXIT_CARDS.biography, EXIT_CARDS.team, EXIT_CARDS.support]
 
 function EndBlock({ onNavigate, isMobile }) {
   const { days, hrs, mins, secs } = useCountdown(new Date('2028-07-14T00:00:00'))
