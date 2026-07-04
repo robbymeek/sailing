@@ -35,9 +35,12 @@ Big site-wide features are still feature branches: slice them into independently
 
 ```
 src/
-  components/   Nav, Footer, Marquee (shared)
-  hooks/        useCountdown
-  pages/        Home, Biography, EventCalendar, Team, Contact
+  components/   Nav, Footer, exit cards, orb (shared)
+  data/         Campaign stops, tour chapters
+  hooks/        useCountdown, usePageEntrance, useTextSpray
+  lib/          Text spray effect
+  bake/         Mobile orb bake pipeline (see BAKE.md)
+  pages/        MainView (home), Biography, ComingSoon, Path, Support, Contact, EventCalendar
   App.jsx       Router
   main.jsx      Entry point
   index.css     Global styles
