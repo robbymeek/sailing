@@ -26,6 +26,11 @@ const REDIRECTS = {
   '/coming-soon': '/the-road',
   '/event-calendar': '/biography',
 }
+// The router matched the retired routes case-insensitively with optional
+// trailing slashes — give the redirect map the same tolerance, or links like
+// /coming-soon/ and /Coming-Soon strand visitors on a blank page.
+const redirectFor = (pathname) =>
+  REDIRECTS[pathname.toLowerCase().replace(/\/+$/, '') || '/']
 
 const INNER_BG = {
   '/biography': 'rgb(230,235,240)',
@@ -126,8 +131,8 @@ export default function App() {
   // load at an old URL paints the target page on the very first frame — no
   // fade, no blank flash, no extra history entry beyond the replace below.
   const [displayLocation, setDisplayLocation] = useState(() =>
-    REDIRECTS[location.pathname]
-      ? { ...location, pathname: REDIRECTS[location.pathname] }
+    redirectFor(location.pathname)
+      ? { ...location, pathname: redirectFor(location.pathname) }
       : location
   )
   const [transitionStage, setTransitionStage] = useState('entered')
@@ -135,9 +140,16 @@ export default function App() {
   // Redirect BEFORE the transition machine (layout effects run in declaration
   // order). replace keeps the dead URL out of history; forwarding state
   // preserves fromOrb / from:'Biography' through the hop.
-  const redirectTo = REDIRECTS[location.pathname]
+  const redirectTo = redirectFor(location.pathname)
   useLayoutEffect(() => {
-    if (redirectTo) navigate(redirectTo, { replace: true, state: location.state })
+    if (!redirectTo) return
+    // Kill the browser's saved-scroll restore for the dead URL's entry — the
+    // offset belongs to the deleted page, not the redirect target. 'manual'
+    // is required (a bare scrollTo(0,0) gets overridden when the browser
+    // retries its deferred restoration after the SPA's content grows).
+    try { history.scrollRestoration = 'manual' } catch { /* older browsers */ }
+    window.scrollTo(0, 0)
+    navigate(redirectTo, { replace: true, state: location.state })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [redirectTo])
 
@@ -150,7 +162,7 @@ export default function App() {
     // Never start a transition toward a redirect source — the redirect effect
     // above is about to replace it, and consuming pendingFromOrb here would
     // replay the orb hand-off as a curtainless fade after the hop.
-    if (REDIRECTS[location.pathname]) return
+    if (redirectTo) return
     if (location.pathname === displayLocation.pathname) return
     if (fromOrb) {
       try { history.scrollRestoration = 'manual' } catch { /* older browsers */ }
@@ -188,7 +200,7 @@ export default function App() {
   // under a tap-swallowing black layer until the curtain's safety timer.
   // (The /coming-soon redirect source is exempt: it forwards to /the-road.)
   useEffect(() => {
-    if (location.pathname !== '/the-road' && !REDIRECTS[location.pathname]) blackBridge.fadeOut(300)
+    if (location.pathname !== '/the-road' && !redirectFor(location.pathname)) blackBridge.fadeOut(300)
   }, [location.pathname])
 
   function handleExitComplete(e) {

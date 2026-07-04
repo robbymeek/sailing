@@ -462,7 +462,12 @@ export function createTextSpray(h1El, opts = {}) {
     else staleness *= Math.exp(-dt / 0.15)
 
     for (const { el, dy } of fadeOffsets) {
-      el.style.opacity = String(Math.min(1, Math.max(0, (rect.top + dy - 50) / 90)))
+      const o = Math.min(1, Math.max(0, (rect.top + dy - 50) / 90))
+      el.style.opacity = String(o)
+      // A fully faded element must also leave hit-testing and tab order:
+      // opacity:0 alone keeps buttons inside it clickable and focusable
+      // (an invisible click target parked at the top of the viewport).
+      el.style.visibility = o <= 0 ? 'hidden' : ''
     }
 
     const paused = isPaused && isPaused()
@@ -507,7 +512,10 @@ export function createTextSpray(h1El, opts = {}) {
     canvas.style.display = 'none'
     rule.style.display = 'none'
     ruleO = 0
-    for (const { el } of fadeOffsets) el.style.opacity = ''
+    for (const { el } of fadeOffsets) {
+      el.style.opacity = ''
+      el.style.visibility = ''
+    }
   }
 
   // Idle watcher: a cheap rAF-throttled scroll check restarts the loop when

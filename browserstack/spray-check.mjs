@@ -26,7 +26,10 @@ for (const line of fs.readFileSync(path.join(__dirname, '.env'), 'utf8').split('
 const user = process.env.BROWSERSTACK_USERNAME
 const key = process.env.BROWSERSTACK_ACCESS_KEY
 
-const FIND_H1 = `window.__h1 = [...document.querySelectorAll('h1')].find(h => h.textContent.replace(/\\s/g,'') === 'LA2028');
+// Per-page: the sprayed headline differs (RESULTS on /biography, LA 2028 on
+// /the-road finale). A missing headline leaves __top = 0, which photographs
+// the hero instead of the spray — the DIAG h1Top field is the tell.
+const FIND_H1 = (text) => `window.__h1 = [...document.querySelectorAll('h1')].find(h => h.textContent.replace(/\\s/g,'') === '${text}');
 window.__top = window.__h1 ? window.__h1.getBoundingClientRect().top + window.scrollY : 0;`
 const WIGGLE_ON = `clearInterval(window.__wig); let i = 0;
 window.__wig = setInterval(() => window.scrollBy(0, (i++ % 2) ? 1 : -1), 120);`
@@ -37,7 +40,7 @@ const PAGES = [
   {
     pagePath: '/biography', settle: 9000,
     steps: [
-      ['arm', `${FIND_H1} window.scrollTo(0, window.__top - window.innerHeight);`, 3000, false],
+      ['arm', `${FIND_H1('RESULTS')} window.scrollTo(0, window.__top - window.innerHeight);`, 3000, false],
       ['bio-mid', `window.scrollTo(0, window.__top + 50); ${WIGGLE_ON}`, 900, true],
       ['bio-oval', `window.scrollTo(0, window.__top + 200);`, 900, true],
       ['bio-reassembled', `${WIGGLE_OFF} window.scrollTo(0, window.__top - 300);`, 1300, true],
@@ -46,7 +49,7 @@ const PAGES = [
   {
     pagePath: '/the-road', settle: 12000,
     steps: [
-      ['arm', `${FIND_H1} window.scrollTo(0, window.__top - window.innerHeight);`, 3000, false],
+      ['arm', `${FIND_H1('LA2028')} window.scrollTo(0, window.__top - window.innerHeight);`, 3000, false],
       ['cs-mid', `window.scrollTo(0, window.__top + 60); ${WIGGLE_ON}`, 900, true],
       ['cs-oval', `window.scrollTo(0, window.__top + 220);`, 900, true],
       ['cs-reassembled', `${WIGGLE_OFF} window.scrollTo(0, window.__top - 400);`, 1300, true],
