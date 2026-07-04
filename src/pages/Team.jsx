@@ -556,12 +556,16 @@ function YourNameInput({ onNavigate, showBoat = false }) {
 // The roll call — the roster's names, present on BOTH statement beats. On
 // "The singlehanded class." they sit quiet in white italic (the crew is
 // there even when the water looks empty); on "Never sailed alone." the same
-// list comes alive in the site's chrome shimmer. Right column on desktop,
-// below the statement on mobile.
+// list comes alive in the site's chrome shimmer. Mobile flows the list below
+// the statement per beat; desktop mounts ONE fixed copy in the sticky layer
+// (RollCallOverlay below) so the names hold their ground while the scroll
+// sprays them apart and reforms them as chrome.
 function SponsorRollCall({ colored, isMobile }) {
   const names = SUPPORTERS.map((s) => s.name)
-  const list = (
-    <div style={{ textAlign: isMobile ? 'left' : 'right' }}>
+  // Centered within the content column (which already sits right of the
+  // mobile spine) — the "centered feel" the owner asked for.
+  return (
+    <div style={{ marginTop: 30, textAlign: 'center' }}>
       {names.map((n) => (
         <p
           key={n}
@@ -570,10 +574,10 @@ function SponsorRollCall({ colored, isMobile }) {
             color: colored ? undefined : 'rgba(255,255,255,0.92)',
             fontStyle: 'italic',
             fontSize: isMobile ? 13 : 'clamp(14px, 1.15vw, 17px)',
-            fontWeight: colored ? 600 : 400,
+            fontWeight: 500,
             letterSpacing: '-0.2px',
             lineHeight: 1.5,
-            margin: isMobile ? '0 0 7px' : '0 0 9px',
+            margin: '0 0 7px',
           }}
         >
           {n}
@@ -581,22 +585,254 @@ function SponsorRollCall({ colored, isMobile }) {
       ))}
     </div>
   )
+}
 
-  if (isMobile) {
-    return <div style={{ marginTop: 30 }}>{list}</div>
+// ---------- Roll-call spray (desktop) ----------
+
+// The chrome-text gradient stops, duplicated from index.css (keep in sync —
+// same convention as lib/textSpray.js). Sampled per-particle by x so the
+// reformed pixels match the real .chrome-text the DOM swaps back in.
+const CHROME_STOPS = [
+  [0.00, 180, 200, 255, 0.9], [0.12, 255, 255, 255, 1], [0.24, 100, 160, 255, 0.8],
+  [0.36, 200, 220, 255, 0.95], [0.48, 60, 120, 220, 0.7], [0.60, 255, 255, 255, 1],
+  [0.72, 140, 180, 255, 0.85], [0.84, 220, 235, 255, 0.95], [0.96, 80, 140, 240, 0.8],
+  [1.00, 180, 200, 255, 0.9],
+]
+function chromeAt(u) {
+  const x = Math.min(1, Math.max(0, u))
+  for (let i = 1; i < CHROME_STOPS.length; i++) {
+    if (x <= CHROME_STOPS[i][0]) {
+      const a = CHROME_STOPS[i - 1]
+      const b = CHROME_STOPS[i]
+      const f = (x - a[0]) / (b[0] - a[0] || 1)
+      return [
+        a[1] + (b[1] - a[1]) * f,
+        a[2] + (b[2] - a[2]) * f,
+        a[3] + (b[3] - a[3]) * f,
+        a[4] + (b[4] - a[4]) * f,
+      ]
+    }
   }
+  return [255, 255, 255, 1]
+}
+
+// Deterministic per-particle "randomness" — a pure function of the particle
+// index, so reverse scroll replays the exact same flight paths backwards.
+const prand = (i) => {
+  const s = Math.sin(i * 12.9898) * 43758.5453
+  return s - Math.floor(s)
+}
+const clamp01 = (v) => Math.min(1, Math.max(0, v))
+const sstep = (a, b, x) => {
+  const t = clamp01((x - a) / (b - a))
+  return t * t * (3 - 2 * t)
+}
+
+// One fixed roll call in the timeline's sticky layer. Scroll choreography
+// (all a pure closed form of scrollY — no one-shot state, reverse scrub
+// reassembles): beat 0 shows the white italic list; scrolling toward beat 1
+// pixelates it into a downward spray (the headline sprays' motion language);
+// past halfway the pixels regather INTO the same glyphs, landing as chrome;
+// the real animated .chrome-text DOM takes over at rest. Fades out as the
+// era chapters arrive. Skipped for reduced motion (plain crossfade).
+function RollCallOverlay() {
+  const wrapRef = useRef(null)
+  const whiteRef = useRef(null)
+  const chromeRef = useRef(null)
+  const canvasRef = useRef(null)
+  const particlesRef = useRef([])
+  const sizeRef = useRef({ w: 0, h: 0, dpr: 1 })
+
+  useEffect(() => {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    // Rasterize the white list into particles. Geometry comes from the live
+    // DOM nodes so the canvas pixels sit exactly where the glyphs are — the
+    // white/chrome lists share font metrics (same size/weight/style), so one
+    // raster serves both endpoints.
+    const PAD_X = 80
+    const PAD_TOP = 40
+    const PAD_BOTTOM = 240 // room for the downward spray
+    const build = () => {
+      const wrap = wrapRef.current
+      const white = whiteRef.current
+      const canvas = canvasRef.current
+      if (!wrap || !white || !canvas) return
+      const wrapRect = wrap.getBoundingClientRect()
+      if (wrapRect.width === 0) return
+      const dpr = Math.min(2, window.devicePixelRatio || 1)
+      const w = wrapRect.width + PAD_X * 2
+      const h = wrapRect.height + PAD_TOP + PAD_BOTTOM
+      canvas.width = Math.round(w * dpr)
+      canvas.height = Math.round(h * dpr)
+      canvas.style.width = `${w}px`
+      canvas.style.height = `${h}px`
+      canvas.style.left = `${-PAD_X}px`
+      canvas.style.top = `${-PAD_TOP}px`
+      sizeRef.current = { w, h, dpr }
+
+      // Offscreen raster of the list text, aligned to the DOM layout.
+      const off = document.createElement('canvas')
+      off.width = canvas.width
+      off.height = canvas.height
+      const octx = off.getContext('2d', { willReadFrequently: true })
+      octx.scale(dpr, dpr)
+      octx.fillStyle = '#fff'
+      for (const p of white.children) {
+        const r = p.getBoundingClientRect()
+        const cs = getComputedStyle(p)
+        octx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`
+        try { octx.letterSpacing = cs.letterSpacing } catch { /* older engines */ }
+        // The DOM rows are centered blocks — draw centered at the box middle
+        // so raster pixels land exactly on the glyphs.
+        octx.textAlign = 'center'
+        octx.textBaseline = 'middle'
+        octx.fillText(
+          p.textContent,
+          r.left - wrapRect.left + PAD_X + r.width / 2,
+          r.top - wrapRect.top + PAD_TOP + r.height / 2
+        )
+      }
+      const data = octx.getImageData(0, 0, off.width, off.height).data
+      const step = Math.max(2, Math.round(2 * dpr))
+      const pts = []
+      for (let y = 0; y < off.height; y += step) {
+        for (let x = 0; x < off.width; x += step) {
+          if (data[(y * off.width + x) * 4 + 3] > 100) {
+            pts.push([x / dpr, y / dpr])
+          }
+        }
+      }
+      particlesRef.current = pts
+    }
+
+    // Scroll choreography windows, in viewport-heights of scrollY:
+    //   0.10 → 0.78  white → spray → chrome (finishes before beat 1 snaps)
+    //   1.45 → 1.92  whole roll call fades out as the first era arrives
+    const draw = (t, vis) => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+      const { w, h, dpr } = sizeRef.current
+      const ctx = canvas.getContext('2d')
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      ctx.clearRect(0, 0, w, h)
+      const bell = Math.sin(Math.PI * t) // 0 → apart → 0
+      const mix = sstep(0.35, 0.65, t) // white → chrome mid-flight
+      const pts = particlesRef.current
+      for (let i = 0; i < pts.length; i++) {
+        const [x, y] = pts[i]
+        const u1 = prand(i * 4 + 1)
+        const u2 = prand(i * 4 + 2)
+        const u3 = prand(i * 4 + 3)
+        // Downward burst with a light sideways curl — the same family of
+        // motion as the headline spray, mirrored so it regathers.
+        const dx = (u1 - 0.5) * 120 * bell + Math.sin(t * Math.PI * 2 + u3 * 6.283) * 10 * bell
+        const dy = (25 + u2 * 185) * bell
+        const c = chromeAt(x / w)
+        const r = 235 + (c[0] - 235) * mix
+        const g = 235 + (c[1] - 235) * mix
+        const b = 255 + (c[2] - 255) * mix
+        const a = (0.92 + (c[3] - 0.92) * mix) * (1 - 0.45 * bell) * vis
+        ctx.fillStyle = `rgba(${r | 0},${g | 0},${b | 0},${a})`
+        ctx.fillRect(x + dx, y + dy, 2, 2)
+      }
+    }
+
+    let raf = 0
+    const update = () => {
+      raf = 0
+      const wrap = wrapRef.current
+      const white = whiteRef.current
+      const chrome = chromeRef.current
+      const canvas = canvasRef.current
+      if (!wrap || !white || !chrome || !canvas) return
+      const vh = window.innerHeight || 1
+      const y = window.scrollY / vh
+      const t = sstep(0.1, 0.78, y)
+      const vis = 1 - sstep(1.45, 1.92, y)
+      wrap.style.opacity = String(vis)
+      if (reduced || particlesRef.current.length === 0) {
+        // Reduced motion (or raster unavailable): plain crossfade.
+        white.style.opacity = String(1 - t)
+        chrome.style.opacity = String(t)
+        canvas.style.display = 'none'
+        return
+      }
+      // Short overlap windows at both ends hide any sub-pixel raster/DOM
+      // mismatch: the DOM list fades while the particles are still at rest.
+      white.style.opacity = String(1 - sstep(0.02, 0.1, t))
+      chrome.style.opacity = String(sstep(0.9, 0.98, t))
+      if (t > 0.02 && t < 0.98 && vis > 0) {
+        canvas.style.display = 'block'
+        draw(t, vis)
+      } else {
+        canvas.style.display = 'none'
+      }
+    }
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(update) }
+    const rebuild = () => { build(); onScroll() }
+
+    let fontsReady = true
+    if (document.fonts?.ready) {
+      fontsReady = false
+      document.fonts.ready.then(() => { fontsReady = true; rebuild() })
+    }
+    if (fontsReady) build()
+    update()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', rebuild)
+    return () => {
+      if (raf) cancelAnimationFrame(raf)
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', rebuild)
+    }
+  }, [])
+
+  const names = SUPPORTERS.map((s) => s.name)
+  const listStyle = (colored) => ({
+    position: colored ? 'absolute' : 'relative',
+    inset: colored ? 0 : undefined,
+    textAlign: 'center', // centered within the padded right-side box
+    opacity: colored ? 0 : 1,
+  })
+  const rowStyle = {
+    fontStyle: 'italic',
+    fontSize: 'clamp(14px, 1.15vw, 17px)',
+    fontWeight: 500, // identical metrics on both lists — one raster serves both
+    letterSpacing: '-0.2px',
+    lineHeight: 1.5,
+    margin: '0 0 9px',
+  }
+
+  // A padded box on the right side — NO scrim/shader behind the text (owner
+  // style rule: the names sit directly on the photo).
   return (
     <div style={{
       position: 'absolute',
-      right: 0,
+      right: 'clamp(24px, 4vw, 80px)',
       top: '50%',
       transform: 'translateY(-50%)',
-      // Soft scrim keeps the names legible over the busy team photo without
-      // boxing them in (square edges, fades to nothing leftward — on-brand).
-      background: 'linear-gradient(to right, transparent, rgba(0,0,0,0.5) 55%)',
-      padding: '36px clamp(40px, 5vw, 100px) 36px 120px',
+      zIndex: 3,
+      padding: '36px clamp(28px, 3vw, 64px)',
+      minWidth: 260,
     }}>
-      {list}
+      <div ref={wrapRef} style={{ position: 'relative' }}>
+        <div ref={whiteRef} style={listStyle(false)}>
+          {names.map((n) => (
+            <p key={n} style={{ ...rowStyle, color: 'rgba(255,255,255,0.92)' }}>{n}</p>
+          ))}
+        </div>
+        <div ref={chromeRef} style={listStyle(true)} aria-hidden="true">
+          {names.map((n) => (
+            <p key={n} className="chrome-text" style={rowStyle}>{n}</p>
+          ))}
+        </div>
+        <canvas
+          ref={canvasRef}
+          aria-hidden="true"
+          style={{ position: 'absolute', display: 'none', pointerEvents: 'none' }}
+        />
+      </div>
     </div>
   )
 }
@@ -672,10 +908,9 @@ function StatementChapter({ beat, isMobile, onMeetTeam }) {
         {/* Mobile: the roll call flows below the statement */}
         {isMobile && <SponsorRollCall colored={beat === 1} isMobile />}
       </div>
-      {/* Desktop: the roll call holds the right column on both beats —
-          quiet white on "The singlehanded class.", chrome on "Never sailed
-          alone." — the names were there the whole time. */}
-      {!isMobile && <SponsorRollCall colored={beat === 1} isMobile={false} />}
+      {/* Desktop: the roll call lives in the timeline's sticky layer
+          (RollCallOverlay) so the names hold their ground across both beats
+          while the scroll sprays them from white into chrome. */}
     </div>
   )
 }
@@ -929,6 +1164,11 @@ export default function Team({ onNavigate }) {
           >
             <SailboatIcon variant={atNow ? 'glow' : 'active'} size={30} />
           </div>
+
+          {/* Desktop roll call — fixed in the sticky layer across the two
+              statement beats; scroll sprays white → chrome (see
+              RollCallOverlay). Mobile flows its lists inside the chapters. */}
+          {!isMobile && <RollCallOverlay />}
         </div>
       </div>
 
