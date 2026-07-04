@@ -19,3 +19,9 @@ trailer-src/
 
 # Stray macOS screenshots dropped into public/ — never deploy these
 /public/Screenshot*.png
+
+# Raw media masters dropped at the repo root — source material only, never commit/deploy
+# (web-ready encodes live in public/tour/, public/trailer/, public/orb/)
+/BioReel_preview.mp4
+/Reel Selects/
+/Sailing Photos/
