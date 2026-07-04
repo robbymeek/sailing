@@ -1,7 +1,12 @@
 # Site Restructure Plan — the temporal spine
 
-_Drafted 2026-07-03 from a brainstorm session. This is the agreed direction for
-resolving the page overlaps. No code has been changed yet._
+_Drafted 2026-07-03 from a brainstorm session; execution began 2026-07-04._
+
+**Status:** steps 1–3 (The Road rename, LA 2028 corner retarget, Event
+Calendar deletion + redirects, Biography → RESULTS) landed in PR #11. The
+Team rework (step 5) is implemented in `feat/the-team` — bottom-of-page
+treatment pending the owner's visual confirmation. Step 4 (event data
+unification) remains deferred until the pages settle.
 
 ## The problem being solved
 

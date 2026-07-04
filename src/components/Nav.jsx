@@ -1,10 +1,10 @@
 import { useState } from 'react'
 
-const PAGES = ['Home', 'Biography', 'Path', 'The Road', 'Contact', 'Support']
+const PAGES = ['Home', 'Biography', 'The Team', 'The Road', 'Contact', 'Support']
 
-const SHORT_LABELS = {
-  'Path': 'Path & Team',
-}
+// Display-label overrides for nav items whose page key shouldn't render
+// verbatim. Currently empty — kept for the next divergence.
+const SHORT_LABELS = {}
 
 export default function Nav({ current, onNavigate, variant, excludeItems }) {
   const [hoveredItem, setHoveredItem] = useState(null)

@@ -649,7 +649,7 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
         }}>
           {[
             ['BIOGRAPHY', 'Biography'],
-            ['PATH & TEAM', 'Path'],
+            ['THE TEAM', 'The Team'],
             ['CONTACT', 'Contact'],
           ].map(([label, route], i, arr) => (
             <span key={route} style={{ display: 'inline-flex', alignItems: 'center' }}>

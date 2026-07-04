@@ -1,4 +1,4 @@
-// Shared sailboat marker — used on the Path & Team timeline spine and as the
+// Shared sailboat marker — used on The Team timeline spine and as the
 // traveling marker on The Road progress rail. Variants tint the sail/hull
 // and add a glow: 'default' | 'active' (blue) | 'glow' (white) | 'ghost' (faint).
 export default function SailboatIcon({ variant = 'default', size = 22 }) {

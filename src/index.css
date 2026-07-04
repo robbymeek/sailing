@@ -170,11 +170,11 @@ button {
   animation: sailBob 3s ease-in-out infinite;
 }
 
-/* Path page: gentle chapter snapping on the root scroller, desktop only.
-   `proximity` (never mandatory) so the banner/sponsors/team sections above
-   and below the timeline scroll completely freely. */
+/* The Team page: gentle chapter snapping on the root scroller, desktop only.
+   `proximity` (never mandatory) so the partners/roster/letter sections below
+   the timeline scroll completely freely. */
 @media (min-width: 700px) {
-  .path-snap-root { scroll-snap-type: y proximity; }
+  .team-snap-root { scroll-snap-type: y proximity; }
 }
 @media (prefers-reduced-motion: reduce) {
   .sail-bob { animation: none; }

@@ -5,10 +5,9 @@ import orbOverlay from './lib/orbOverlay'
 import blackBridge from './lib/blackBridge'
 
 // Pages shown in the compact (narrow-viewport) overlay nav.
-const COMPACT_PAGES = ['Home', 'Biography', 'Path', 'The Road', 'Contact', 'Support']
+const COMPACT_PAGES = ['Home', 'Biography', 'The Team', 'The Road', 'Contact', 'Support']
 import MainView from './pages/MainView'
 import Biography from './pages/Biography'
-import Path from './pages/Path'
 import Team from './pages/Team'
 import Contact from './pages/Contact'
 import Support from './pages/Support'
@@ -25,6 +24,7 @@ const TheRoad = lazy(() => import('./pages/TheRoad'))
 const REDIRECTS = {
   '/coming-soon': '/the-road',
   '/event-calendar': '/biography',
+  '/path': '/team',
 }
 // The router matched the retired routes case-insensitively with optional
 // trailing slashes — give the redirect map the same tolerance, or links like
@@ -34,9 +34,8 @@ const redirectFor = (pathname) =>
 
 const INNER_BG = {
   '/biography': 'rgb(230,235,240)',
-  '/team': 'rgb(22,24,28)',
+  '/team': 'rgb(12,14,18)',
   '/contact': 'rgb(240,240,240)',
-  '/path': 'rgb(12,14,18)',
   '/support': 'rgb(240,240,240)',
   '/the-road': 'rgb(0,0,0)',
 }
@@ -44,9 +43,8 @@ const INNER_BG = {
 const VARIANT_MAP = {
   '/': 'dark',
   '/biography': 'dark', // white nav text — it floats over the dark video hero
-  '/team': 'blue',
+  '/team': 'dark',
   '/contact': 'light',
-  '/path': 'dark',
   '/support': 'light',
   '/the-road': 'dark',
 }
@@ -54,9 +52,8 @@ const VARIANT_MAP = {
 const CURRENT_MAP = {
   '/': 'Home',
   '/biography': 'Biography',
-  '/team': 'Team',
+  '/team': 'The Team',
   '/contact': 'Contact',
-  '/path': 'Path',
   '/support': 'Support',
   '/the-road': 'The Road',
 }
@@ -67,7 +64,7 @@ function getNavMode(pathname) {
   // Support) are suppressed on / because the bottom-left nav already covers
   // narrow screens — see the isHomeRoute gates below.
   if (pathname === '/') return 'hover'
-  if (pathname === '/path') return 'overlay'
+  if (pathname === '/team') return 'overlay'
   // Biography opens on the full-bleed sailing video: the nav floats over it
   // with a TRANSPARENT background (unlike 'overlay', whose solid navBg is
   // color-matched to each dark hero) and scrolls away with the page.
@@ -118,9 +115,8 @@ export default function App() {
     const routes = {
       'Home': '/',
       'Biography': '/biography',
-      'Path': '/path',
+      'The Team': '/team',
       'The Road': '/the-road',
-      'Team': '/team',
       'Contact': '/contact',
       'Support': '/support',
     }
@@ -498,7 +494,7 @@ export default function App() {
                     letterSpacing: '-0.6px', padding: '8px 14px',
                   }}
                 >
-                  {{'Path': 'Path & Team'}[item] || item}
+                  {item}
                 </button>
               )
             })}
@@ -524,7 +520,6 @@ export default function App() {
           <Route path="/biography" element={<Biography onNavigate={go} />} />
           <Route path="/team" element={<Team onNavigate={go} />} />
           <Route path="/contact" element={<Contact onNavigate={go} />} />
-          <Route path="/path" element={<Path onNavigate={go} />} />
           <Route path="/support" element={<Support onNavigate={go} />} />
           <Route path="/the-road" element={
             <Suspense fallback={<div style={{ height: '100dvh', background: 'rgb(0,0,0)' }} />}>

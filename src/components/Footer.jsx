@@ -12,7 +12,7 @@ export default function Footer({ variant, onNavigate }) {
         {[
           ['Home', 'Home'],
           ['Biography', 'Biography'],
-          ['Path', 'Path & Team'],
+          ['The Team', 'The Team'],
           ['Contact', 'Contact'],
           ['Support', 'Support'],
         ].map(([key, label], i, arr) => (
