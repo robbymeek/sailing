@@ -2,11 +2,14 @@
 
 _Drafted 2026-07-03 from a brainstorm session; execution began 2026-07-04._
 
-**Status:** steps 1–3 (The Road rename, LA 2028 corner retarget, Event
-Calendar deletion + redirects, Biography → RESULTS) landed in PR #11. The
-Team rework (step 5) is implemented in `feat/the-team` — bottom-of-page
-treatment pending the owner's visual confirmation. Step 4 (event data
-unification) remains deferred until the pages settle.
+**Status (2026-07-04): SHIPPED.** Steps 1–3 (The Road rename, LA 2028 corner
+retarget, Event Calendar deletion + redirects, Biography → RESULTS) landed in
+PR #11; the Team rework (step 5, including the hero roll-call spray) landed
+in PR #12 after the owner's live review — both deployed to robbysailing.com.
+Remaining: step 4 (event data unification) stays deferred until the pages
+settle; optional follow-ups — liquid-logo treatment for the roll call, and a
+BrowserStack device pass on the orb→Road morph (`browserstack/run.js
+--morph`).
 
 ## The problem being solved
 
