@@ -50,40 +50,70 @@ function TagChip({ tag }) {
   )
 }
 
-// Era header: "ILCA 7 ————————— 2022 – Present"
-export function GroupHeader({ title, years }) {
+// Era header: "▸ ILCA 7 ————————— 2022 – Present". Clicking toggles the
+// group's list. Each group toggles independently (all four can be open at
+// once); state lives in Biography's openGroups.
+export function GroupHeader({ title, years, open, onToggle }) {
+  const [hovered, setHovered] = useState(false)
   return (
-    <div
+    <button
+      onClick={onToggle}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      aria-expanded={open}
+      aria-label={`${title} results, ${years}`}
       style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'baseline',
         gap: 16,
-        padding: '44px 0 12px',
+        width: '100%',
+        background: 'none',
+        border: 'none',
         borderBottom: '1px solid rgba(255,255,255,0.25)',
+        fontFamily: 'inherit',
+        textAlign: 'left',
+        cursor: 'pointer',
+        padding: '44px 0 12px',
       }}
     >
       <span
         style={{
-          color: 'rgba(255,255,255,0.9)',
+          color: hovered || open ? '#fff' : 'rgba(255,255,255,0.9)',
           fontSize: 13,
           fontWeight: 700,
           letterSpacing: '3px',
           textTransform: 'uppercase',
+          transition: 'color 0.2s ease',
         }}
       >
+        <span
+          aria-hidden="true"
+          style={{
+            display: 'inline-block',
+            marginRight: 12,
+            fontSize: 10,
+            color: hovered ? '#fff' : 'rgba(255,255,255,0.5)',
+            transform: open ? 'rotate(90deg)' : 'none',
+            transition: 'transform 0.25s ease, color 0.2s ease',
+          }}
+        >
+          ▶
+        </span>
         {title}
       </span>
       <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, letterSpacing: '1px', flexShrink: 0 }}>
         {years}
       </span>
-    </div>
+    </button>
   )
 }
 
 // One uniform result row: place badge → event name (+ class) + tag chip → year.
 // Every row opens the modal — at minimum it shows the full stat line.
-export function ResultRow({ result, isActive, onActivate }) {
+// isMobile (<700px, incl. the MobileHome embed): tighter place column and the
+// chip drops to its own line so nothing collides with the year column.
+export function ResultRow({ result, isActive, isMobile, onActivate }) {
   const [hovered, setHovered] = useState(false)
   const highlighted = hovered || isActive
   return (
@@ -100,14 +130,14 @@ export function ResultRow({ result, isActive, onActivate }) {
         transition: 'all 0.25s ease',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
-        <span style={{ width: 96, flexShrink: 0, whiteSpace: 'nowrap' }}>
-          <span style={{ color: placeColor(result.place), fontSize: 14, fontWeight: 700 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: isMobile ? 12 : 14 }}>
+        <span style={{ width: isMobile ? 78 : 96, flexShrink: 0, whiteSpace: 'nowrap' }}>
+          <span style={{ color: placeColor(result.place), fontSize: isMobile ? 13 : 14, fontWeight: 700 }}>
             {ordinal(result.place)}
           </span>
-          <span style={{ color: 'rgba(255,255,255,0.32)', fontSize: 12 }}> of {result.fleet}</span>
+          <span style={{ color: 'rgba(255,255,255,0.32)', fontSize: isMobile ? 11 : 12 }}> of {result.fleet}</span>
         </span>
-        <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ flex: 1, minWidth: 0, overflowWrap: 'break-word' }}>
           <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, fontWeight: 400 }}>
             {result.event}
           </span>
@@ -115,12 +145,18 @@ export function ResultRow({ result, isActive, onActivate }) {
             <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12.5 }}> · {result.classNote}</span>
           )}
           {result.tag && (
-            <span style={{ marginLeft: 10, display: 'inline-block', transform: 'translateY(-1px)' }}>
+            <span
+              style={
+                isMobile
+                  ? { display: 'block', margin: '7px 0 0', width: 'fit-content' }
+                  : { marginLeft: 10, display: 'inline-block', transform: 'translateY(-1px)' }
+              }
+            >
               <TagChip tag={result.tag} />
             </span>
           )}
         </span>
-        <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, flexShrink: 0, marginLeft: 16 }}>
+        <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, flexShrink: 0, marginLeft: isMobile ? 8 : 16 }}>
           {result.year}
         </span>
       </div>

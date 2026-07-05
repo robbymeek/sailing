@@ -118,6 +118,10 @@ function RoadCard({ isMid, isMobile, onNavigate, img }) {
 // that copy must never boot the RESULTS spray effect (see useTextSpray).
 export default function Biography({ onNavigate, scrollOffsetRef, preload = false }) {
   const [selectedEvent, setSelectedEvent] = useState(null)
+  // Which result eras are expanded. ILCA 7 (the current campaign) starts
+  // open; the rest start collapsed. Groups toggle independently — all four
+  // can be open at once, and each only ever changes by its own click.
+  const [openGroups, setOpenGroups] = useState({ 'ILCA 7': true })
   const rootRef = useRef(null)
   const imageRef = useRef(null)
   const text1Ref = useRef(null)
@@ -532,38 +536,44 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
 
         {/* The full résumé results, grouped by era exactly as the résumé
              groups them (data/events.js mirrors the PDF). Uniform rows:
-             place badge → event → distinction chip → year. */}
-        <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 40px' }}>
+             place badge → event → distinction chip → year. Each era is a
+             collapsible list behind its GroupHeader. */}
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: isMobile ? '32px 20px' : '40px 40px' }}>
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
             {/* The chrome "door" into the future campaign tour, pinned to the top. */}
             <BridgeRow onNavigate={onNavigate} />
-            {RESULT_GROUPS.map((group) => (
-              <div key={group.title}>
-                <GroupHeader title={group.title} years={group.years} />
-                {group.results.map((r, i) =>
-                  r.note ? (
-                    <NoteRow key={i} note={r.note} year={r.year} />
-                  ) : (
-                    <ResultRow
-                      key={i}
-                      result={r}
-                      isActive={selectedEvent?.result === r}
-                      onActivate={() => setSelectedEvent({ result: r, group })}
-                    />
-                  )
-                )}
-              </div>
-            ))}
+            {RESULT_GROUPS.map((group) => {
+              const open = !!openGroups[group.title]
+              return (
+                <div key={group.title}>
+                  <GroupHeader
+                    title={group.title}
+                    years={group.years}
+                    open={open}
+                    onToggle={() =>
+                      setOpenGroups((s) => ({ ...s, [group.title]: !s[group.title] }))
+                    }
+                  />
+                  {open &&
+                    group.results.map((r, i) =>
+                      r.note ? (
+                        <NoteRow key={i} note={r.note} year={r.year} />
+                      ) : (
+                        <ResultRow
+                          key={i}
+                          result={r}
+                          isMobile={isMobile}
+                          isActive={selectedEvent?.result === r}
+                          onActivate={() => setSelectedEvent({ result: r, group })}
+                        />
+                      )
+                    )}
+                </div>
+              )
+            })}
           </div>
         </div>
 
-        {selectedEvent && (
-          <EventModal
-            result={selectedEvent.result}
-            group={selectedEvent.group}
-            onClose={() => setSelectedEvent(null)}
-          />
-        )}
       </div>
 
       {/* ===== WHERE TO NEXT — parallelogram nav (between events and press) ===== */}
@@ -600,6 +610,20 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
 
         <Footer variant="dark" onNavigate={onNavigate} />
       </div>
+
+      {/* Modal lives OUTSIDE the zIndex:5 section stacking contexts: rendered
+           inside the events div its fixed overlay painted UNDER the later
+           press+footer sibling (same z5, later in DOM), which stayed clickable
+           over the dimmed backdrop. As a direct child of the root its z100
+           beats the z5 sections. Spray pause is state-driven (sprayPausedRef
+           watches selectedEvent), so it doesn't care where the modal mounts. */}
+      {selectedEvent && (
+        <EventModal
+          result={selectedEvent.result}
+          group={selectedEvent.group}
+          onClose={() => setSelectedEvent(null)}
+        />
+      )}
     </div>
   )
 }

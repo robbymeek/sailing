@@ -6,6 +6,18 @@
 //  Results table, grouped the same way (ILCA 7 → ILCA 6 → College → High
 //  School). When the résumé changes, update this file to match.
 //
+//  Deliberate deviations from the résumé's wording (display polish only —
+//  places, fleets, years are exact):
+//    - "OCR" expanded to "Olympic Classes Regatta"; "World Sailing
+//      Championship" shortened to "World Championship".
+//    - "(High School)" qualifiers dropped inside the High School group.
+//    - The résumé's "Top American –" prefix on College rows is NOT rendered
+//      as a chip there: an all-college fleet is all-American, so the chip
+//      carries no information. The two College results that also appear in
+//      the ILCA 7 group DO keep the chip in that international context.
+//    - "(Incl. Douglas, Riley, Rose)" / "(2nd to Rose)" live in modal-only
+//      fleetNote fields.
+//
 //  Row shape (uniform — the UI in components/eventUI.jsx depends on it):
 //    place      finishing place (number) — drives the medal-tinted badge
 //    fleet      fleet size (number) — rendered as "of N"
@@ -41,7 +53,7 @@ const RESULT_GROUPS = [
         place: 57, fleet: 171, event: 'European Championship', year: 2026,
         tag: 'Top American',
         summary:
-          'The ILCA 7 Senior European Championships in Split, Croatia — one of the deepest fleets in the class outside the Worlds. Finished 57th of 171 as the top American, holding the U.S. top spot at consecutive European Championships.',
+          'The ILCA 7 Senior European Championships in Split, Croatia. Finished 57th of 171 as the top American — holding the U.S. top spot at consecutive European Championships.',
         url: 'https://eurilca.org/',
       },
       {
@@ -59,7 +71,7 @@ const RESULT_GROUPS = [
         url: 'https://ilcanasailing.org/major-regattas',
       },
       {
-        place: 1, fleet: 18, event: 'College Single-Handed National Championship', year: 2025,
+        place: 1, fleet: 18, event: 'College Single-handed National Championship', year: 2025,
         tag: 'Top American',
         summary:
           'The ICSA College Singlehanded National Championship hosted by Old Dominion University. Won the Open National Championship title representing Harvard.',
@@ -78,7 +90,7 @@ const RESULT_GROUPS = [
         place: 1, fleet: 37, event: 'Long Beach Olympic Classes Regatta', year: 2023,
         tag: 'Top American',
         summary:
-          'Olympic classes regatta on the 2028 Olympic venue waters in Long Beach, California. Won the 37-boat ILCA 7 fleet on the waters where LA 2028 will be decided.',
+          'Olympic classes regatta in Long Beach, California — the waters that will host sailing at LA 2028. Won the 37-boat ILCA 7 fleet.',
       },
       {
         place: 3, fleet: 45, event: 'Lauderdale Olympic Classes Regatta', year: 2023,
@@ -102,7 +114,7 @@ const RESULT_GROUPS = [
         place: 5, fleet: 225, event: 'World Championship', year: 2022,
         tag: 'Top American',
         summary:
-          'The 2022 ILCA 6 World Championship — fifth of 225 boats and top American. A top-five finish at the world level, and the springboard into the ILCA 7 Olympic campaign.',
+          'The 2022 ILCA 6 World Championship — fifth of 225 boats and top American. My final season in the ILCA 6 before moving into the ILCA 7.',
       },
       {
         place: 1, fleet: 120, event: 'Midwinters East Regatta', year: 2022,
@@ -124,7 +136,7 @@ const RESULT_GROUPS = [
         place: 9, fleet: 374, event: 'World Championship', year: 2021,
         tag: 'Second American',
         summary:
-          'The 2021 ILCA 6 World Championship — ninth of 374 boats in the largest fleet of the season, and second American overall.',
+          'The 2021 ILCA 6 World Championship — ninth of 374 boats, and second American overall.',
       },
       {
         place: 2, fleet: 74, event: 'Lauderdale Olympic Classes Regatta', year: 2021,
@@ -143,7 +155,7 @@ const RESULT_GROUPS = [
       { place: 1, fleet: 16, event: 'Team Race National Championship', year: 2026 },
       { place: 1, fleet: 16, event: 'NEISA Team Race Championship', year: 2026 },
       {
-        place: 1, fleet: 18, event: 'Single-Handed National Championship', year: 2025,
+        place: 1, fleet: 18, event: 'Single-handed National Championship', year: 2025,
         classNote: 'ILCA 7',
         summary:
           'The ICSA College Singlehanded National Championship hosted by Old Dominion University. Won the Open National Championship title representing Harvard.',
@@ -160,13 +172,13 @@ const RESULT_GROUPS = [
     years: '2019 – 2023',
     results: [
       {
-        place: 1, fleet: 18, event: 'Single-Handed National Championship', year: 2023,
+        place: 1, fleet: 18, event: 'Single-handed National Championship', year: 2023,
         classNote: 'ILCA 7',
       },
       { place: 1, fleet: 12, event: 'Team Race National Championship', year: 2023 },
       { place: 2, fleet: 12, event: 'Fleet Race National Championship', year: 2023 },
       {
-        place: 1, fleet: 18, event: 'Single-Handed National Championship', year: 2022,
+        place: 1, fleet: 18, event: 'Single-handed National Championship', year: 2022,
         classNote: 'ILCA 6',
       },
       { place: 2, fleet: 20, event: 'Fleet Race National Championship', year: 2022 },
@@ -174,7 +186,7 @@ const RESULT_GROUPS = [
       { place: 3, fleet: 20, event: 'Fleet Race National Championship', year: 2021 },
       { place: 3, fleet: 20, event: 'Team Race National Championship', year: 2021 },
       {
-        place: 5, fleet: 18, event: 'Single-Handed National Championship', year: 2019,
+        place: 5, fleet: 18, event: 'Single-handed National Championship', year: 2019,
         classNote: 'ILCA 6',
       },
     ],
