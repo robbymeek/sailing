@@ -28,28 +28,6 @@ function ordinal(n) {
   return `${n}th`
 }
 
-// The "Top American" / "Second American" distinction chip. One style
-// everywhere — uniformity is the point of this list.
-function TagChip({ tag }) {
-  return (
-    <span
-      style={{
-        fontSize: 10,
-        fontWeight: 600,
-        letterSpacing: '1.2px',
-        textTransform: 'uppercase',
-        color: '#fff',
-        border: '1px solid rgba(255,255,255,0.18)',
-        borderRadius: 3,
-        padding: '2px 7px',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {tag}
-    </span>
-  )
-}
-
 // Era header: "▸ ILCA 7 ————————— 2022 – Present". Clicking toggles the
 // group's list. Each group toggles independently (all four can be open at
 // once); state lives in Biography's openGroups.
@@ -109,10 +87,11 @@ export function GroupHeader({ title, years, open, onToggle }) {
   )
 }
 
-// One uniform result row: place badge → event name (+ class) + tag chip → year.
+// One uniform result row: place badge → event name (+ class) | tag → year.
+// The distinction tag ("Top American") reads as plain text after a vertical
+// bar, same size and colour as the event name (owner request — no chip box).
 // Every row opens the modal — at minimum it shows the full stat line.
-// isMobile (<700px, incl. the MobileHome embed): tighter place column and the
-// chip drops to its own line so nothing collides with the year column.
+// isMobile (<700px, incl. the MobileHome embed): tighter place column.
 export function ResultRow({ result, isActive, isMobile, onActivate }) {
   const [hovered, setHovered] = useState(false)
   const highlighted = hovered || isActive
@@ -145,15 +124,7 @@ export function ResultRow({ result, isActive, isMobile, onActivate }) {
             <span style={{ color: '#fff', fontSize: 12.5 }}> · {result.classNote}</span>
           )}
           {result.tag && (
-            <span
-              style={
-                isMobile
-                  ? { display: 'block', margin: '7px 0 0', width: 'fit-content' }
-                  : { marginLeft: 10, display: 'inline-block', transform: 'translateY(-1px)' }
-              }
-            >
-              <TagChip tag={result.tag} />
-            </span>
+            <span style={{ color: '#fff', fontSize: 14, fontWeight: 400 }}> | {result.tag}</span>
           )}
         </span>
         <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, flexShrink: 0, marginLeft: isMobile ? 8 : 16 }}>
@@ -237,12 +208,16 @@ export function EventModal({ result, group, onClose }) {
             <span style={{ color: '#fff', fontSize: 14, fontWeight: 400 }}> · {result.classNote}</span>
           )}
         </h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 20px', flexWrap: 'wrap' }}>
+        {/* Stat line: "1st of 41 | Top American" — the tag as plain text
+             after the bar, matching the "of N" size (owner request). */}
+        <div style={{ margin: '0 0 20px' }}>
           <span style={{ fontSize: 24, fontWeight: 800, color: placeColor(result.place), letterSpacing: '-0.5px' }}>
             {ordinal(result.place)}
-            <span style={{ color: '#fff', fontSize: 15, fontWeight: 400 }}> of {result.fleet}</span>
           </span>
-          {result.tag && <TagChip tag={result.tag} />}
+          <span style={{ color: '#fff', fontSize: 15, fontWeight: 400 }}> of {result.fleet}</span>
+          {result.tag && (
+            <span style={{ color: '#fff', fontSize: 15, fontWeight: 400 }}> | {result.tag}</span>
+          )}
         </div>
         {result.summary && (
           <p style={{ color: '#fff', fontSize: 14, lineHeight: 1.7, margin: '0 0 20px' }}>
