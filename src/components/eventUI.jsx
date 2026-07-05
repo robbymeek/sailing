@@ -3,11 +3,87 @@ import { useState } from 'react'
 // ============================================================================
 //  Results-list UI — used by the Biography RESULTS section (the site's single
 //  home for past results since the standalone Event Calendar page was
-//  retired). Data lives in src/data/events.js.
+//  retired). Data lives in src/data/events.js and mirrors the sailing résumé:
+//  every row is a uniform { place, fleet, event, year } record, grouped by
+//  era (ILCA 7 / ILCA 6 / College / High School).
 // ============================================================================
 
-// One clickable past-event row → opens the modal.
-export function EventRow({ event, isActive, onActivate }) {
+// 1st / 2nd / 3rd get medal-tinted ordinals; everything else stays neutral.
+const PLACE_COLORS = {
+  1: 'rgb(255,214,120)',
+  2: 'rgb(201,208,220)',
+  3: 'rgb(226,171,124)',
+}
+
+function placeColor(place) {
+  return PLACE_COLORS[place] || 'rgba(255,255,255,0.55)'
+}
+
+function ordinal(n) {
+  const rem10 = n % 10
+  const rem100 = n % 100
+  if (rem10 === 1 && rem100 !== 11) return `${n}st`
+  if (rem10 === 2 && rem100 !== 12) return `${n}nd`
+  if (rem10 === 3 && rem100 !== 13) return `${n}rd`
+  return `${n}th`
+}
+
+// The "Top American" / "Second American" distinction chip. One style
+// everywhere — uniformity is the point of this list.
+function TagChip({ tag }) {
+  return (
+    <span
+      style={{
+        fontSize: 10,
+        fontWeight: 600,
+        letterSpacing: '1.2px',
+        textTransform: 'uppercase',
+        color: 'rgba(255,255,255,0.55)',
+        border: '1px solid rgba(255,255,255,0.18)',
+        borderRadius: 3,
+        padding: '2px 7px',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {tag}
+    </span>
+  )
+}
+
+// Era header: "ILCA 7 ————————— 2022 – Present"
+export function GroupHeader({ title, years }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'baseline',
+        gap: 16,
+        padding: '44px 0 12px',
+        borderBottom: '1px solid rgba(255,255,255,0.25)',
+      }}
+    >
+      <span
+        style={{
+          color: 'rgba(255,255,255,0.9)',
+          fontSize: 13,
+          fontWeight: 700,
+          letterSpacing: '3px',
+          textTransform: 'uppercase',
+        }}
+      >
+        {title}
+      </span>
+      <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, letterSpacing: '1px', flexShrink: 0 }}>
+        {years}
+      </span>
+    </div>
+  )
+}
+
+// One uniform result row: place badge → event name (+ class) + tag chip → year.
+// Every row opens the modal — at minimum it shows the full stat line.
+export function ResultRow({ result, isActive, onActivate }) {
   const [hovered, setHovered] = useState(false)
   const highlighted = hovered || isActive
   return (
@@ -24,9 +100,42 @@ export function EventRow({ event, isActive, onActivate }) {
         transition: 'all 0.25s ease',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, fontWeight: 400 }}>{event.n}</span>
-        <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, flexShrink: 0, marginLeft: 16 }}>{event.d}</span>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
+        <span style={{ width: 96, flexShrink: 0, whiteSpace: 'nowrap' }}>
+          <span style={{ color: placeColor(result.place), fontSize: 14, fontWeight: 700 }}>
+            {ordinal(result.place)}
+          </span>
+          <span style={{ color: 'rgba(255,255,255,0.32)', fontSize: 12 }}> of {result.fleet}</span>
+        </span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, fontWeight: 400 }}>
+            {result.event}
+          </span>
+          {result.classNote && (
+            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12.5 }}> · {result.classNote}</span>
+          )}
+          {result.tag && (
+            <span style={{ marginLeft: 10, display: 'inline-block', transform: 'translateY(-1px)' }}>
+              <TagChip tag={result.tag} />
+            </span>
+          )}
+        </span>
+        <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, flexShrink: 0, marginLeft: 16 }}>
+          {result.year}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+// Narrative divider from the résumé ("Enrolled at Harvard and worked at a
+// start-up") — muted, not clickable, no placement.
+export function NoteRow({ note, year }) {
+  return (
+    <div style={{ padding: '18px 0', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16 }}>
+        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, fontStyle: 'italic' }}>{note}</span>
+        <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, flexShrink: 0 }}>{year}</span>
       </div>
     </div>
   )
@@ -71,7 +180,7 @@ export function BridgeRow({ onNavigate }) {
   )
 }
 
-export function EventModal({ event, onClose }) {
+export function EventModal({ result, group, onClose }) {
   return (
     <div
       onClick={onClose}
@@ -93,17 +202,39 @@ export function EventModal({ event, onClose }) {
           width: '100%',
         }}
       >
-        <h2 style={{ color: '#fff', fontSize: 18, fontWeight: 600, margin: '0 0 6px', letterSpacing: '-0.3px' }}>
-          {event.n}
-        </h2>
-        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, margin: '0 0 20px' }}>{event.d}</p>
-        <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.7, margin: '0 0 24px' }}>
-          {event.summary}
+        <p style={{
+          color: 'rgba(255,255,255,0.35)', fontSize: 12, letterSpacing: '2px',
+          textTransform: 'uppercase', margin: '0 0 10px',
+        }}>
+          {group.title} · {result.year}
         </p>
+        <h2 style={{ color: '#fff', fontSize: 18, fontWeight: 600, margin: '0 0 14px', letterSpacing: '-0.3px' }}>
+          {result.event}
+          {result.classNote && (
+            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14, fontWeight: 400 }}> · {result.classNote}</span>
+          )}
+        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 20px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 24, fontWeight: 800, color: placeColor(result.place), letterSpacing: '-0.5px' }}>
+            {ordinal(result.place)}
+            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 15, fontWeight: 400 }}> of {result.fleet}</span>
+          </span>
+          {result.tag && <TagChip tag={result.tag} />}
+        </div>
+        {result.summary && (
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.7, margin: '0 0 20px' }}>
+            {result.summary}
+          </p>
+        )}
+        {result.fleetNote && (
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, fontStyle: 'italic', margin: '0 0 20px' }}>
+            {result.fleetNote}
+          </p>
+        )}
         <div style={{ display: 'flex', gap: 12 }}>
-          {event.url && (
+          {result.url && (
             <a
-              href={event.url}
+              href={result.url}
               target="_blank"
               rel="noopener noreferrer"
               style={{

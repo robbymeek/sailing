@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import Footer from '../components/Footer'
 import useCountdown from '../hooks/useCountdown'
 import useTextSpray from '../hooks/useTextSpray'
-import EVENTS from '../data/events'
-import { EventRow, BridgeRow, EventModal } from '../components/eventUI'
+import RESULT_GROUPS from '../data/events'
+import { ResultRow, NoteRow, GroupHeader, BridgeRow, EventModal } from '../components/eventUI'
 import ExitNav from '../components/ExitNav'
 import SailingBanner from '../components/SailingBanner'
 import { EXIT_CARDS } from '../components/exitCards'
@@ -526,27 +526,43 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
           </div>
 
           <p ref={hintRef} style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, margin: '16px 0 0' }}>
-            Click on event to learn more.
+            Click on a result to learn more.
           </p>
         </div>
 
+        {/* The full résumé results, grouped by era exactly as the résumé
+             groups them (data/events.js mirrors the PDF). Uniform rows:
+             place badge → event → distinction chip → year. */}
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 40px' }}>
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
             {/* The chrome "door" into the future campaign tour, pinned to the top. */}
             <BridgeRow onNavigate={onNavigate} />
-            {EVENTS.map((e, i) => (
-              <EventRow
-                key={i}
-                event={e}
-                isActive={selectedEvent === e}
-                onActivate={() => setSelectedEvent(e)}
-              />
+            {RESULT_GROUPS.map((group) => (
+              <div key={group.title}>
+                <GroupHeader title={group.title} years={group.years} />
+                {group.results.map((r, i) =>
+                  r.note ? (
+                    <NoteRow key={i} note={r.note} year={r.year} />
+                  ) : (
+                    <ResultRow
+                      key={i}
+                      result={r}
+                      isActive={selectedEvent?.result === r}
+                      onActivate={() => setSelectedEvent({ result: r, group })}
+                    />
+                  )
+                )}
+              </div>
             ))}
           </div>
         </div>
 
         {selectedEvent && (
-          <EventModal event={selectedEvent} onClose={() => setSelectedEvent(null)} />
+          <EventModal
+            result={selectedEvent.result}
+            group={selectedEvent.group}
+            onClose={() => setSelectedEvent(null)}
+          />
         )}
       </div>
 
