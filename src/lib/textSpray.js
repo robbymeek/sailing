@@ -32,7 +32,7 @@ import * as THREE from 'three'
 // .chrome-text gradient from index.css — keep in sync. Baked into a 256x1
 // texture premultiplied over black (the banner background), so an alpha-1
 // particle at the seam matches the DOM glyph pixel exactly.
-const CHROME_STOPS = [
+export const CHROME_STOPS = [
   [0.00, 180, 200, 255, 0.9],
   [0.12, 255, 255, 255, 1.0],
   [0.24, 100, 160, 255, 0.8],

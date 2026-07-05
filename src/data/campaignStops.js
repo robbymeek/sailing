@@ -1,50 +1,62 @@
 // The 2026 → 2028 campaign tour, in order. This single array drives The Road
 // globe. Edit dates/venues/coords here as the circuit firms up.
 //
-// Each stop is one card, displayed as:
-//   {ordinal} of 18 Stops        — position in the tour
-//   region                        — general location (e.g. "Australia", "Annapolis")
-//   event                         — short description (e.g. "World Championship")
-//   dates                         — Month Year (e.g. "July 2028", "August – October 2027")
-//   venues                        — specific "City, Country", multiple joined by " | "
+// Copy voice (Jul 2026 revamp): race program, not brochure. Data renders as
+// labeled instrument fields, never sentences. No em dashes, no spaced en
+// dashes anywhere (asserted in dev below) — the only dash is the tight en
+// dash inside a numeric range ('OCT–NOV 2026', '2025–26').
 //
-// A stop can have multiple `points` (waypoints): the globe zips through them in
-// order while the one card (showing all venues at once) stays up. lat/lng are
-// decimal degrees of the sailing harbor/waterfront. status: 'confirmed' |
-// 'projected' | 'training' | 'finale'.
+// Fields per stop:
+//   region  — headline place name ("Dublin", "Australia")
+//   event   — one of three classes (asserted in dev): a real regatta's proper
+//             name ("World Championship", "Trofeo Princesa Sofía"), or
+//             'Training Camp' (single city) / 'Training Block' (multi-city)
+//   dates   — 'MMM YYYY' or 'MMM–MMM YYYY', uppercase 3-letter months,
+//             tight en dash (asserted in dev)
+//   venues  — [{ city, noc }] with 3-letter NOC country codes, rendered via
+//             formatVenues() in ./tourChapters.js ("Adelaide · Fremantle ·
+//             Sydney, AUS"); TOUR_STATS derives continents from the nocs
+//   status  — 'confirmed' | 'projected' | 'training' | 'finale'
+//   record  — optional real past fact at this venue, rendered as a data chip:
+//             { result: 'GOLD' | 'RACED' | 'TRAINED', detail, date }
+//             (facts cross-checked against ../data/events.js — never invent)
+//
+// A stop can have multiple `points` (waypoints): the globe zips through them
+// in order while the one card stays up; the card's POSITION field ticks over
+// per waypoint. lat/lng are decimal degrees of the sailing harbor/waterfront.
 //
 // Tour-narrative fields (Jul 2026 chapter redesign):
 //   chapter — 0..4 half-year chapter index (H2'26, H1'27, H2'27, H1'28, H2'28).
 //             Stops of one chapter must be contiguous (asserted in dev below);
 //             chapter copy/titles live in ./tourChapters.js.
-//   tier    — 'key' (championship/major regatta: bigger card, globe dwell zoom)
-//             | 'support' (training camp: compact card).
-//   short   — roll-call label for the chapter interstitial ("Worlds", "Europeans");
-//             presence ⇒ the stop is name-checked (emphasized) in the roll-call.
-//   photo   — optional real photo of Robby at (or tied to) this venue. Outputs of
-//             scripts/prep-tour-photos.mjs in public/tour/. `pastNote` cites the
-//             real past result (see ../data/events.js); `credit` when required.
-//             NEVER invent stock imagery — no photo means a typography treatment.
+//   tier    — 'key' (championship/major: cinematic card, globe dwell zoom)
+//             | 'support' (training camp: compact logbook card).
+//   short   — roll-call label for the chapter interstitial ("Worlds");
+//             presence ⇒ the stop is name-checked in the roll-call.
+//   photo   — optional real photo of Robby at (or tied to) this venue. Outputs
+//             of scripts/prep-tour-photos.mjs in public/tour/; `credit` when
+//             required (rendered as a corner caption on the backdrop).
+//             NEVER invent stock imagery — no photo means typography only.
 
 const STOPS = [
   {
     id: 'san-pedro-ocr',
     region: 'Los Angeles',
     event: 'Olympic Classes Regatta',
-    dates: 'July 2026',
-    venues: 'San Pedro, USA',
+    dates: 'JUL 2026',
+    venues: [{ city: 'San Pedro', noc: 'USA' }],
     status: 'confirmed',
     lat: 33.7088,
     lng: -118.2836,
     chapter: 0,
     tier: 'key',
     short: 'Olympic Classes',
+    record: { result: 'GOLD', detail: 'US Open Sailing Series, Long Beach', date: 'JUL 2025' },
     photo: {
       src: 'tour/la-open.jpg',
       srcMobile: 'tour/la-open-m.jpg',
       position: 'center 30%', // crops the baked-in banner at the frame's bottom
       alt: 'Robby Meek atop the podium at the US Open Sailing Series in Long Beach',
-      pastNote: 'Gold on these waters — US Open Sailing Series, Long Beach',
       credit: 'US Sailing / Simone Staff',
     },
   },
@@ -52,8 +64,8 @@ const STOPS = [
     id: 'nyc-training',
     region: 'New York City',
     event: 'Training Camp',
-    dates: 'June – August 2026',
-    venues: 'New York City, USA',
+    dates: 'JUN–AUG 2026',
+    venues: [{ city: 'New York City', noc: 'USA' }],
     status: 'training',
     lat: 40.7128,
     lng: -74.006,
@@ -64,8 +76,8 @@ const STOPS = [
     id: 'dun-laoghaire-worlds',
     region: 'Dublin',
     event: 'World Championship',
-    dates: 'August 2026',
-    venues: 'Dún Laoghaire, Ireland',
+    dates: 'AUG 2026',
+    venues: [{ city: 'Dún Laoghaire', noc: 'IRL' }],
     status: 'confirmed',
     lat: 53.2956,
     lng: -6.1306,
@@ -77,8 +89,8 @@ const STOPS = [
     id: 'annapolis-fall-26',
     region: 'Annapolis',
     event: 'Training Camp',
-    dates: 'September 2026',
-    venues: 'Annapolis, USA',
+    dates: 'SEP 2026',
+    venues: [{ city: 'Annapolis', noc: 'USA' }],
     status: 'training',
     lat: 38.9755,
     lng: -76.485,
@@ -88,9 +100,13 @@ const STOPS = [
   {
     id: 'australia-breeze-26',
     region: 'Australia',
-    event: 'Breeze Training',
-    dates: 'October – November 2026',
-    venues: 'Adelaide, Australia | Fremantle, Australia | Sydney, Australia',
+    event: 'Training Block',
+    dates: 'OCT–NOV 2026',
+    venues: [
+      { city: 'Adelaide', noc: 'AUS' },
+      { city: 'Fremantle', noc: 'AUS' },
+      { city: 'Sydney', noc: 'AUS' },
+    ],
     status: 'training',
     lat: -35.02583,
     lng: 138.51718,
@@ -105,21 +121,21 @@ const STOPS = [
   {
     id: 'vilamoura-26',
     region: 'Algarve',
-    event: 'Training & Racing',
-    dates: 'November – December 2026',
-    venues: 'Vilamoura, Portugal',
+    event: 'Vilamoura Grand-Prix',
+    dates: 'NOV–DEC 2026',
+    venues: [{ city: 'Vilamoura', noc: 'POR' }],
     status: 'projected',
     lat: 37.0741,
     lng: -8.1247,
     chapter: 0,
     tier: 'support',
     short: 'Grand-Prix',
+    record: { result: 'RACED', detail: 'Vilamoura Grand-Prix', date: 'NOV 2025' },
     photo: {
       src: 'tour/vilamoura.jpg',
       srcMobile: 'tour/vilamoura-m.jpg',
       position: 'center 42%',
       alt: 'Robby Meek reaching past the red cliffs of the Algarve at Vilamoura',
-      pastNote: 'Raced here — Vilamoura Grand-Prix, Nov 2025',
       credit: null,
     },
   },
@@ -127,8 +143,8 @@ const STOPS = [
     id: 'miami-jan-27',
     region: 'Miami',
     event: 'Training Camp',
-    dates: 'January 2027',
-    venues: 'Miami, USA',
+    dates: 'JAN 2027',
+    venues: [{ city: 'Miami', noc: 'USA' }],
     status: 'training',
     lat: 25.7345,
     lng: -80.2326,
@@ -138,9 +154,9 @@ const STOPS = [
   {
     id: 'fortaleza-worlds-27',
     region: 'Fortaleza',
-    event: 'World Sailing Championships',
-    dates: 'January 2027',
-    venues: 'Fortaleza, Brazil',
+    event: 'World Championship',
+    dates: 'JAN 2027',
+    venues: [{ city: 'Fortaleza', noc: 'BRA' }],
     status: 'projected',
     lat: -3.718,
     lng: -38.515,
@@ -152,8 +168,8 @@ const STOPS = [
     id: 'fort-lauderdale-feb-27',
     region: 'Fort Lauderdale',
     event: 'Training Camp',
-    dates: 'February 2027',
-    venues: 'Fort Lauderdale, USA',
+    dates: 'FEB 2027',
+    venues: [{ city: 'Fort Lauderdale', noc: 'USA' }],
     status: 'training',
     lat: 26.108,
     lng: -80.1232,
@@ -163,21 +179,21 @@ const STOPS = [
   {
     id: 'palma-27',
     region: 'Mallorca',
-    event: 'Princesa Sofía Regatta',
-    dates: 'March 2027',
-    venues: 'Palma, Spain',
+    event: 'Trofeo Princesa Sofía',
+    dates: 'MAR 2027',
+    venues: [{ city: 'Palma', noc: 'ESP' }],
     status: 'projected',
     lat: 39.5645,
     lng: 2.6333,
     chapter: 1,
     tier: 'key',
     short: 'Princesa Sofía',
+    record: { result: 'RACED', detail: 'Trofeo Princesa Sofía', date: 'MAR 2026' },
     photo: {
       src: 'tour/palma.jpg',
       srcMobile: 'tour/palma-m.jpg',
       position: 'center 55%',
       alt: 'The fleet off the start with the Mediterranean hillside behind',
-      pastNote: 'Raced here — Trofeo Princesa Sofía, Mar 2026',
       credit: null,
     },
   },
@@ -185,8 +201,8 @@ const STOPS = [
     id: 'hyeres-27',
     region: 'Hyères',
     event: 'French Olympic Week',
-    dates: 'April 2027',
-    venues: 'Hyères, France',
+    dates: 'APR 2027',
+    venues: [{ city: 'Hyères', noc: 'FRA' }],
     status: 'projected',
     lat: 43.0822,
     lng: 6.135,
@@ -198,8 +214,8 @@ const STOPS = [
     id: 'europeans-27',
     region: 'Mar Menor',
     event: 'European Championship',
-    dates: 'May 2027',
-    venues: 'Los Alcázares, Spain',
+    dates: 'MAY 2027',
+    venues: [{ city: 'Los Alcázares', noc: 'ESP' }],
     status: 'projected',
     lat: 37.7419,
     lng: -0.8508,
@@ -210,20 +226,24 @@ const STOPS = [
   {
     id: 'la-training-27',
     region: 'California',
-    event: 'Venue Training',
-    dates: 'June – August 2027',
-    venues: 'San Pedro, USA | Long Beach, USA | San Francisco, USA',
+    event: 'Training Block',
+    dates: 'JUN–AUG 2027',
+    venues: [
+      { city: 'San Pedro', noc: 'USA' },
+      { city: 'Long Beach', noc: 'USA' },
+      { city: 'San Francisco', noc: 'USA' },
+    ],
     status: 'training',
     lat: 33.7088,
     lng: -118.2836,
     chapter: 2,
     tier: 'support',
+    record: { result: 'GOLD', detail: 'North American Championship, Alamitos Bay', date: 'JUN 2025' },
     photo: {
       src: 'tour/california.jpg',
       srcMobile: 'tour/california-m.jpg',
       position: 'center 60%',
       alt: 'The ILCA fleet racing off the Southern California shoreline',
-      pastNote: 'NA Championship gold, Alamitos Bay — Jun 2025',
       credit: null,
     },
     points: [
@@ -236,8 +256,8 @@ const STOPS = [
     id: 'annapolis-fall-27',
     region: 'Annapolis',
     event: 'Training Camp',
-    dates: 'September 2027',
-    venues: 'Annapolis, USA',
+    dates: 'SEP 2027',
+    venues: [{ city: 'Annapolis', noc: 'USA' }],
     status: 'training',
     lat: 38.9755,
     lng: -76.485,
@@ -247,9 +267,14 @@ const STOPS = [
   {
     id: 'oceania-summer-27',
     region: 'Australia & New Zealand',
-    event: 'Summer Training Block',
-    dates: 'October – December 2027',
-    venues: 'Fremantle, Australia | Melbourne, Australia | Sydney, Australia | Auckland, New Zealand',
+    event: 'Training Block',
+    dates: 'OCT–DEC 2027',
+    venues: [
+      { city: 'Fremantle', noc: 'AUS' },
+      { city: 'Melbourne', noc: 'AUS' },
+      { city: 'Sydney', noc: 'AUS' },
+      { city: 'Auckland', noc: 'NZL' },
+    ],
     status: 'training',
     lat: -32.06853,
     lng: 115.74937,
@@ -266,8 +291,8 @@ const STOPS = [
     id: 'nz-worlds-28',
     region: 'Auckland',
     event: 'World Championship',
-    dates: 'January 2028',
-    venues: 'Takapuna, New Zealand',
+    dates: 'JAN 2028',
+    venues: [{ city: 'Takapuna', noc: 'NZL' }],
     status: 'confirmed',
     lat: -36.78576,
     lng: 174.77544,
@@ -278,20 +303,24 @@ const STOPS = [
   {
     id: 'olympic-prep-28',
     region: 'Europe & USA',
-    event: 'Olympic Preparation',
-    dates: 'March – May 2028',
-    venues: 'Palma, Spain | Hyères, France | Miami, USA',
+    event: 'Training Block',
+    dates: 'MAR–MAY 2028',
+    venues: [
+      { city: 'Palma', noc: 'ESP' },
+      { city: 'Hyères', noc: 'FRA' },
+      { city: 'Miami', noc: 'USA' },
+    ],
     status: 'training',
     lat: 39.5645,
     lng: 2.6333,
     chapter: 3,
     tier: 'support',
+    record: { result: 'TRAINED', detail: 'US Sailing Team, Miami', date: '2025–26' },
     photo: {
       src: 'tour/olympic-prep.jpg',
       srcMobile: 'tour/olympic-prep-m.jpg',
       position: 'center 40%',
       alt: 'Robby Meek hiking upwind with the Miami skyline behind',
-      pastNote: 'Miami training blocks with the US Sailing Team, 2025 – 26',
       credit: 'Allison Chenard / USST',
     },
     points: [
@@ -306,8 +335,8 @@ const STOPS = [
     id: 'la-2028',
     region: 'Los Angeles',
     event: 'Olympic Games',
-    dates: 'July 2028',
-    venues: 'San Pedro, USA',
+    dates: 'JUL 2028',
+    venues: [{ city: 'San Pedro', noc: 'USA' }],
     status: 'finale',
     lat: 33.7088,
     lng: -118.2836,
@@ -317,15 +346,37 @@ const STOPS = [
   },
 ]
 
-// Chapters must be contiguous, ascending blocks — the scroll engine inserts one
-// interstitial per chapter boundary and would silently misbehave otherwise.
 if (import.meta.env.DEV) {
+  // Chapters must be contiguous, ascending blocks — the scroll engine inserts one
+  // interstitial per chapter boundary and would silently misbehave otherwise.
   for (let i = 1; i < STOPS.length; i++) {
     const prev = STOPS[i - 1].chapter
     const cur = STOPS[i].chapter
     if (cur !== prev && cur !== prev + 1) {
       throw new Error(`campaignStops: chapters not contiguous at "${STOPS[i].id}" (${prev} → ${cur})`)
     }
+  }
+  // Copy-voice guards: dates in race-sheet form, events from the fixed taxonomy,
+  // and no em dashes / spaced en dashes hiding in any rendered string.
+  const EVENT_CLASSES = new Set([
+    'Olympic Classes Regatta', 'World Championship', 'Trofeo Princesa Sofía',
+    'French Olympic Week', 'European Championship', 'Vilamoura Grand-Prix',
+    'Olympic Games', 'Training Camp', 'Training Block',
+  ])
+  const DATES_RE = /^[A-Z]{3}(–[A-Z]{3})? \d{4}$/
+  for (const s of STOPS) {
+    if (!DATES_RE.test(s.dates)) {
+      throw new Error(`campaignStops: "${s.id}" dates "${s.dates}" not in MMM YYYY / MMM–MMM YYYY form`)
+    }
+    if (!EVENT_CLASSES.has(s.event)) {
+      throw new Error(`campaignStops: "${s.id}" event "${s.event}" not in the taxonomy (add it deliberately)`)
+    }
+    if (s.record && !['GOLD', 'RACED', 'TRAINED'].includes(s.record.result)) {
+      throw new Error(`campaignStops: "${s.id}" record.result "${s.record.result}" unknown`)
+    }
+  }
+  if (/—| – /.test(JSON.stringify(STOPS))) {
+    throw new Error('campaignStops: em dash or spaced en dash found in data — restructure the copy instead')
   }
 }
 

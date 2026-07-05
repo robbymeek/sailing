@@ -9,10 +9,14 @@
     "preview": "vite preview",
     "bake:encode": "node scripts/encode-orb.mjs",
     "trailer:encode": "node scripts/encode-trailer.mjs",
-    "tour:photos": "node scripts/prep-tour-photos.mjs"
+    "tour:photos": "node scripts/prep-tour-photos.mjs",
+    "boat:export": "/Applications/Blender.app/Contents/MacOS/Blender --background ~/sailboatBLACK.blend --python scripts/export-boat.py -- --out public/boat/sailboat.glb"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
+    "@react-three/drei": "9.122.0",
+    "@react-three/fiber": "8.18.0",
+    "@react-three/postprocessing": "2.19.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0",
