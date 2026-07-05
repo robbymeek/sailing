@@ -164,19 +164,6 @@ export function ResultRow({ result, isActive, isMobile, onActivate }) {
   )
 }
 
-// Narrative divider from the résumé ("Enrolled at Harvard and worked at a
-// start-up") — muted, not clickable, no placement.
-export function NoteRow({ note, year }) {
-  return (
-    <div style={{ padding: '18px 0', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16 }}>
-        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, fontStyle: 'italic' }}>{note}</span>
-        <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, flexShrink: 0 }}>{year}</span>
-      </div>
-    </div>
-  )
-}
-
 // The chrome "door" into the future campaign tour. Styled with the same LA 2028
 // shimmer (chrome-text) so it invites the click, and navigates to The Road
 // instead of opening a modal.

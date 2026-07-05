@@ -17,6 +17,8 @@
 //      the ILCA 7 group DO keep the chip in that international context.
 //    - "(Incl. Douglas, Riley, Rose)" / "(2nd to Rose)" live in modal-only
 //      fleetNote fields.
+//    - The résumé's "Enrolled at Harvard and worked at a start-up" narrative
+//      line is not rendered (owner request, Jul 2026).
 //
 //  Row shape (uniform — the UI in components/eventUI.jsx depends on it):
 //    place      finishing place (number) — drives the medal-tinted badge
@@ -28,8 +30,6 @@
 //    fleetNote  competitive context shown in the modal only (optional)
 //    summary    modal paragraph (optional — modal falls back to the stats)
 //    url        official event page (optional)
-//  A row with `note` instead of place/event is a narrative divider (the
-//  résumé's "Enrolled at Harvard" line) — rendered muted, not clickable.
 //
 //  FUTURE events are intentionally NOT here: the 2026 → 2028 campaign lives on
 //  The Road globe tour (src/data/campaignStops.js). The one forward-looking
@@ -81,7 +81,6 @@ const RESULT_GROUPS = [
         place: 1, fleet: 36, event: 'NEISA Championship', year: 2025,
         tag: 'Top American',
       },
-      { note: 'Enrolled at Harvard and worked at a start-up', year: '2023 – 2024' },
       {
         place: 1, fleet: 37, event: 'North American Championship', year: 2023,
         tag: 'Top American',

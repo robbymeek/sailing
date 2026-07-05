@@ -3,7 +3,7 @@ import Footer from '../components/Footer'
 import useCountdown from '../hooks/useCountdown'
 import useTextSpray from '../hooks/useTextSpray'
 import RESULT_GROUPS from '../data/events'
-import { ResultRow, NoteRow, GroupHeader, BridgeRow, EventModal } from '../components/eventUI'
+import { ResultRow, GroupHeader, BridgeRow, EventModal } from '../components/eventUI'
 import ExitNav from '../components/ExitNav'
 import SailingBanner from '../components/SailingBanner'
 import { EXIT_CARDS } from '../components/exitCards'
@@ -555,19 +555,15 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
                     }
                   />
                   {open &&
-                    group.results.map((r, i) =>
-                      r.note ? (
-                        <NoteRow key={i} note={r.note} year={r.year} />
-                      ) : (
-                        <ResultRow
-                          key={i}
-                          result={r}
-                          isMobile={isMobile}
-                          isActive={selectedEvent?.result === r}
-                          onActivate={() => setSelectedEvent({ result: r, group })}
-                        />
-                      )
-                    )}
+                    group.results.map((r, i) => (
+                      <ResultRow
+                        key={i}
+                        result={r}
+                        isMobile={isMobile}
+                        isActive={selectedEvent?.result === r}
+                        onActivate={() => setSelectedEvent({ result: r, group })}
+                      />
+                    ))}
                 </div>
               )
             })}
