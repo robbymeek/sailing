@@ -3,11 +3,96 @@ import { useState } from 'react'
 // ============================================================================
 //  Results-list UI — used by the Biography RESULTS section (the site's single
 //  home for past results since the standalone Event Calendar page was
-//  retired). Data lives in src/data/events.js.
+//  retired). Data lives in src/data/events.js and mirrors the sailing résumé:
+//  every row is a uniform { place, fleet, event, year } record, grouped by
+//  era (ILCA 7 / ILCA 6 / College / High School).
 // ============================================================================
 
-// One clickable past-event row → opens the modal.
-export function EventRow({ event, isActive, onActivate }) {
+// 1st / 2nd / 3rd get medal-tinted ordinals; everything else stays neutral.
+const PLACE_COLORS = {
+  1: 'rgb(255,214,120)',
+  2: 'rgb(201,208,220)',
+  3: 'rgb(226,171,124)',
+}
+
+function placeColor(place) {
+  return PLACE_COLORS[place] || '#fff'
+}
+
+function ordinal(n) {
+  const rem10 = n % 10
+  const rem100 = n % 100
+  if (rem10 === 1 && rem100 !== 11) return `${n}st`
+  if (rem10 === 2 && rem100 !== 12) return `${n}nd`
+  if (rem10 === 3 && rem100 !== 13) return `${n}rd`
+  return `${n}th`
+}
+
+// Era header: "▸ ILCA 7 ————————— 2022 – Present". Clicking toggles the
+// group's list. Each group toggles independently (all four can be open at
+// once); state lives in Biography's openGroups.
+export function GroupHeader({ title, years, open, onToggle }) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <button
+      onClick={onToggle}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      aria-expanded={open}
+      aria-label={`${title} results, ${years}`}
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'baseline',
+        gap: 16,
+        width: '100%',
+        background: 'none',
+        border: 'none',
+        borderBottom: '1px solid rgba(255,255,255,0.25)',
+        fontFamily: 'inherit',
+        textAlign: 'left',
+        cursor: 'pointer',
+        padding: '44px 0 12px',
+      }}
+    >
+      <span
+        style={{
+          color: '#fff',
+          fontSize: 13,
+          fontWeight: 700,
+          letterSpacing: '3px',
+          textTransform: 'uppercase',
+          transition: 'color 0.2s ease',
+        }}
+      >
+        <span
+          aria-hidden="true"
+          style={{
+            display: 'inline-block',
+            marginRight: 12,
+            fontSize: 10,
+            color: '#fff',
+            transform: open ? 'rotate(90deg)' : 'none',
+            transition: 'transform 0.25s ease, color 0.2s ease',
+          }}
+        >
+          ▶
+        </span>
+        {title}
+      </span>
+      <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, letterSpacing: '1px', flexShrink: 0 }}>
+        {years}
+      </span>
+    </button>
+  )
+}
+
+// One uniform result row: place badge → event name (+ class) | tag → year.
+// The distinction tag ("Top American") reads as plain text after a vertical
+// bar, same size and colour as the event name (owner request — no chip box).
+// Every row opens the modal — at minimum it shows the full stat line.
+// isMobile (<700px, incl. the MobileHome embed): tighter place column.
+export function ResultRow({ result, isActive, isMobile, onActivate }) {
   const [hovered, setHovered] = useState(false)
   const highlighted = hovered || isActive
   return (
@@ -24,9 +109,27 @@ export function EventRow({ event, isActive, onActivate }) {
         transition: 'all 0.25s ease',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, fontWeight: 400 }}>{event.n}</span>
-        <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, flexShrink: 0, marginLeft: 16 }}>{event.d}</span>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: isMobile ? 12 : 14 }}>
+        <span style={{ width: isMobile ? 78 : 96, flexShrink: 0, whiteSpace: 'nowrap' }}>
+          <span style={{ color: placeColor(result.place), fontSize: isMobile ? 13 : 14, fontWeight: 700 }}>
+            {ordinal(result.place)}
+          </span>
+          <span style={{ color: '#fff', fontSize: isMobile ? 11 : 12 }}> of {result.fleet}</span>
+        </span>
+        <span style={{ flex: 1, minWidth: 0, overflowWrap: 'break-word' }}>
+          <span style={{ color: '#fff', fontSize: 14, fontWeight: 400 }}>
+            {result.event}
+          </span>
+          {result.classNote && (
+            <span style={{ color: '#fff', fontSize: 12.5 }}> · {result.classNote}</span>
+          )}
+          {result.tag && (
+            <span style={{ color: '#fff', fontSize: 14, fontWeight: 400 }}> | {result.tag}</span>
+          )}
+        </span>
+        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, flexShrink: 0, marginLeft: isMobile ? 8 : 16 }}>
+          {result.year}
+        </span>
       </div>
     </div>
   )
@@ -71,7 +174,7 @@ export function BridgeRow({ onNavigate }) {
   )
 }
 
-export function EventModal({ event, onClose }) {
+export function EventModal({ result, group, onClose }) {
   return (
     <div
       onClick={onClose}
@@ -93,21 +196,47 @@ export function EventModal({ event, onClose }) {
           width: '100%',
         }}
       >
-        <h2 style={{ color: '#fff', fontSize: 18, fontWeight: 600, margin: '0 0 6px', letterSpacing: '-0.3px' }}>
-          {event.n}
-        </h2>
-        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, margin: '0 0 20px' }}>{event.d}</p>
-        <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.7, margin: '0 0 24px' }}>
-          {event.summary}
+        <p style={{
+          color: '#fff', fontSize: 12, letterSpacing: '2px',
+          textTransform: 'uppercase', margin: '0 0 10px',
+        }}>
+          {group.title} · {result.year}
         </p>
+        <h2 style={{ color: '#fff', fontSize: 18, fontWeight: 600, margin: '0 0 14px', letterSpacing: '-0.3px' }}>
+          {result.event}
+          {result.classNote && (
+            <span style={{ color: '#fff', fontSize: 14, fontWeight: 400 }}> · {result.classNote}</span>
+          )}
+        </h2>
+        {/* Stat line: "1st of 41 | Top American" — the tag as plain text
+             after the bar, matching the "of N" size (owner request). */}
+        <div style={{ margin: '0 0 20px' }}>
+          <span style={{ fontSize: 24, fontWeight: 800, color: placeColor(result.place), letterSpacing: '-0.5px' }}>
+            {ordinal(result.place)}
+          </span>
+          <span style={{ color: '#fff', fontSize: 15, fontWeight: 400 }}> of {result.fleet}</span>
+          {result.tag && (
+            <span style={{ color: '#fff', fontSize: 15, fontWeight: 400 }}> | {result.tag}</span>
+          )}
+        </div>
+        {result.summary && (
+          <p style={{ color: '#fff', fontSize: 14, lineHeight: 1.7, margin: '0 0 20px' }}>
+            {result.summary}
+          </p>
+        )}
+        {result.fleetNote && (
+          <p style={{ color: '#fff', fontSize: 13, fontStyle: 'italic', margin: '0 0 20px' }}>
+            {result.fleetNote}
+          </p>
+        )}
         <div style={{ display: 'flex', gap: 12 }}>
-          {event.url && (
+          {result.url && (
             <a
-              href={event.url}
+              href={result.url}
               target="_blank"
               rel="noopener noreferrer"
               style={{
-                color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: 400,
+                color: '#fff', fontSize: 13, fontWeight: 400,
                 border: '1px solid rgba(255,255,255,0.15)', padding: '8px 20px',
                 textDecoration: 'none', borderRadius: 4,
               }}
@@ -119,7 +248,7 @@ export function EventModal({ event, onClose }) {
             onClick={onClose}
             style={{
               background: 'none', border: '1px solid rgba(255,255,255,0.15)',
-              color: 'rgba(255,255,255,0.35)', fontSize: 13,
+              color: '#fff', fontSize: 13,
               padding: '8px 20px', cursor: 'pointer', borderRadius: 4,
             }}
           >

@@ -1,15 +1,40 @@
 // ============================================================================
-//  EVENTS  —  single source of truth for the results calendar.
+//  RESULTS  —  single source of truth for the Biography RESULTS section.
 // ============================================================================
-//  Past regattas + results, newest first. FUTURE events are intentionally NOT
-//  here: the 2026 → 2028 campaign lives on The Road globe tour
-//  (src/data/campaignStops.js), so a stop that's on the tour is deliberately
-//  left off this list. The one forward-looking row is the chrome
-//  "Full-Time Olympic Training" bridge (OLYMPIC_BRIDGE), which links to
-//  The Road instead of opening a modal.
+//  Mirrors the sailing résumé (public/resume/Robby-Meek-Sailing-Resume.pdf,
+//  regenerated from ~/Desktop/Sailing Resume Docs/): every row of the résumé's
+//  Results table, grouped the same way (ILCA 7 → ILCA 6 → College → High
+//  School). When the résumé changes, update this file to match.
 //
-//  Consumed by the Biography RESULTS section (the site's single home for past
-//  results). Add past results here as they happen.
+//  Deliberate deviations from the résumé's wording (display polish only —
+//  places, fleets, years are exact):
+//    - "OCR" expanded to "Olympic Classes Regatta"; "World Sailing
+//      Championship" shortened to "World Championship".
+//    - "(High School)" qualifiers dropped inside the High School group.
+//    - The résumé's "Top American –" prefix on College rows is NOT rendered
+//      as a chip there: an all-college fleet is all-American, so the chip
+//      carries no information. The two College results that also appear in
+//      the ILCA 7 group DO keep the chip in that international context.
+//    - "(Incl. Douglas, Riley, Rose)" / "(2nd to Rose)" live in modal-only
+//      fleetNote fields.
+//    - The résumé's "Enrolled at Harvard and worked at a start-up" narrative
+//      line is not rendered (owner request, Jul 2026).
+//
+//  Row shape (uniform — the UI in components/eventUI.jsx depends on it):
+//    place      finishing place (number) — drives the medal-tinted badge
+//    fleet      fleet size (number) — rendered as "of N"
+//    event      regatta name, no placement/class baked into the string
+//    year       season (number)
+//    tag        national-distinction chip, e.g. 'Top American' (optional)
+//    classNote  class qualifier shown inline, e.g. 'ILCA 7' (optional)
+//    fleetNote  competitive context shown in the modal only (optional)
+//    summary    modal paragraph (optional — modal falls back to the stats)
+//    url        official event page (optional)
+//
+//  FUTURE events are intentionally NOT here: the 2026 → 2028 campaign lives on
+//  The Road globe tour (src/data/campaignStops.js). The one forward-looking
+//  row is the chrome "Full-Time Olympic Training" bridge (OLYMPIC_BRIDGE),
+//  which links to The Road instead of opening a modal.
 
 // The chrome-shimmer "door" into the future tour. Rendered specially (BridgeRow
 // in components/eventUI.jsx): LA 2028-style chrome text; click → The Road.
@@ -19,80 +44,152 @@ export const OLYMPIC_BRIDGE = {
   d: '2026 – 2028',
 }
 
-const EVENTS = [
+const RESULT_GROUPS = [
   {
-    n: 'ILCA 7 European Championships',
-    d: 'May 2026',
-    summary:
-      'The ILCA 7 Senior European Championships in Split, Croatia. A critical event for fleet racing experience at the highest international level, bringing together top sailors from across Europe and beyond.',
-    url: 'https://eurilca.org/',
+    title: 'ILCA 7',
+    years: '2022 – Present',
+    results: [
+      {
+        place: 57, fleet: 171, event: 'European Championship', year: 2026,
+        tag: 'Top American',
+        summary:
+          'The ILCA 7 Senior European Championships in Split, Croatia. Finished 57th of 171 as the top American — holding the U.S. top spot at consecutive European Championships.',
+        url: 'https://eurilca.org/',
+      },
+      {
+        place: 48, fleet: 153, event: 'European Championship', year: 2025,
+        tag: 'Top American',
+        summary:
+          'The ILCA 7 Senior European Championships in Marstrand, Sweden. I was really happy with my performance here among the best in the world — 48th of 153 and top American. A great learning experience racing against the top fleet on the international stage.',
+        url: 'https://eurilca.org/2025-ilca-senior-european-championships-final-results/',
+      },
+      {
+        place: 1, fleet: 41, event: 'North American Championship', year: 2025,
+        tag: 'Top American',
+        summary:
+          'The ILCA 7 North American Championship hosted by Alamitos Bay Yacht Club. Won the title in the 41-boat ILCA 7 fleet.',
+        url: 'https://ilcanasailing.org/major-regattas',
+      },
+      {
+        place: 1, fleet: 18, event: 'College Single-handed National Championship', year: 2025,
+        tag: 'Top American',
+        summary:
+          'The ICSA College Singlehanded National Championship hosted by Old Dominion University. Won the Open National Championship title representing Harvard.',
+        url: 'https://collegesailing.org/championships/national-championships',
+      },
+      {
+        place: 1, fleet: 36, event: 'NEISA Championship', year: 2025,
+        tag: 'Top American',
+      },
+      {
+        place: 1, fleet: 37, event: 'North American Championship', year: 2023,
+        tag: 'Top American',
+      },
+      {
+        place: 1, fleet: 37, event: 'Long Beach Olympic Classes Regatta', year: 2023,
+        tag: 'Top American',
+        summary:
+          'Olympic classes regatta in Long Beach, California — the waters that will host sailing at LA 2028. Won the 37-boat ILCA 7 fleet.',
+      },
+      {
+        place: 3, fleet: 45, event: 'Lauderdale Olympic Classes Regatta', year: 2023,
+        tag: 'Third American',
+      },
+    ],
   },
   {
-    n: 'Trofeo Princesa Sofía — Palma',
-    d: 'March 2026',
-    summary:
-      'The 55th Trofeo Princesa Sofia in Palma de Mallorca, opening the 2026 Sailing Grand Slam season. One of the largest ILCA 7 fleets of the year with sailors from across all continents racing on the Bay of Palma.',
-    url: 'https://www.trofeoprincesasofia.org/en/default/races/race',
+    title: 'ILCA 6',
+    years: '2019 – 2022',
+    results: [
+      {
+        place: 1, fleet: 75, event: 'North American Championship', year: 2022,
+        tag: 'Top American',
+      },
+      {
+        place: 1, fleet: 120, event: 'Lauderdale Olympic Classes Regatta', year: 2022,
+        tag: 'Top American', fleetNote: 'Fleet included Douglas, Riley, and Rose.',
+      },
+      {
+        place: 5, fleet: 225, event: 'World Championship', year: 2022,
+        tag: 'Top American',
+        summary:
+          'The 2022 ILCA 6 World Championship — fifth of 225 boats and top American. My final season in the ILCA 6 before moving into the ILCA 7.',
+      },
+      {
+        place: 1, fleet: 120, event: 'Midwinters East Regatta', year: 2022,
+        tag: 'Top American',
+      },
+      {
+        place: 1, fleet: 54, event: 'San Diego Olympic Classes Regatta', year: 2021,
+        tag: 'Top American',
+      },
+      {
+        place: 1, fleet: 92, event: 'Orange Bowl Regatta', year: 2021,
+        tag: 'Top American',
+      },
+      {
+        place: 2, fleet: 119, event: 'North American Championship', year: 2021,
+        tag: 'Second American', fleetNote: 'Second to Rose.',
+      },
+      {
+        place: 9, fleet: 374, event: 'World Championship', year: 2021,
+        tag: 'Second American',
+        summary:
+          'The 2021 ILCA 6 World Championship — ninth of 374 boats, and second American overall.',
+      },
+      {
+        place: 2, fleet: 74, event: 'Lauderdale Olympic Classes Regatta', year: 2021,
+        tag: 'Second American', fleetNote: 'Fleet included Douglas, Riley, and Rose.',
+      },
+      {
+        place: 3, fleet: 94, event: 'Lauderbowl', year: 2020,
+        tag: 'Third American',
+      },
+    ],
   },
   {
-    n: 'Miami Training Block',
-    d: 'November 2025',
-    summary:
-      'Intensive training block in Miami focused on boat speed, fitness, and race preparation with members of the US Sailing Team in Biscayne Bay conditions.',
+    title: 'College',
+    years: '2023 – 2026',
+    results: [
+      { place: 1, fleet: 16, event: 'Team Race National Championship', year: 2026 },
+      { place: 1, fleet: 16, event: 'NEISA Team Race Championship', year: 2026 },
+      {
+        place: 1, fleet: 18, event: 'Single-handed National Championship', year: 2025,
+        classNote: 'ILCA 7',
+        summary:
+          'The ICSA College Singlehanded National Championship hosted by Old Dominion University. Won the Open National Championship title representing Harvard.',
+        url: 'https://collegesailing.org/championships/national-championships',
+      },
+      { place: 1, fleet: 36, event: 'NEISA Championship', year: 2025, classNote: 'ILCA 7' },
+      { place: 1, fleet: 16, event: 'Team Race National Championship', year: 2025 },
+      { place: 1, fleet: 34, event: 'NEISA Championship', year: 2024, classNote: 'ILCA 7' },
+      { place: 2, fleet: 32, event: 'NEISA Championship', year: 2023, classNote: 'ILCA 7' },
+    ],
   },
   {
-    n: 'Vilamoura Grand-Prix',
-    d: 'November 2025',
-    summary:
-      'International ILCA 7 grand-prix regatta in Vilamoura, Portugal. A high-level European fleet racing event with strong Atlantic Ocean conditions.',
-    url: 'https://www.vilamourasailing.com/events',
-  },
-  {
-    n: 'College Single-Handed National Championship \u{1F947}',
-    d: 'November 2025',
-    summary:
-      'The ICSA College Singlehanded National Championship hosted by Old Dominion University. Won the Open National Championship title representing Harvard.',
-    url: 'https://collegesailing.org/championships/national-championships',
-  },
-  {
-    n: 'Miami Training',
-    d: 'November 2025',
-    summary:
-      'Continuation of Miami-based training with focus on starts, upwind speed, and tactical decision-making in shifty bay conditions.',
-  },
-  {
-    n: 'ILCA 7 European Championship \u{1F4AA}',
-    d: 'August 2025',
-    summary:
-      'The ILCA 7 Senior European Championships in Marstrand, Sweden. I was really happy with my performance here among the best in the world. A great learning experience racing against the top fleet on the international stage.',
-    url: 'https://eurilca.org/2025-ilca-senior-european-championships-final-results/',
-  },
-  {
-    n: 'Long Beach Olympic Classes',
-    d: 'July 2025',
-    summary:
-      'ILCA 7 Olympic classes regatta on the 2028 Olympic venue waters in Long Beach, California. Critical for learning the local conditions ahead of LA 2028.',
-  },
-  {
-    n: 'Kiel Week',
-    d: 'June 2025',
-    summary:
-      "One of the world's largest and most prestigious sailing events, held annually in Kiel, Germany. Raced in the ILCA 7 fleet alongside world-class competition across all Olympic classes.",
-    url: 'https://www.kieler-woche.de/en/sailing.php',
-  },
-  {
-    n: 'ILCA 7 North American Championship \u{1F947}',
-    d: 'June 2025',
-    summary:
-      'The ILCA 7 North American Championship hosted by Alamitos Bay Yacht Club. Won the title of top North American in the 45-boat ILCA 7 fleet.',
-    url: 'https://ilcanasailing.org/major-regattas',
-  },
-  {
-    n: 'LA Training',
-    d: 'June 2025',
-    summary:
-      'Training in Los Angeles waters to build familiarity with the Olympic venue. Focused on the unique thermal breeze and current patterns of the LA coast.',
+    title: 'High School',
+    years: '2019 – 2023',
+    results: [
+      {
+        place: 1, fleet: 18, event: 'Single-handed National Championship', year: 2023,
+        classNote: 'ILCA 7',
+      },
+      { place: 1, fleet: 12, event: 'Team Race National Championship', year: 2023 },
+      { place: 2, fleet: 12, event: 'Fleet Race National Championship', year: 2023 },
+      {
+        place: 1, fleet: 18, event: 'Single-handed National Championship', year: 2022,
+        classNote: 'ILCA 6',
+      },
+      { place: 2, fleet: 20, event: 'Fleet Race National Championship', year: 2022 },
+      { place: 2, fleet: 20, event: 'Team Race National Championship', year: 2022 },
+      { place: 3, fleet: 20, event: 'Fleet Race National Championship', year: 2021 },
+      { place: 3, fleet: 20, event: 'Team Race National Championship', year: 2021 },
+      {
+        place: 5, fleet: 18, event: 'Single-handed National Championship', year: 2019,
+        classNote: 'ILCA 6',
+      },
+    ],
   },
 ]
 
-export default EVENTS
+export default RESULT_GROUPS
