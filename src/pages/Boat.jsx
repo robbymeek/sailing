@@ -12,27 +12,33 @@ import useTextSpray from '../hooks/useTextSpray'
 // of scrollY (boatScroll.js); this file adds no animation state of its own —
 // text "choreography" is just document-positioned type scrolling naturally.
 
-// normalized scroll positions (see boatScroll ACT map); layer 'back' renders
-// behind the boat so the sail carves through the type as it passes
+// Copy beats. Each line is a FIXED element whose opacity/drift is a closed
+// form of scroll: it fades in around `at - w`, dwells (drifting gently upward
+// so it stays alive), and fades out by `at + w` — so lines are actually
+// readable instead of whipping past at raw scroll speed. `y` = resting offset
+// from screen centre in vh; layer 'back' renders behind the boat so the sail
+// carves through the type. (Not a sticky banner: nothing pins during normal
+// reading — this is The Road's chapter-card grammar.)
 const COPY = [
-  { at: 0.02, layer: 'front', kind: 'kicker', text: 'ROBBY MEEK — ILCA 7' },
-  { at: 0.055, layer: 'back', kind: 'giant', text: 'ONE SAIL.' },
-  { at: 0.095, layer: 'front', kind: 'line', text: 'One sail.', align: 'left' },
-  { at: 0.125, layer: 'back', kind: 'line', text: 'One hull.' },
-  { at: 0.155, layer: 'front', kind: 'line', text: 'One sailor.', align: 'right' },
-  { at: 0.182, layer: 'front', kind: 'small', text: 'No crew. No engine. Everything else stays on shore.' },
-  { at: 0.325, layer: 'front', kind: 'small', text: 'One design. The boat is identical for every sailor on Earth.' },
-  { at: 0.342, layer: 'front', kind: 'line', text: 'You don’t get to change the boat.' },
-  { at: 0.356, layer: 'front', kind: 'line', text: 'So you change.' },
-  { at: 0.503, layer: 'front', kind: 'chrome-small', text: 'Nine years in.' },
-  { at: 0.52, layer: 'back', kind: 'stat', text: '3× CONTINENTAL CHAMPION' },
-  { at: 0.57, layer: 'front', kind: 'stat', text: '6× NATIONAL CHAMPION' },
-  { at: 0.62, layer: 'back', kind: 'stat', text: '9+ YEARS IN THE CLASS' },
-  { at: 0.65, layer: 'front', kind: 'small', text: 'Same hull. Same sail. Different sailor.' },
-  { at: 0.685, layer: 'front', kind: 'small', text: 'The next three years decide everything.' },
-  { at: 0.84, layer: 'front', kind: 'line', text: 'The Games come home to Los Angeles.' },
-  { at: 0.875, layer: 'front', kind: 'line', text: 'So does the boat.' },
+  { at: 0.02, layer: 'front', kind: 'kicker', text: 'ROBBY MEEK — ILCA 7', y: -14, w: 0.03 },
+  { at: 0.055, layer: 'back', kind: 'giant', text: 'ONE SAIL.', w: 0.042 },
+  { at: 0.098, layer: 'front', kind: 'line', text: 'One sail.', align: 'left', y: -6 },
+  { at: 0.128, layer: 'back', kind: 'line', text: 'One hull.' },
+  { at: 0.158, layer: 'front', kind: 'line', text: 'One sailor.', align: 'right', y: 6 },
+  { at: 0.186, layer: 'front', kind: 'small', text: 'No crew. No engine. Everything else stays on shore.', y: 15 },
+  { at: 0.325, layer: 'front', kind: 'small', text: 'One design. The boat is identical for every sailor on Earth.', y: 24 },
+  { at: 0.345, layer: 'front', kind: 'line', text: 'You don’t get to change the boat.', y: -12 },
+  { at: 0.358, layer: 'front', kind: 'line', text: 'So you change.', y: -2 },
+  { at: 0.502, layer: 'front', kind: 'chrome-small', text: 'Nine years in.', y: 26 },
+  { at: 0.53, layer: 'back', kind: 'stat', text: '3× CONTINENTAL CHAMPION', y: -18, w: 0.034 },
+  { at: 0.575, layer: 'front', kind: 'stat', text: '6× NATIONAL CHAMPION', y: 0, w: 0.034 },
+  { at: 0.62, layer: 'back', kind: 'stat', text: '9+ YEARS IN THE CLASS', y: 18, w: 0.034 },
+  { at: 0.652, layer: 'front', kind: 'small', text: 'Same hull. Same sail. Different sailor.', y: 26 },
+  { at: 0.685, layer: 'front', kind: 'small', text: 'The next three years decide everything.', y: 12 },
+  { at: 0.845, layer: 'front', kind: 'line', text: 'The Games come home to Los Angeles.', y: -12 },
+  { at: 0.878, layer: 'front', kind: 'line', text: 'So does the boat.', y: -2 },
 ]
+const BEAT_W = 0.024 // default half-window (t units)
 
 const KIND_STYLE = {
   kicker: { fontSize: 'clamp(13px, 1.1vw, 16px)', letterSpacing: '0.34em', fontWeight: 600, color: 'rgba(220,230,255,0.85)' },
@@ -43,18 +49,21 @@ const KIND_STYLE = {
   'chrome-small': { fontSize: 'clamp(22px, 2.6vw, 40px)', fontWeight: 700 },
 }
 
-function TextItem({ item, isMobile }) {
+function TextItem({ item, refFn }) {
   const chrome = item.kind === 'stat' || item.kind === 'chrome-small'
   return (
     <div
+      ref={refFn}
       style={{
-        position: 'absolute',
-        top: `${centerVh(item.at, isMobile)}vh`,
+        position: 'fixed',
+        top: '50%',
         left: 0,
         right: 0,
+        opacity: 0,
         transform: 'translateY(-50%)',
         padding: '0 7vw',
         textAlign: item.align || 'center',
+        pointerEvents: 'none',
       }}
     >
       <span className={chrome ? 'chrome-text' : undefined} style={KIND_STYLE[item.kind]}>
@@ -164,6 +173,7 @@ function BoatLive({ isMobile }) {
   const [frameloop, setFrameloop] = useState('always')
   const headlineRef = useRef(null)
   const bgGlowRef = useRef(null)
+  const beatRefs = useRef({}) // COPY index -> element
 
   // the LA 2028 headline dissolves via the site's sea-spray motif on exit
   useTextSpray(headlineRef, { palette: 'chrome', enabled: !failed })
@@ -177,6 +187,21 @@ function BoatLive({ isMobile }) {
       computeBoatScroll()
       if (headlineRef.current) headlineRef.current.style.opacity = String(P.headlineFade)
       if (bgGlowRef.current) bgGlowRef.current.style.opacity = String(P.bgLift * 0.9)
+      // copy beats: opacity/drift = closed form of scroll (see COPY comment)
+      for (let i = 0; i < COPY.length; i++) {
+        const el = beatRefs.current[i]
+        if (!el) continue
+        const item = COPY[i]
+        const w = item.w || BEAT_W
+        const x = (P.t - (item.at - w)) / (2 * w) // 0..1 across the beat window
+        if (x <= 0 || x >= 1) {
+          el.style.opacity = '0'
+          continue
+        }
+        el.style.opacity = String(Math.min(1, Math.min(x, 1 - x) * 4)) // 25% ramps
+        const drift = (0.5 - x) * 7 // vh: +3.5 -> -3.5, alive but readable
+        el.style.transform = `translateY(calc(-50% + ${(item.y || 0) + drift}vh))`
+      }
     }
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(write)
@@ -215,10 +240,12 @@ function BoatLive({ isMobile }) {
         }}
       />
       {/* text BEHIND the boat — its opaque pixels carve through these glyphs */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: `${TVH}vh`, zIndex: 0, pointerEvents: 'none' }}>
-        {COPY.filter((c) => c.layer === 'back').map((c) => (
-          <TextItem key={c.at} item={c} isMobile={isMobile} />
-        ))}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+        {COPY.map((c, i) =>
+          c.layer === 'back' ? (
+            <TextItem key={c.at} item={c} refFn={(el) => { beatRefs.current[i] = el }} />
+          ) : null
+        )}
       </div>
       <div style={{ position: 'fixed', inset: 0, zIndex: 1, pointerEvents: 'none' }}>
         <BoatErrorBoundary onFail={() => setFailed(true)}>
@@ -227,9 +254,11 @@ function BoatLive({ isMobile }) {
       </div>
       {/* text in FRONT of the boat */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: `${TVH}vh`, zIndex: 2, pointerEvents: 'none' }}>
-        {COPY.filter((c) => c.layer === 'front').map((c) => (
-          <TextItem key={c.at} item={c} isMobile={isMobile} />
-        ))}
+        {COPY.map((c, i) =>
+          c.layer === 'front' ? (
+            <TextItem key={c.at} item={c} refFn={(el) => { beatRefs.current[i] = el }} />
+          ) : null
+        )}
         {/* the transmutation target: particles land into this exact line; fontSize
             and weight are coupled to boatParticles' raster + pose.glyphSize */}
         <h1

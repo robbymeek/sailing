@@ -24,7 +24,7 @@ export const DECK_Y = 0.047
 
 // Runway: TOTAL_VH of document height => (TOTAL_VH/100 - 1) viewport-heights of travel.
 export function totalVh(isMobile) {
-  return isMobile ? 700 : 800
+  return isMobile ? 1050 : 1250
 }
 // Document top (in vh) that puts an element's center at screen center when scroll t = frac.
 export function centerVh(frac, isMobile) {
@@ -53,17 +53,20 @@ function bump(t, a, b) {
 // stays framed on narrow viewports; heights/targets don't need it.
 const C1a = [0.55, 0.98, 0.42] // sail-edge close-up
 const T1a = [0.02, 0.95, 0.1]
-const R1b = 2.4 // A1 end / A2 orbit radius
+// Whole-boat framing: the sculpture is 1.58 units tall, so full-boat shots
+// need ~2.0 units of vertical coverage (FOV 38 → distance ≥ ~2.9) with the
+// target near the boat's vertical centre (~0.72), or the sail tip crops.
+const R1b = 3.0 // A1 end / A2 orbit radius
 const ORBIT_END = (80 * Math.PI) / 180 // A2 sweep
 const F0 = [1.7, 0.7, 1.25] // fly-through bezier (desktop only)
 const F1 = [0, 0.55, 0]
 const F2 = [-1.7, 0.7, -1.25]
-const C4a = [2.7, 0.14, 0.55] // waterline framing
-const C4b = [2.15, 0.14, 0.45]
-const T4 = [0, 0.45, 0]
-const C5a = [2.5, 1.45, 1.9] // 3/4 aerial hero
-const C5b = [2.35, 1.35, 1.75]
-const T5 = [0, 0.65, 0]
+const C4a = [3.2, 0.3, 0.65] // waterline framing (low, but whole boat in frame)
+const C4b = [2.9, 0.3, 0.5]
+const T4 = [0, 0.6, 0]
+const C5a = [2.6, 1.5, 2.0] // 3/4 aerial hero
+const C5b = [2.45, 1.4, 1.85]
+const T5 = [0, 0.7, 0]
 export const C6 = [0.7, 1.5, -2.5] // astern-high, holds through A6-A8
 export const T6 = [0, 1.0, 0]
 const M3 = [2.2, 0.8, 1.3] // mobile fixed 3/4 view for A3 (no fly-through)
@@ -137,7 +140,7 @@ export default function computeBoatScroll() {
   // ---- A1 THE LINE: edge close-up dollies back to the full silhouette ----
   if (t < ACT.A2) {
     const x = ss(seg(t, 0, ACT.A2))
-    lerpCam(C1a, T1a, [R1b, 0.5, 0], [0, 0.6, 0], x)
+    lerpCam(C1a, T1a, [R1b, 0.6, 0], [0, 0.72, 0], x)
     P.boatYaw = 0
     P.rim1 = 1
     P.rim2 = 0
@@ -145,7 +148,7 @@ export default function computeBoatScroll() {
     // ---- A2 THE MACHINE: 80deg gallery orbit at deck height ----
     const x = ss(seg(t, ACT.A2, ACT.A3))
     const az = ORBIT_END * x
-    setCam(R1b * Math.cos(az), lerp(0.5, 0.7, x), R1b * Math.sin(az), 0, 0.6, 0)
+    setCam(R1b * Math.cos(az), lerp(0.6, 0.8, x), R1b * Math.sin(az), 0, 0.72, 0)
     P.boatYaw = 0
     P.rim1 = 1
     P.rim2 = ss(seg(t, 0.15, 0.185)) // second edge light as the orbit completes
@@ -167,10 +170,10 @@ export default function computeBoatScroll() {
     if (P.isMobile) {
       // fixed 3/4 view, no fly-through
       const x = ss(seg(t, ACT.A3, 0.24))
-      lerpCam([orbitEndX, 0.7, orbitEndZ], [0, 0.6, 0], M3, [0, 0.75, 0], x)
+      lerpCam([orbitEndX, 0.8, orbitEndZ], [0, 0.72, 0], M3, [0, 0.75, 0], x)
       if (t >= 0.3) lerpCam(M3, [0, 0.75, 0], C4a, T4, ss(seg(t, 0.3, ACT.A4)))
     } else if (t < 0.24) {
-      lerpCam([orbitEndX, 0.7, orbitEndZ], [0, 0.6, 0], F0, [F0[0] - 1.2, F0[1] + 0.7, F0[2] - 0.9], ss(seg(t, ACT.A3, 0.24)))
+      lerpCam([orbitEndX, 0.8, orbitEndZ], [0, 0.72, 0], F0, [F0[0] - 1.2, F0[1] + 0.7, F0[2] - 0.9], ss(seg(t, ACT.A3, 0.24)))
     } else if (t < 0.3) {
       // quadratic bezier through the hull/sail gap, looking along the tangent
       // with a downward bias so the deck slides past below and the lifted sail
