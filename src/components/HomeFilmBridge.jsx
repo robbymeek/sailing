@@ -6,10 +6,10 @@ const BASE = import.meta.env.BASE_URL
 // ============================================================================
 //  The embedded home used to hard-cut from the dark photo/orb frame straight
 //  into the mid-loop film. This band turns that cut into an intentional cinema
-//  beat — pure black, the ROBBY MEEK wordmark (same asset as the film strip's
-//  fallback card, so it is already warm in cache from the hidden Biography
-//  preload copy), a chrome "THE FILM" kicker — echoing the white title cards
-//  baked into the film's own edit.
+//  beat — pure black with the ROBBY MEEK wordmark (same asset as the film
+//  strip's fallback card, so it is already warm in cache from the hidden
+//  Biography preload copy), echoing the white title cards baked into the
+//  film's own edit.
 //
 //  It also buys loading runway: roughly one extra screen of scroll between the
 //  home frame and the strip, which SailingBanner's early-warm observer uses to
@@ -27,16 +27,19 @@ export default function HomeFilmBridge() {
       aria-label="The film"
       style={{
         position: 'relative',
-        minHeight: '56vh',
+        minHeight: '34vh',
         background: 'rgb(0,0,0)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '48px 24px',
+        padding: '24px',
         boxSizing: 'border-box',
       }}
     >
+      {/* The PNG carries generous transparent padding above and below the
+          lettering (the baked glow oval), so the band reads taller than its
+          minHeight — keep that in mind before adding height back here. */}
       <img
         src={`${BASE}trailer/wordmark.png`}
         alt=""
@@ -44,21 +47,6 @@ export default function HomeFilmBridge() {
         onError={(e) => { e.currentTarget.style.display = 'none' }}
         style={{ width: 'min(78%, 360px)', height: 'auto', pointerEvents: 'none' }}
       />
-      {/* Negative margin tucks the kicker under the wordmark's baked-in glow
-          padding (the PNG carries ~40% empty height below the lettering). */}
-      <div
-        className="chrome-text"
-        style={{
-          fontSize: 13,
-          fontWeight: 600,
-          letterSpacing: '0.35em',
-          paddingLeft: '0.35em', // re-center: letter-spacing trails the last glyph
-          marginTop: -52,
-          userSelect: 'none',
-        }}
-      >
-        THE FILM
-      </div>
     </section>
   )
 }
