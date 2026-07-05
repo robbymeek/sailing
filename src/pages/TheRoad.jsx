@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import STOPS from '../data/campaignStops'
-import CHAPTERS, { rollCall, TOUR_STATS } from '../data/tourChapters'
+import CHAPTERS, { rollCall, formatVenues, TOUR_STATS } from '../data/tourChapters'
 import createGlobeScene from '../lib/globeScene'
 import { hasWebGL2 } from '../lib/webglSupport'
 import Footer from '../components/Footer'
@@ -42,7 +42,7 @@ const WAYPOINT_HOP = 0.12
 const FINALE_EXTRA = 1.0 // runway for the LA 2028 zoom
 const CHAPTER_LEN = 1.35 // chapter interstitial beat
 const ENTRY_LEG = 0.6 // chapter-0 overview → first stop
-const RECAP_LEN = 2.4 // "totally travelled" full-globe spin before the last leg
+const RECAP_LEN = 1.9 // "totally travelled" full-globe spin before the last leg
 const KEY_ZOOM = 0.85 // camera dolly-in at key-stop arrivals (fraction of baseZ)
 const RECAP_ZOOM = 1.15 // pull-back during the recap (and the final chapter's intro)
 
@@ -257,38 +257,8 @@ const STOP_FRAME = (() => {
 })()
 const STOP_Y = STOP_FRAME.map((fi) => LAND_Y[fi])
 
-// Desktop reel: photo cards are taller than text cards, so entries sit at
-// cumulative centres (variable pitch) instead of one fixed spacing.
-const ENTRY_H = STOPS.map((s) => (s.photo ? 330 : s.tier === 'key' ? 172 : 152))
-const ENTRY_C = (() => {
-  const c = [0]
-  for (let i = 1; i < STOPS.length; i++) c[i] = c[i - 1] + (ENTRY_H[i - 1] + ENTRY_H[i]) / 2
-  return c
-})()
-function entryCenterAt(prog) {
-  const p = clamp(prog, 0, STOPS.length - 1)
-  const lo = Math.floor(p)
-  const hi = Math.min(lo + 1, STOPS.length - 1)
-  return ENTRY_C[lo] + (ENTRY_C[hi] - ENTRY_C[lo]) * (p - lo)
-}
-
-// Left progress rail: bigger, easier-to-click dots with an extra gap between
-// chapter clusters (a half-year tick label sits in each gap), and a sailboat
-// that rides from dot to dot (holding at each stop as you scroll).
-const RAIL_PITCH = 26 // px between dot centres
-const RAIL_GROUP_GAP = 16 // extra px between chapter clusters
-const RAIL_DOT_X = 30 // dot-column x within the rail container
-const RAIL_BOAT_X = 11 // sailboat x (just left of the dots)
-const RAIL_H = STOPS.length * RAIL_PITCH + (N_CHAPTERS - 1) * RAIL_GROUP_GAP
-const railY = (i) => i * RAIL_PITCH + STOPS[i].chapter * RAIL_GROUP_GAP + RAIL_PITCH / 2
-function railYAt(prog) {
-  const p = clamp(prog, 0, STOPS.length - 1)
-  const lo = Math.floor(p)
-  const hi = Math.min(lo + 1, STOPS.length - 1)
-  return railY(lo) + (railY(hi) - railY(lo)) * (p - lo)
-}
-// First stop of each chapter (tick label position) + compact tick labels
-// derived from the chapter date ranges: 'JAN – JUN 2027' → 'JAN ’27'.
+// First stop of each chapter (season label position) + compact tick labels
+// derived from the chapter date ranges: 'JAN–JUN 2027' → 'JAN ’27'.
 const CH_FIRST_STOP = (() => {
   const m = []
   STOPS.forEach((s, i) => { if (m[s.chapter] == null) m[s.chapter] = i })
@@ -299,16 +269,147 @@ const railTick = (label) => {
   return m ? `${m[1]} ’${m[2]}` : label
 }
 
-// 1 → "1st", 2 → "2nd", 3 → "3rd", … for the "Nth of 18 stops" counter.
-function ordinal(n) {
-  const s = ['th', 'st', 'nd', 'rd']
-  const v = n % 100
-  return n + (s[(v - 20) % 10] || s[v] || s[0])
+// ---------- passage-plan course geometry (the tracker) ----------
+// The route is drawn as a 5-tack beat: each chapter is one straight leg of a
+// zigzag, so a tack corner = a chapter boundary. Marks sit on the line (key
+// regattas = diamonds, camps = ticks); the sailboat rides it, heeling with
+// the current tack. Everything is precomputed once at mount — the per-frame
+// work is just xAt/yAt lookups off card.prog.
+const COURSE_W = 170 // board width (labels/tooltips hang off the line)
+const COURSE_AXIS = 70 // course centreline x within the board
+const COURSE_AMP = 9 // tack amplitude (± px off the centreline)
+const TRACKER_MOBILE_H = 48 // mobile waterline strip height (above safe-area)
+
+function buildCourse({ pitch, gap, amp, axisX }) {
+  const N = STOPS.length
+  const H = N * pitch + (N_CHAPTERS - 1) * gap
+  const sy = (i) => i * pitch + STOPS[i].chapter * gap + pitch / 2
+  // tack vertices: the start (y=0), one corner per chapter boundary (mid-gap,
+  // where the old rail put its tick labels), and the finish (y=H)
+  const vy = [0]
+  for (let c = 1; c < N_CHAPTERS; c++) vy.push(sy(CH_FIRST_STOP[c]) - (pitch + gap) / 2)
+  vy.push(H)
+  const vx = vy.map((_, k) => axisX + (k % 2 === 0 ? -amp : amp))
+  const legOf = (y) => {
+    let k = 0
+    while (k < vy.length - 2 && vy[k + 1] < y) k++
+    return k
+  }
+  const xAt = (y) => {
+    const k = legOf(y)
+    return vx[k] + ((vx[k + 1] - vx[k]) * (y - vy[k])) / (vy[k + 1] - vy[k])
+  }
+  // signed lean of each leg (deg); the boat's heel blends across ±6px of a
+  // corner so the tack-over reads as a turn, not a snap
+  const legHeel = []
+  for (let k = 0; k < vy.length - 1; k++) {
+    legHeel.push(Math.atan2(vx[k + 1] - vx[k], vy[k + 1] - vy[k]) * (180 / Math.PI))
+  }
+  const heelAt = (y) => {
+    const k = legOf(y)
+    const SMOOTH = 6
+    if (k < vy.length - 2 && vy[k + 1] - y < SMOOTH) {
+      const t = (1 - (vy[k + 1] - y) / SMOOTH) * 0.5
+      return legHeel[k] + (legHeel[k + 1] - legHeel[k]) * t
+    }
+    if (k > 0 && y - vy[k] < SMOOTH) {
+      const t = (1 - (y - vy[k]) / SMOOTH) * 0.5
+      return legHeel[k] + (legHeel[k - 1] - legHeel[k]) * t
+    }
+    return legHeel[k]
+  }
+  const yAt = (prog) => {
+    const p = clamp(prog, 0, N - 1)
+    const lo = Math.floor(p)
+    const hi = Math.min(lo + 1, N - 1)
+    return sy(lo) + (sy(hi) - sy(lo)) * (p - lo)
+  }
+  const yToProg = (yPx) => {
+    if (yPx <= sy(0)) return 0
+    if (yPx >= sy(N - 1)) return N - 1
+    let lo = 0
+    while (lo < N - 2 && sy(lo + 1) < yPx) lo++
+    return lo + (yPx - sy(lo)) / (sy(lo + 1) - sy(lo))
+  }
+  // cumulative polyline length at each vertex → wake fraction (analytic, no
+  // getTotalLength): frac drives the solid wake's dasharray reveal
+  const cum = [0]
+  for (let k = 0; k < vy.length - 1; k++) {
+    cum.push(cum[k] + Math.hypot(vy[k + 1] - vy[k], vx[k + 1] - vx[k]))
+  }
+  const totalLen = cum[cum.length - 1]
+  const fracAt = (y) => {
+    const k = legOf(y)
+    return (cum[k] + Math.hypot(y - vy[k], xAt(y) - vx[k])) / totalLen
+  }
+  const pathD = vy.map((y, k) => `${k === 0 ? 'M' : 'L'}${vx[k].toFixed(1)} ${y.toFixed(1)}`).join(' ')
+  return { N, H, sy, vx, vy, xAt, yAt, heelAt, yToProg, fracAt, pathD }
 }
 
-// dotT past which the globe is "arriving" at the next waypoint: the card/label
-// for the destination pops up here — just before the dot reaches the pin.
-const ARRIVE = 0.74
+// Mobile waterline strip: same stop map flattened to a horizontal line with
+// small chapter gaps. Built once at mount from the viewport width.
+function buildStrip(width) {
+  const N = STOPS.length
+  const gap = 8
+  const pitch = (width - (N_CHAPTERS - 1) * gap) / (N - 1)
+  const sx = (i) => i * pitch + STOPS[i].chapter * gap
+  const xAt = (prog) => {
+    const p = clamp(prog, 0, N - 1)
+    const lo = Math.floor(p)
+    const hi = Math.min(lo + 1, N - 1)
+    return sx(lo) + (sx(hi) - sx(lo)) * (p - lo)
+  }
+  const xToProg = (xPx) => {
+    if (xPx <= sx(0)) return 0
+    if (xPx >= sx(N - 1)) return N - 1
+    let lo = 0
+    while (lo < N - 2 && sx(lo + 1) < xPx) lo++
+    return lo + (xPx - sx(lo)) / (sx(lo + 1) - sx(lo))
+  }
+  return { N, width, sx, xAt, xToProg }
+}
+
+// ---------- distance made good ----------
+// Real great-circle miles along the route (the readout's "NM TO LA").
+const NM_PER_RAD = 3440.065
+const FRAME_NM = (() => {
+  const c = [0]
+  for (let i = 1; i < F; i++) c[i] = c[i - 1] + centralAngle(FRAMES[i - 1], FRAMES[i]) * NM_PER_RAD
+  return c
+})()
+const STOP_NM = STOP_FRAME.map((fi) => FRAME_NM[fi])
+const TOTAL_NM = FRAME_NM[F - 1]
+function nmToLA(prog) {
+  const p = clamp(prog, 0, STOPS.length - 1)
+  const lo = Math.floor(p)
+  const hi = Math.min(lo + 1, STOPS.length - 1)
+  return Math.max(0, TOTAL_NM - (STOP_NM[lo] + (STOP_NM[hi] - STOP_NM[lo]) * (p - lo)))
+}
+const fmtNM = (nm) => Math.round(nm).toLocaleString('en-US')
+// computed once at module load — no ticking; the finale countdown owns live time
+const DAYS_TO_GAMES = Math.max(0, Math.ceil((new Date('2028-07-14T00:00:00') - Date.now()) / 864e5))
+
+// Scroll offset (px) for a fractional stop — shared by the desktop boat drag,
+// the mobile strip drag/tap, and keyboard stepping. The last stop maps to the
+// finale climax (top of the end block), like its mark does.
+function progToScrollY(prog) {
+  const N = STOPS.length
+  const stopVh = (i) => (i >= N - 1 ? TOTAL_VH / 100 : STOP_Y[i])
+  const p = clamp(prog, 0, N - 1)
+  const lo = Math.floor(p)
+  const hi = Math.min(lo + 1, N - 1)
+  return (stopVh(lo) + (stopVh(hi) - stopVh(lo)) * (p - lo)) * window.innerHeight
+}
+function flyToStop(tour, i) {
+  if (!tour) return
+  const y = i >= STOPS.length - 1 ? (TOTAL_VH / 100) * window.innerHeight : STOP_Y[i] * window.innerHeight
+  tour.toY(y)
+}
+
+// dotT past which the globe is "arriving" at the next waypoint: the card for
+// the destination pops up here — just before the dot reaches the pin. Key
+// regattas open earlier (synced with their camera dolly-in) so they dwell.
+const arriveAt = (stopIndex) => (STOPS[stopIndex].tier === 'key' ? 0.64 : 0.74)
 
 function zoomEase(kind, t) {
   if (kind === 'late') return smoothstep(0.55, 0.95, t) // dolly in as the dot lands
@@ -394,11 +495,15 @@ function computeScroll() {
   if (travel) {
     const dst = FRAMES[seg.dest]
     const dotT = P.arcT
-    const arriving = dotT >= ARRIVE
+    // ONE shared arrival threshold per destination (tiered: key stops open
+    // earlier) — it gates the card switch, the opacity ramp, AND the label
+    // frame below, so the three can never desync mid-leg.
+    const ARR = arriveAt(dst.stopIndex)
+    const arriving = dotT >= ARR
     if (seg.arcIdx < 0) {
       // entry leg — no departure card; the first stop pops as the globe settles
       P.bodyStopIndex = dst.stopIndex
-      P.bodyOpacity = smoothstep(ARRIVE, 0.9, dotT)
+      P.bodyOpacity = smoothstep(ARR, 0.9, dotT)
       P.stopProgress = 0
     } else if (holdFrame.stopIndex === dst.stopIndex) {
       // hop within one multi-waypoint stop: the card just stays up
@@ -407,13 +512,17 @@ function computeScroll() {
       P.stopProgress = holdFrame.stopIndex
     } else if (arriving) {
       P.bodyStopIndex = dst.stopIndex
-      P.bodyOpacity = smoothstep(ARRIVE, 0.9, dotT)
+      P.bodyOpacity = smoothstep(ARR, 0.9, dotT)
       P.stopProgress = holdFrame.stopIndex + smoothstep(0.18, 0.82, dotT)
     } else {
       P.bodyStopIndex = holdFrame.stopIndex
       // legs right after an interstitial: the departing card already faded out
-      // under the chapter card — only the arrival pop shows on this leg
-      P.bodyOpacity = seg.afterChapter ? 0 : 1 - smoothstep(0.16, 0.46, dotT)
+      // under the chapter card — only the arrival pop shows on this leg.
+      // Key stops linger a touch longer before letting go.
+      const key = STOPS[holdFrame.stopIndex].tier === 'key'
+      P.bodyOpacity = seg.afterChapter
+        ? 0
+        : 1 - (key ? smoothstep(0.2, 0.55, dotT) : smoothstep(0.16, 0.46, dotT))
       P.stopProgress = holdFrame.stopIndex + smoothstep(0.18, 0.82, dotT)
     }
     if (seg.type === 'finale-leg') P.bodyOpacity = 0 // clean centred approach to LA
@@ -447,13 +556,20 @@ function computeScroll() {
 // tour lingers on the chapter interstitials and the recap instead of blowing
 // through them. Piecewise-linear map between scroll (vh units) and warped units.
 const PLAY_MS_PER_UNIT = 1100 // pace knob — bigger = calmer tour
-const PLAY_WEIGHT = { chapter: 1.8, recap: 1.3 }
+// One weight function shared by the map and its inverse (they must agree):
+// interstitials linger most, the recap breathes, key arrivals get a beat.
+const weightOf = (seg) => {
+  if (seg.type === 'chapter') return 1.8
+  if (seg.type === 'recap') return 1.3
+  if (seg.type === 'leg' && seg.dest != null && FRAMES[seg.dest].keyArrival) return 1.2
+  return 1
+}
 const PLAY_CUMU = (() => {
   const cumu = []
   let acc = 0
   for (const seg of SEGMENTS) {
     cumu.push(acc)
-    acc += seg.len * (PLAY_WEIGHT[seg.type] || 1)
+    acc += seg.len * weightOf(seg)
   }
   cumu.push(acc) // sentinel: warped units at the end of the last segment
   return cumu
@@ -468,8 +584,7 @@ function playUOfY(yVh) {
     else break
   }
   const seg = SEGMENTS[k]
-  const w = PLAY_WEIGHT[seg.type] || 1
-  return PLAY_CUMU[k] + clamp((yVh - seg.start) / seg.len, 0, 1) * seg.len * w
+  return PLAY_CUMU[k] + clamp((yVh - seg.start) / seg.len, 0, 1) * seg.len * weightOf(seg)
 }
 
 function playYOfU(u) {
@@ -484,8 +599,7 @@ function playYOfU(u) {
     else break
   }
   const seg = SEGMENTS[k]
-  const w = PLAY_WEIGHT[seg.type] || 1
-  return seg.start + (u - PLAY_CUMU[k]) / w
+  return seg.start + (u - PLAY_CUMU[k]) / weightOf(seg)
 }
 
 // seamless: arrived via the home orb→globe morph. The body-level orb overlay is
@@ -533,9 +647,20 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
   const [heroDone, setHeroDone] = useState(false)
   const [isMobile] = useState(() => window.innerWidth < 700)
   const [playing, setPlaying] = useState(false)
-  const [dragging, setDragging] = useState(false)
   const [docked, setDocked] = useState(false) // "Back to Biography" docks to the top once scrolled past the nav
-  const draggingRef = useRef(false)
+  // Course geometry, built once at mount (compact vertical pitch on short
+  // windows; the strip spans the phone width). Resize mid-session is unhandled
+  // by design — same precedent as the mount-time isMobile.
+  const [courseGeom] = useState(() => {
+    const compact = window.innerHeight < 760
+    return buildCourse({
+      pitch: compact ? 22 : 26,
+      gap: compact ? 14 : 18,
+      amp: COURSE_AMP,
+      axisX: COURSE_AXIS,
+    })
+  })
+  const [stripGeom] = useState(() => buildStrip(window.innerWidth - 32))
   // Save-Data / 2g → skip the photo backdrops + warm-ahead entirely (the same
   // lite gate SailingBanner uses; reduced-motion already fell back upstream).
   const [lite] = useState(() => {
@@ -562,29 +687,6 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
     const t = setTimeout(() => warmStop(0), 800)
     return () => clearTimeout(t)
   }, [ready, lite]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Drag the rail sailboat → scrub the tour. Map the pointer's Y within the rail to a
-  // fractional stop, then scroll to the interpolated stop offset; the boat (driven by
-  // card.prog) follows. The last stop maps to the finale (climax) like its dot does.
-  const dragBoatTo = (clientY) => {
-    const N = STOPS.length
-    const railTop = window.innerHeight / 2 - RAIL_H / 2
-    const yPx = clientY - railTop
-    // invert the (piecewise-linear, chapter-gapped) boat map → fractional stop
-    let prog
-    if (yPx <= railY(0)) prog = 0
-    else if (yPx >= railY(N - 1)) prog = N - 1
-    else {
-      let lo = 0
-      while (lo < N - 2 && railY(lo + 1) < yPx) lo++
-      prog = lo + (yPx - railY(lo)) / (railY(lo + 1) - railY(lo))
-    }
-    const stopVh = (i) => (i >= N - 1 ? TOTAL_VH / 100 : STOP_Y[i])
-    const lo = Math.floor(prog)
-    const hi = Math.min(lo + 1, N - 1)
-    const vh = stopVh(lo) + (stopVh(hi) - stopVh(lo)) * (prog - lo)
-    window.scrollTo(0, vh * window.innerHeight)
-  }
 
   // Tour controls (additive — the page stays scroll-driven). A shared rAF tween of
   // window.scrollY powers "to the start / play / to the end"; any real user input
@@ -738,17 +840,15 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
     }
   }, [])
 
-  // Mobile shows a single card keyed off the popping bodyStopIndex/opacity.
-  const mStop = STOPS[Math.min(card.stopIndex, STOPS.length - 1)]
-
-  // Desktop reel: a window of stop entries around the current progress.
+  // The displayed stop + which of its waypoints the globe is at (multi-city
+  // stops tick their POSITION field per hop). Frames are contiguous per stop,
+  // so the active waypoint is just labelKey relative to the stop's first frame.
+  const dStop = STOPS[Math.min(card.stopIndex, STOPS.length - 1)]
+  const wpIdx = dStop.points
+    ? clamp(card.labelKey - STOP_FRAME[Math.min(card.stopIndex, STOPS.length - 1)], 0, dStop.points.length - 1)
+    : 0
   const currentStop = isMobile ? card.stopIndex : Math.round(card.prog)
-  const labelInfo = { show: card.showLabel, text: card.label, key: card.labelKey }
-  const reelLo = Math.max(0, Math.round(card.prog) - 2)
-  const reelHi = Math.min(STOPS.length - 1, Math.round(card.prog) + 2)
-  const reelIndices = []
-  for (let k = reelLo; k <= reelHi; k++) reelIndices.push(k)
-  // the chapter interstitial + recap own the screen — rail/reel/controls yield
+  // the chapter interstitial + recap own the screen — tracker/card/controls yield
   const interlude = card.mode === 'chapter' || card.mode === 'recap'
   const reelVisible = heroDone && finaleT < 0.05 && !interlude
   const railVisible = heroDone && finaleT === 0 && !interlude
@@ -795,132 +895,53 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
           out at the finale so the LA 2028 headline arrives on a clean top edge. */}
       {fromBiography && <BackButton onNavigate={onNavigate} docked={docked} finaleT={finaleT} />}
 
-      {/* progress rail (desktop) — one clickable dot per stop; click flies the globe
-          there (last dot = jump to the LA 2028 end). Hover reveals the stop label. */}
+      {/* passage plan (desktop) — the tacking course line: click a mark to fly
+          there, drag the boat to scrub, arrows/Home/End step the stops. */}
       {!isMobile && (
-        <div
-          style={{
-            position: 'fixed',
-            left: 18,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: 52,
-            height: RAIL_H,
-            zIndex: 4,
-            opacity: railVisible ? 1 : 0,
-            transition: 'opacity 0.5s ease',
-            pointerEvents: railVisible ? 'auto' : 'none',
-          }}
-        >
-          {/* half-year tick labels sit in the gaps between chapter clusters */}
-          {CHAPTERS.slice(1).map((ch, k) => (
-            <span
-              key={ch.id}
-              style={{
-                position: 'absolute',
-                left: RAIL_DOT_X,
-                top: railY(CH_FIRST_STOP[k + 1]) - (RAIL_PITCH + RAIL_GROUP_GAP) / 2,
-                transform: 'translate(-50%, -50%)',
-                color: 'rgba(255,255,255,0.35)',
-                fontSize: 9,
-                fontWeight: 600,
-                letterSpacing: '1.2px',
-                textTransform: 'uppercase',
-                whiteSpace: 'nowrap',
-                pointerEvents: 'none',
-              }}
-            >
-              {railTick(ch.label)}
-            </span>
-          ))}
-          {STOPS.map((s, i) => (
-            <RailDot
-              key={s.id}
-              top={railY(i)}
-              name={s.region}
-              dates={s.dates}
-              isKey={s.tier === 'key'}
-              active={i === currentStop}
-              done={i < currentStop}
-              onClick={() => {
-                const y =
-                  i >= STOPS.length - 1
-                    ? (TOTAL_VH / 100) * window.innerHeight
-                    : STOP_Y[i] * window.innerHeight
-                if (tourRef.current) tourRef.current.toY(y)
-              }}
-            />
-          ))}
-          {/* sailboat rides the rail — holds at each stop's dot, sails between them.
-              Grab + drag it up/down to scrub the whole tour. */}
-          <div
-            role="slider"
-            aria-label="Drag to move through the stops"
-            onPointerDown={(e) => {
-              e.preventDefault()
-              try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* ignore */ }
-              draggingRef.current = true
-              setDragging(true)
-              if (tourRef.current) tourRef.current.stop()
-              dragBoatTo(e.clientY)
-            }}
-            onPointerMove={(e) => { if (draggingRef.current) dragBoatTo(e.clientY) }}
-            onPointerUp={(e) => {
-              draggingRef.current = false
-              setDragging(false)
-              try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* ignore */ }
-            }}
-            onPointerCancel={() => { draggingRef.current = false; setDragging(false) }}
-            style={{
-              position: 'absolute',
-              left: RAIL_BOAT_X,
-              top: railYAt(card.prog),
-              transform: `translate(-50%, -50%) scale(${dragging ? 1.18 : 1})`,
-              transition: dragging ? 'none' : 'top 0.1s linear, transform 0.15s ease',
-              cursor: dragging ? 'grabbing' : 'grab',
-              touchAction: 'none',
-              zIndex: 5,
-            }}
-          >
-            <SailboatIcon variant="glow" size={22} />
-          </div>
-        </div>
+        <CourseBoard
+          geom={courseGeom}
+          prog={card.prog}
+          current={currentStop}
+          visible={railVisible}
+          tour={tourRef.current}
+        />
       )}
 
-      {/* desktop: slot-machine reel — current stop centered, prev/next faded
-          above/below, scrolling with the dot on each cross-stop hop */}
+      {/* desktop: the stop panel — one Chart Datum display at a time; the
+          arrival/departure envelope (card.opacity) is scrub-pure, so the inner
+          node carries NO CSS transition, only the wrapper's visibility fade */}
       {!isMobile && (
         <div
-          data-testid="reel"
+          data-testid="stop-panel"
           style={{
             position: 'fixed',
             right: '7vw',
             top: '50%',
-            width: 340,
-            height: 0,
+            transform: 'translateY(-50%)',
+            width: NARROW_DESKTOP ? 'min(400px, 38vw)' : 'min(480px, 42vw)',
             zIndex: 1,
             opacity: reelVisible ? 1 : 0,
             transition: 'opacity 0.45s ease',
             pointerEvents: 'none',
           }}
         >
-          {reelIndices.map((k) => (
-            <ReelEntry
-              key={k}
-              stopIndex={k}
-              diff={k - card.prog}
-              offsetPx={ENTRY_C[k] - entryCenterAt(card.prog)}
-              labelInfo={labelInfo}
-            />
-          ))}
+          <div
+            data-testid="stop-card"
+            style={{
+              opacity: card.opacity,
+              transform: `translateY(${(1 - card.opacity) * 14}px)`,
+            }}
+          >
+            <StopDisplay stop={dStop} index={card.stopIndex} waypointIdx={wpIdx} variant="desktop" />
+          </div>
         </div>
       )}
 
-      {/* desktop: tour controls sit at the bottom-right, below the reel (the stop
-          "slider"), left-aligned to the reel column */}
+      {/* desktop: tour controls sit at the bottom-right, left-aligned to the
+          stop panel's column */}
       {!isMobile && (
         <div style={{
-          position: 'fixed', right: '7vw', bottom: 40, width: 340, zIndex: 4,
+          position: 'fixed', right: '7vw', bottom: 40, width: NARROW_DESKTOP ? 'min(400px, 38vw)' : 'min(480px, 42vw)', zIndex: 4,
           opacity: reelVisible ? 1 : 0, transition: 'opacity 0.45s ease',
           pointerEvents: reelVisible ? 'auto' : 'none',
         }}>
@@ -928,29 +949,25 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
         </div>
       )}
 
-      {/* mobile: the single stop card, with the tour controls directly BELOW it */}
+      {/* mobile: the single stop card, with the tour controls directly BELOW it
+          (the whole stack clears the waterline strip at the bottom edge) */}
       {isMobile && (
         <div style={{
-          position: 'fixed', left: 20, right: 20, bottom: 24, zIndex: 3,
+          position: 'fixed', left: 20, right: 20,
+          // clear the waterline strip AND the notch safe-area (the strip adds
+          // the same inset, so the card must too or it overlaps on notched phones)
+          bottom: `calc(${TRACKER_MOBILE_H + 30}px + env(safe-area-inset-bottom))`,
+          zIndex: 3,
         }}>
-          <div data-testid="stop-card" style={{ opacity: card.opacity, pointerEvents: 'none' }}>
-            {!lite && mStop.photo && <MobilePhotoStrip key={card.stopIndex} photo={mStop.photo} />}
-            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: 600, letterSpacing: '1.6px', margin: '0 0 14px' }}>
-              {ordinal(card.stopIndex + 1)} of {STOPS.length} Stops
-            </p>
-            {/* PRIMARY: where + why */}
-            <h2 style={{ color: '#fff', fontSize: 25, fontWeight: 800, letterSpacing: '-0.6px', lineHeight: 1.05, margin: '0 0 6px' }}>
-              {mStop.region}
-            </h2>
-            <p style={{ color: '#fff', fontSize: 15, fontWeight: 600, lineHeight: 1.3, margin: '0 0 18px' }}>{mStop.event}</p>
-            {/* SECONDARY: when + exactly where */}
-            <p style={{ color: '#fff', fontSize: 14, fontWeight: 500, margin: '0 0 4px' }}>{mStop.dates}</p>
-            <p style={{ color: 'rgba(255,255,255,0.82)', fontSize: 13, fontWeight: 400, lineHeight: 1.45, margin: 0 }}>{mStop.venues}</p>
-            {mStop.photo && mStop.photo.pastNote && (
-              <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', fontSize: 11.5, lineHeight: 1.4, margin: '8px 0 0' }}>
-                {mStop.photo.pastNote}
-              </p>
-            )}
+          <div
+            data-testid="stop-card"
+            style={{
+              opacity: card.opacity,
+              transform: `translateY(${(1 - card.opacity) * 10}px)`,
+              pointerEvents: 'none',
+            }}
+          >
+            <StopDisplay stop={dStop} index={card.stopIndex} waypointIdx={wpIdx} variant="mobile" />
           </div>
           {/* controls sit just below the displayed stop */}
           <div style={{
@@ -963,6 +980,19 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
         </div>
       )}
 
+      {/* mobile: the waterline strip — the tracker the phone never had. Tap to
+          fly to the nearest stop; a sideways drag scrubs (vertical swipes still
+          scroll the page). */}
+      {isMobile && (
+        <CourseStrip
+          geom={stripGeom}
+          prog={card.prog}
+          current={currentStop}
+          visible={railVisible}
+          tour={tourRef.current}
+        />
+      )}
+
       {/* end block scrolls up over the fixed globe. The LA 2028 climax reads over the
           zoomed globe (transparent lead-in), then everything scrolls through the top —
           the headline dissolving into spray as it crosses (see EndBlock). */}
@@ -973,79 +1003,169 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
   )
 }
 
-// One card in the desktop reel. Positioned by its cumulative centre offset
-// (photo cards are taller than text cards); the center is full and bright,
-// neighbours fade. Key stops read bigger; stops with a real photo carry it as
-// a masked header fading into the page black, with the past-result note below.
-function ReelEntry({ stopIndex, diff, offsetPx, labelInfo }) {
-  const stop = STOPS[stopIndex]
-  const [imgFailed, setImgFailed] = useState(false)
-  const absDiff = Math.abs(diff)
-  const entryOpacity = absDiff <= 1 ? 1 - 0.82 * absDiff : Math.max(0, 0.18 - 0.36 * (absDiff - 1))
-  const isCenter = absDiff < 0.5
-  const isKey = stop.tier === 'key'
-  const showPhoto = !!stop.photo && !imgFailed
+// ---------- Chart Datum stop display ----------
+// One stop on screen at a time, as an instrument readout: a hairline "datum
+// line" carries the stop index, labeled fields hang beneath it. Key regattas
+// arrive cinematic (cyan kicker, huge region hero, full field grid, result
+// chip); training camps read as quiet logbook entries (WHEN + POSITION only).
+// No prose, no in-card photos — the full-bleed backdrop is the photo layer.
+
+// Decimal degrees → nautical degrees + minutes: 53.2956,-6.1306 → 53°18′N 6°08′W
+function fmtPosition(lat, lng) {
+  const part = (v, pos, neg) => {
+    const hemi = v >= 0 ? pos : neg
+    const a = Math.abs(v)
+    let d = Math.floor(a)
+    let m = Math.round((a - d) * 60)
+    if (m === 60) { d += 1; m = 0 }
+    return `${d}°${String(m).padStart(2, '0')}′${hemi}`
+  }
+  return `${part(lat, 'N', 'S')} ${part(lng, 'E', 'W')}`
+}
+
+const STATUS_LABEL = { confirmed: 'Confirmed', projected: 'Projected', training: 'Training', finale: 'Confirmed' }
+
+// label-over-value instrument field
+function Field({ label, size = 15, children }) {
   return (
-    <div
-      data-testid={isCenter ? 'stop-card' : undefined}
+    <div>
+      <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 9.5, fontWeight: 600, letterSpacing: '1.8px', textTransform: 'uppercase', margin: '0 0 5px' }}>
+        {label}
+      </p>
+      <p style={{ color: '#fff', fontSize: size, fontWeight: 600, letterSpacing: '0.2px', fontVariantNumeric: 'tabular-nums', textTransform: 'uppercase', margin: 0 }}>
+        {children}
+      </p>
+    </div>
+  )
+}
+
+// the signature device: stop index + hairline rule
+function DatumLine({ index }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 16px' }}>
+      <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: 600, letterSpacing: '1px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+        {String(index + 1).padStart(2, '0')} / {STOPS.length}
+      </span>
+      <span style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.18)' }} />
+    </div>
+  )
+}
+
+// structured past fact — GOLD is hardware, so it gets the filled cyan chip;
+// RACED/TRAINED are plain tracked caption lines
+function RecordChip({ record, marginTop = 20 }) {
+  if (!record) return null
+  const gold = record.result === 'GOLD'
+  return (
+    <p
       style={{
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        top: 0,
-        transform: `translateY(calc(-50% + ${offsetPx}px))`,
-        opacity: entryOpacity,
-        pointerEvents: 'none',
+        display: 'inline-block',
+        margin: `${marginTop}px 0 0`,
+        padding: gold ? '5px 10px' : 0,
+        border: gold ? '1px solid rgba(0,180,255,0.5)' : 'none',
+        background: gold ? 'rgba(0,180,255,0.12)' : 'none',
+        color: gold ? 'rgb(0,180,255)' : 'rgba(255,255,255,0.6)',
+        fontSize: 10,
+        fontWeight: gold ? 700 : 600,
+        letterSpacing: '1.6px',
+        textTransform: 'uppercase',
+        lineHeight: 1.5,
       }}
     >
-      {showPhoto && (
-        <div style={{ position: 'relative', height: 132, marginBottom: 14 }}>
-          <img
-            src={`${BASE}${stop.photo.src}`}
-            alt={stop.photo.alt}
-            loading="lazy"
-            decoding="async"
-            onError={() => setImgFailed(true)}
+      {record.result} · {record.detail} · {record.date}
+    </p>
+  )
+}
+
+// multi-city stops: the waypoint chain; the active city pops as the dot lands
+function WaypointChain({ points, activeIdx, marginBottom = 14 }) {
+  return (
+    <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', lineHeight: 1.8, margin: `0 0 ${marginBottom}px` }}>
+      {points.map((pt, i) => (
+        <span key={pt.label}>
+          {i > 0 && <span style={{ color: 'rgba(255,255,255,0.3)' }}>{' · '}</span>}
+          <span
+            key={`${pt.label}-${i === activeIdx}`}
+            className={i === activeIdx ? 'cs-pop' : undefined}
             style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              objectPosition: stop.photo.position,
-              display: 'block',
-              filter: 'grayscale(0.15) contrast(1.08) brightness(0.7)',
-              // square corners; the photo dissolves into the page black below
-              WebkitMaskImage: 'linear-gradient(to bottom, #000 45%, transparent 100%)',
-              maskImage: 'linear-gradient(to bottom, #000 45%, transparent 100%)',
+              display: 'inline-block',
+              color: i === activeIdx ? '#fff' : 'rgba(255,255,255,0.4)',
+              fontWeight: i === activeIdx ? 700 : 600,
             }}
-          />
-        </div>
-      )}
-      {isKey && !showPhoto && (
-        <p style={{ color: 'rgb(0,180,255)', fontSize: 11, fontWeight: 600, letterSpacing: '1.6px', textTransform: 'uppercase', margin: '0 0 10px' }}>
-          {stop.event}
-        </p>
-      )}
-      <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: 600, letterSpacing: '1.6px', margin: '0 0 14px' }}>
-        {ordinal(stopIndex + 1)} of {STOPS.length} Stops
+          >
+            {pt.label}
+          </span>
+        </span>
+      ))}
+    </p>
+  )
+}
+
+// Narrow-desktop gate (mount-time, like isMobile): below this the dollied
+// globe's limb reaches under the panel, so the key hero caps smaller and the
+// panel narrows to keep text on dark space.
+const NARROW_DESKTOP = typeof window !== 'undefined' && window.innerWidth < 1160
+
+function StopDisplay({ stop, index, waypointIdx, variant }) {
+  const isKey = stop.tier === 'key'
+  const mobile = variant === 'mobile'
+  // POSITION reads the active waypoint on multi-city stops — the coordinates
+  // tick over per hop, chart-plotter style
+  const at = stop.points ? stop.points[clamp(waypointIdx, 0, stop.points.length - 1)] : stop
+  const position = (
+    <span
+      key={stop.points ? `${index}-${waypointIdx}` : index}
+      className={stop.points ? 'cs-pop' : undefined}
+      style={{ display: 'inline-block' }}
+    >
+      {fmtPosition(at.lat, at.lng)}
+    </span>
+  )
+  const fieldSize = mobile || !isKey ? 12.5 : 15
+
+  return (
+    <div style={{ maxWidth: !mobile && !isKey ? 320 : undefined }}>
+      <p
+        style={{
+          color: isKey ? 'rgb(0,180,255)' : 'rgba(255,255,255,0.45)',
+          fontSize: isKey ? (mobile ? 10.5 : 12) : 10.5,
+          fontWeight: isKey ? 700 : 600,
+          letterSpacing: isKey ? '2.2px' : '2px',
+          textTransform: 'uppercase',
+          margin: isKey ? '0 0 14px' : '0 0 10px',
+        }}
+      >
+        {stop.event}
       </p>
-      {/* PRIMARY: where + why */}
-      <h2 style={{ color: '#fff', fontSize: isKey ? 30 : 27, fontWeight: 800, letterSpacing: '-0.7px', lineHeight: 1.05, margin: '0 0 6px' }}>
+      <h2
+        style={{
+          color: '#fff',
+          fontSize: isKey ? (mobile ? 28 : NARROW_DESKTOP ? 36 : 'clamp(40px, 4.6vw, 64px)') : mobile ? 19 : 22,
+          fontWeight: isKey ? 800 : 700,
+          letterSpacing: isKey ? '-2px' : '-0.4px',
+          lineHeight: 0.98,
+          margin: isKey ? (mobile ? '0 0 16px' : '0 0 26px') : '0 0 14px',
+        }}
+      >
         {stop.region}
       </h2>
-      <p style={{ color: '#fff', fontSize: 16, fontWeight: 600, lineHeight: 1.3, margin: '0 0 18px' }}>{stop.event}</p>
-      {/* SECONDARY: when + exactly where */}
-      <p style={{ color: '#fff', fontSize: 14, fontWeight: 500, margin: '0 0 4px' }}>{stop.dates}</p>
-      <p style={{ color: 'rgba(255,255,255,0.82)', fontSize: 13, fontWeight: 400, lineHeight: 1.45, margin: 0 }}>{stop.venues}</p>
-      {stop.photo && stop.photo.pastNote && (
-        <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', fontSize: 12.5, lineHeight: 1.4, margin: '10px 0 0' }}>
-          {stop.photo.pastNote}
-          {stop.photo.credit && (
-            <span style={{ color: 'rgba(255,255,255,0.3)', fontStyle: 'normal', fontSize: 10, letterSpacing: '1px', textTransform: 'uppercase' }}>
-              {' '}· photo {stop.photo.credit}
-            </span>
-          )}
-        </p>
+      {!isKey && stop.points && <WaypointChain points={stop.points} activeIdx={waypointIdx} />}
+      <DatumLine index={index} />
+      {isKey && !mobile ? (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 28px' }}>
+          <Field label="When" size={fieldSize}>{stop.dates}</Field>
+          <Field label="Venue" size={fieldSize}>{formatVenues(stop.venues)}</Field>
+          <Field label="Position" size={fieldSize}>{position}</Field>
+          <Field label="Status" size={fieldSize}>{STATUS_LABEL[stop.status]}</Field>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 26px' }}>
+          <Field label="When" size={fieldSize}>{stop.dates}</Field>
+          <Field label="Position" size={fieldSize}>{position}</Field>
+          {isKey && <Field label="Status" size={fieldSize}>{STATUS_LABEL[stop.status]}</Field>}
+        </div>
       )}
+      <RecordChip record={stop.record} marginTop={mobile ? 14 : 20} />
     </div>
   )
 }
@@ -1078,7 +1198,7 @@ function ChapterCard({ chapterIdx, t, isMobile }) {
       }}
     >
       <p style={{ ...el(0.1, 0.26), color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600, letterSpacing: '1.6px', textTransform: 'uppercase', margin: '0 0 16px' }}>
-        Chapter {chapterIdx + 1} · {ch.label}
+        Leg {chapterIdx + 1} · {ch.label}
       </p>
       <h2
         className={ch.chrome ? 'chrome-text' : undefined}
@@ -1094,18 +1214,24 @@ function ChapterCard({ chapterIdx, t, isMobile }) {
       >
         {ch.title}
       </h2>
-      <p style={{ ...el(0.18, 0.34), color: 'rgba(255,255,255,0.75)', fontStyle: 'italic', fontSize: 'clamp(15px, 1.8vw, 19px)', fontWeight: 500, letterSpacing: '-0.2px', margin: '0 0 22px', maxWidth: 560 }}>
+      <p style={{ ...el(0.18, 0.34), color: 'rgba(255,255,255,0.75)', fontSize: 'clamp(15px, 1.8vw, 19px)', fontWeight: 500, letterSpacing: '-0.2px', margin: '0 0 22px', maxWidth: 560 }}>
         {ch.subtitle}
       </p>
-      {/* roll-call: the chapter's regattas name-checked, camps counted */}
-      <p style={{ ...el(0.22, 0.38), fontSize: isMobile ? 13 : 13.5, lineHeight: 1.7, letterSpacing: '0.2px', maxWidth: 640, margin: 0 }}>
-        {rollCall(ch).map((seg, i) => (
-          <span key={i}>
-            {i > 0 && <span style={{ color: 'rgba(255,255,255,0.35)' }}>{' · '}</span>}
-            <span style={{ color: seg.em ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: seg.em ? 600 : 400 }}>{seg.t}</span>
-          </span>
-        ))}
-      </p>
+      {/* roll-call: name-checked regattas as name + dim place, camps counted —
+          typography does the joining (no dashes anywhere) */}
+      {rollCall(ch).length > 0 && (
+        <p style={{ ...el(0.22, 0.38), fontSize: isMobile ? 13 : 13.5, lineHeight: 1.7, letterSpacing: '0.2px', maxWidth: 640, margin: 0 }}>
+          {rollCall(ch).map((seg, i) => (
+            <span key={i}>
+              {i > 0 && <span style={{ color: 'rgba(255,255,255,0.35)' }}>{' · '}</span>}
+              <span style={{ color: seg.em ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: seg.em ? 600 : 400 }}>{seg.name}</span>
+              {seg.place && (
+                <span style={{ color: 'rgba(255,255,255,0.5)', fontWeight: 400 }}> {seg.place}</span>
+              )}
+            </span>
+          ))}
+        </p>
+      )}
     </div>
   )
 }
@@ -1159,80 +1285,519 @@ function TourBackdrops({ mode, stopIndex, opacity, prog, isMobile }) {
           background: 'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.3) 45%, rgba(0,0,0,0.15) 100%)',
         }}
       />
+      {/* photo credit rides the backdrop it belongs to (desktop only — the
+          mobile bottom edge belongs to the card + waterline strip) */}
+      {!isMobile && activeIdx >= 0 && STOPS[activeIdx].photo.credit && (
+        <p
+          style={{
+            position: 'absolute', left: 20, bottom: 16, margin: 0,
+            color: 'rgba(255,255,255,0.3)', fontSize: 9, fontWeight: 600,
+            letterSpacing: '1.5px', textTransform: 'uppercase', opacity: o,
+          }}
+        >
+          Photo · {STOPS[activeIdx].photo.credit}
+        </p>
+      )}
     </div>
   )
 }
 
-// Compact photo strip atop the mobile stop card — same mask-into-black grammar
-// as the desktop reel header. Keyed by stop so the error state resets per stop.
-function MobilePhotoStrip({ photo }) {
-  const [failed, setFailed] = useState(false)
-  if (failed) return null
-  return (
-    <div style={{ position: 'relative', height: 84, marginBottom: 12 }}>
-      <img
-        src={`${BASE}${photo.srcMobile || photo.src}`}
-        alt={photo.alt}
-        loading="lazy"
-        decoding="async"
-        onError={() => setFailed(true)}
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          objectPosition: photo.position,
-          display: 'block',
-          filter: 'grayscale(0.15) contrast(1.08) brightness(0.7)',
-          WebkitMaskImage: 'linear-gradient(to bottom, #000 45%, transparent 100%)',
-          maskImage: 'linear-gradient(to bottom, #000 45%, transparent 100%)',
-        }}
-      />
-    </div>
-  )
+// ---------- passage plan (the tracker) ----------
+
+// shared sharp-cornered tooltip/HUD box
+const HUD_BOX = {
+  background: 'rgba(0,0,0,0.85)',
+  border: '1px solid rgba(255,255,255,0.14)',
+  borderRadius: 0,
+  padding: '7px 10px',
+  pointerEvents: 'none',
+  whiteSpace: 'nowrap',
+  textAlign: 'left',
 }
 
-// One clickable dot on the left progress rail — flies the globe to that stop and
-// reveals the stop's name/dates on hover. Key regattas read heavier: bigger dot
-// plus a persistent blue halo ring.
-function RailDot({ top, name, dates, active, done, isKey, onClick }) {
+// One chart mark on the course: key regattas are diamonds (course marks),
+// camps are ticks perpendicular to their tack. Click flies the globe there.
+// `onSelect` is a STABLE callback + `index` a primitive, so the memo actually
+// bails for the ~16 marks whose active/done don't change on a stop crossing
+// (a fresh inline onClick closure would defeat memo entirely).
+const CourseMark = memo(function CourseMark({ index, x, y, heel, isKey, active, done, name, event, dates, onSelect }) {
   const [hover, setHover] = useState(false)
-  const size = hover || active ? (isKey ? 16 : 15) : isKey ? 13 : 10
   return (
     <button
-      onClick={onClick}
+      onClick={() => onSelect(index)}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       aria-label={name}
       style={{
-        position: 'absolute', left: RAIL_DOT_X, top,
+        position: 'absolute', left: x, top: y,
         transform: 'translate(-50%, -50%)',
         background: 'none', border: 'none', margin: 0,
-        padding: 8, // bigger invisible hit area → easy to click
-        cursor: 'pointer', display: 'flex', alignItems: 'center',
+        padding: 12, // invisible hit area → easy to click
+        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}
     >
-      <span style={{
-        display: 'block', width: size, height: size, borderRadius: '50%',
-        background: active ? '#1E40FF' : done ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.3)',
-        boxShadow: hover
-          ? '0 0 0 5px rgba(30,64,255,0.25)'
-          : isKey
-            ? '0 0 0 3px rgba(0,80,255,0.22)'
-            : 'none',
-        transition: 'width 0.2s ease, height 0.2s ease, background 0.3s ease, box-shadow 0.2s ease',
-      }} />
+      {isKey ? (
+        <span
+          style={{
+            display: 'block', width: 8, height: 8,
+            transform: `rotate(45deg) scale(${hover ? 1.35 : 1})`,
+            background: active ? '#1E40FF' : done ? 'rgba(255,255,255,0.55)' : 'transparent',
+            border: active || done ? 'none' : '1px solid rgba(255,255,255,0.5)',
+            boxShadow: active ? '0 0 0 4px rgba(30,64,255,0.22), 0 0 12px rgba(0,80,255,0.6)' : 'none',
+            transition: 'transform 0.2s ease, background 0.3s ease, box-shadow 0.2s ease',
+          }}
+        />
+      ) : (
+        <span
+          style={{
+            display: 'block', width: 7, height: active ? 2 : 1.5,
+            transform: `rotate(${heel}deg) scale(${hover ? 1.35 : 1})`,
+            background: active ? '#1E40FF' : done ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.35)',
+            transition: 'transform 0.2s ease, background 0.3s ease',
+          }}
+        />
+      )}
       {hover && (
-        <span style={{
-          position: 'absolute', left: 30, whiteSpace: 'nowrap',
-          background: 'rgba(0,0,0,0.78)', color: '#fff',
-          fontSize: 12, fontWeight: 500, letterSpacing: '0.2px',
-          padding: '6px 10px', borderRadius: 5, pointerEvents: 'none',
-          border: '1px solid rgba(255,255,255,0.14)',
-        }}>
-          {name} <span style={{ color: 'rgba(255,255,255,0.5)' }}>· {dates}</span>
+        <span
+          style={{
+            ...HUD_BOX,
+            position: 'absolute', left: 28, top: '50%', transform: 'translateY(-50%)',
+            borderLeft: isKey ? '2px solid rgb(0,80,255)' : HUD_BOX.border,
+          }}
+        >
+          <span style={{ display: 'block', color: '#fff', fontSize: 12, fontWeight: 600 }}>{name}</span>
+          <span style={{ display: 'block', color: 'rgba(255,255,255,0.55)', fontSize: 10.5, marginTop: 2 }}>
+            {event} · {dates}
+          </span>
         </span>
       )}
     </button>
+  )
+})
+
+// readout row: label left, numeral right
+function ReadoutRow({ label, value, cyan }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 6 }}>
+      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9, fontWeight: 600, letterSpacing: '1.6px', textTransform: 'uppercase' }}>
+        {label}
+      </span>
+      <span style={{ color: cyan ? 'rgb(0,180,255)' : '#fff', fontSize: 11, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+        {value}
+      </span>
+    </div>
+  )
+}
+
+// Desktop tracker: the tacking course. Sailed track = solid blue wake; route
+// ahead = dashed hairline (chart-plotter notation). One cyan pennant flies on
+// the next key regatta ahead of the boat. Below: the distance-made-good block.
+function CourseBoard({ geom, prog, current, visible, tour }) {
+  const boardRef = useRef(null)
+  const [dragging, setDragging] = useState(false)
+  const draggingRef = useRef(false)
+
+  const boatY = geom.yAt(prog)
+  const boat = { x: geom.xAt(boatY), y: boatY, heel: geom.heelAt(boatY) }
+  const frac = geom.fracAt(boatY)
+  const nm = nmToLA(prog)
+  const nearLA = prog > geom.N - 2
+  // first key regatta strictly ahead of the boat — the "next major" pennant
+  const nextKey = STOPS.findIndex((s, i) => s.tier === 'key' && i > prog)
+  const scrubStop = STOPS[clamp(Math.round(prog), 0, geom.N - 1)]
+  // stable per-render — keeps CourseMark's memo effective (tour is a ref value)
+  const onMarkSelect = useCallback((i) => flyToStop(tour, i), [tour])
+
+  const scrub = (clientY) => {
+    const el = boardRef.current
+    if (!el) return
+    window.scrollTo(0, progToScrollY(geom.yToProg(clientY - el.getBoundingClientRect().top)))
+  }
+
+  return (
+    <div
+      ref={boardRef}
+      style={{
+        position: 'fixed',
+        left: 22,
+        top: '50%',
+        transform: `translate(${visible ? 0 : -10}px, -50%)`,
+        width: COURSE_W,
+        height: geom.H + 86,
+        zIndex: 4,
+        opacity: visible ? 1 : 0,
+        transition: 'opacity 0.5s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1)',
+        pointerEvents: visible ? 'auto' : 'none',
+      }}
+    >
+      <svg width={COURSE_W} height={geom.H} style={{ position: 'absolute', left: 0, top: 0, overflow: 'visible' }} aria-hidden="true">
+        <defs>
+          <linearGradient id="wakeGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgb(18,0,120)" />
+            <stop offset="100%" stopColor="rgb(0,80,255)" />
+          </linearGradient>
+        </defs>
+        {/* route ahead: dashed hairline */}
+        <path d={geom.pathD} fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="1.5" strokeDasharray="2 5" />
+        {/* sailed track: solid glowing wake, revealed to the boat's position */}
+        <path
+          d={geom.pathD}
+          fill="none"
+          stroke="url(#wakeGrad)"
+          strokeWidth="2"
+          pathLength="1000"
+          strokeDasharray={`${frac * 1000} 1000`}
+          style={{ filter: 'drop-shadow(0 0 6px rgba(0,80,255,0.45))' }}
+        />
+        {/* finish line: two strokes across the final approach */}
+        {[14, 9].map((dy) => {
+          const fy = geom.sy(geom.N - 1) - dy
+          const fx = geom.xAt(fy)
+          return <line key={dy} x1={fx - 7} y1={fy} x2={fx + 7} y2={fy} stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" />
+        })}
+      </svg>
+
+      {/* season labels at the tack corners (outside of each corner) */}
+      {CHAPTERS.map((ch, k) => {
+        const onLeft = k % 2 === 0
+        return (
+          <span
+            key={ch.id}
+            style={{
+              position: 'absolute',
+              top: geom.vy[k],
+              ...(onLeft
+                ? { right: COURSE_W - (geom.vx[k] - 10) }
+                : { left: geom.vx[k] + 10 }),
+              transform: 'translateY(-50%)',
+              color: 'rgba(255,255,255,0.4)',
+              fontSize: 9,
+              fontWeight: 600,
+              letterSpacing: '1.2px',
+              textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
+              pointerEvents: 'none',
+            }}
+          >
+            {railTick(ch.label)}
+          </span>
+        )
+      })}
+
+      {/* chart marks */}
+      {STOPS.map((s, i) => {
+        const y = geom.sy(i)
+        return (
+          <CourseMark
+            key={s.id}
+            index={i}
+            x={geom.xAt(y)}
+            y={y}
+            heel={geom.heelAt(y)}
+            isKey={s.tier === 'key'}
+            active={i === current}
+            done={i < current}
+            name={s.region}
+            event={s.event}
+            dates={s.dates}
+            onSelect={onMarkSelect}
+          />
+        )
+      })}
+
+      {/* the next-major pennant */}
+      {nextKey >= 0 && (
+        <svg
+          width="14"
+          height="13"
+          aria-hidden="true"
+          style={{ position: 'absolute', left: geom.xAt(geom.sy(nextKey)) + 8, top: geom.sy(nextKey) - 14, pointerEvents: 'none' }}
+        >
+          <line x1="1" y1="1" x2="1" y2="13" stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
+          <path d="M2 1 L11 3.5 L2 6 Z" fill="rgba(0,180,255,0.9)" />
+        </svg>
+      )}
+
+      {/* LA ’28 at the finish */}
+      <span
+        style={{
+          position: 'absolute',
+          left: geom.xAt(geom.sy(geom.N - 1)) + 12,
+          top: geom.sy(geom.N - 1),
+          transform: 'translateY(-50%)',
+          color: nearLA ? 'rgb(0,180,255)' : 'rgba(255,255,255,0.5)',
+          fontSize: 9,
+          fontWeight: 700,
+          letterSpacing: '1.6px',
+          textTransform: 'uppercase',
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+          transition: 'color 0.3s ease',
+        }}
+      >
+        LA ’28
+      </span>
+
+      {/* the boat = you; heels with the tack, drag to scrub, arrows to step */}
+      <div
+        role="slider"
+        tabIndex={0}
+        aria-label="Drag to move through the stops"
+        aria-valuemin={1}
+        aria-valuemax={geom.N}
+        aria-valuenow={clamp(Math.round(prog), 0, geom.N - 1) + 1}
+        aria-valuetext={`Stop ${clamp(Math.round(prog), 0, geom.N - 1) + 1} of ${geom.N}: ${scrubStop.region}, ${scrubStop.dates}`}
+        onPointerDown={(e) => {
+          e.preventDefault()
+          try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* ignore */ }
+          // preventDefault above suppresses the browser's focus-on-pointerdown,
+          // so focus explicitly — the Arrow/Home/End stepping needs it after a grab
+          try { e.currentTarget.focus({ preventScroll: true }) } catch { /* ignore */ }
+          draggingRef.current = true
+          setDragging(true)
+          if (tour) tour.stop()
+          scrub(e.clientY)
+        }}
+        onPointerMove={(e) => { if (draggingRef.current) scrub(e.clientY) }}
+        onPointerUp={(e) => {
+          draggingRef.current = false
+          setDragging(false)
+          try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* ignore */ }
+        }}
+        onPointerCancel={() => { draggingRef.current = false; setDragging(false) }}
+        onKeyDown={(e) => {
+          // stopPropagation: the fly tween's own cancel hook listens for these
+          // keys on window — without it the triggering keypress bubbles up and
+          // halts the tween it just started
+          const cur = clamp(Math.round(prog), 0, geom.N - 1)
+          if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); e.stopPropagation(); flyToStop(tour, Math.min(cur + 1, geom.N - 1)) }
+          else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); e.stopPropagation(); flyToStop(tour, Math.max(cur - 1, 0)) }
+          else if (e.key === 'Home') { e.preventDefault(); e.stopPropagation(); if (tour) tour.toStart() }
+          else if (e.key === 'End') { e.preventDefault(); e.stopPropagation(); if (tour) tour.toEnd() }
+        }}
+        style={{
+          position: 'absolute',
+          left: boat.x,
+          top: boat.y,
+          transform: `translate(-50%, -58%) rotate(${boat.heel}deg) scale(${dragging ? 1.15 : 1})`,
+          transition: dragging ? 'none' : 'top 0.1s linear, left 0.1s linear, transform 0.15s ease',
+          cursor: dragging ? 'grabbing' : 'grab',
+          touchAction: 'none',
+          zIndex: 5,
+          willChange: 'transform',
+        }}
+      >
+        <SailboatIcon variant="active" size={20} />
+      </div>
+
+      {/* scrub HUD: where you are + distance run, live under the drag */}
+      {dragging && (
+        <div
+          style={{
+            ...HUD_BOX,
+            position: 'absolute',
+            left: COURSE_AXIS + COURSE_AMP + 18,
+            top: boat.y,
+            transform: 'translateY(-50%)',
+            zIndex: 6,
+          }}
+        >
+          <span style={{ display: 'block', color: '#fff', fontSize: 12, fontWeight: 600 }}>{scrubStop.region}</span>
+          <span style={{ display: 'block', color: 'rgba(255,255,255,0.55)', fontSize: 10.5, marginTop: 2 }}>{scrubStop.dates}</span>
+          <span style={{ display: 'block', color: 'rgb(0,180,255)', fontSize: 10.5, fontWeight: 700, fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>
+            {fmtNM(nm)} NM TO LA
+          </span>
+        </div>
+      )}
+
+      {/* distance made good */}
+      <div style={{ position: 'absolute', left: 8, right: 8, top: geom.H + 14, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 6 }}>
+        <ReadoutRow label="Stop" value={`${String(clamp(Math.round(prog), 0, geom.N - 1) + 1).padStart(2, '0')} / ${geom.N}`} />
+        <ReadoutRow label="NM to LA" value={fmtNM(nm)} cyan={nearLA} />
+        <ReadoutRow label="Days" value={String(DAYS_TO_GAMES)} />
+      </div>
+    </div>
+  )
+}
+
+// Mobile tracker: the waterline strip along the bottom edge. The line doubles
+// as the water: solid wake behind the boat, dashed route ahead. Tap flies to
+// the nearest stop; a sideways drag scrubs (vertical swipes scroll the page).
+function CourseStrip({ geom, prog, current, visible, tour }) {
+  const stripRef = useRef(null)
+  const [dragging, setDragging] = useState(false)
+  const gestureRef = useRef(null) // { id, x0, y0, t0, dragging }
+
+  const boatX = geom.xAt(prog)
+  const nm = nmToLA(prog)
+  const nearLA = prog > geom.N - 2
+  const scrubStop = STOPS[clamp(Math.round(prog), 0, geom.N - 1)]
+  // waterline y within the strip: 5px padding + ~11px kicker row + 8px svg
+  // margin + the line at y=10 inside the svg
+  const LINE_Y = 34
+
+  const scrub = (clientX) => {
+    const el = stripRef.current
+    if (!el) return
+    const x = clientX - el.getBoundingClientRect().left - 16
+    window.scrollTo(0, progToScrollY(geom.xToProg(x)))
+  }
+
+  return (
+    <div
+      ref={stripRef}
+      role="slider"
+      tabIndex={0}
+      aria-label="Tour progress. Tap to fly to a stop, drag sideways to scrub."
+      aria-valuemin={1}
+      aria-valuemax={geom.N}
+      aria-valuenow={clamp(Math.round(prog), 0, geom.N - 1) + 1}
+      aria-valuetext={`Stop ${clamp(Math.round(prog), 0, geom.N - 1) + 1} of ${geom.N}: ${scrubStop.region}, ${scrubStop.dates}`}
+      onPointerDown={(e) => {
+        // ignore a second finger while one is already scrubbing — otherwise it
+        // orphans the active drag and its own lift could fly to a stray stop
+        if (gestureRef.current && gestureRef.current.dragging) return
+        gestureRef.current = { id: e.pointerId, x0: e.clientX, y0: e.clientY, t0: performance.now(), dragging: false }
+      }}
+      onPointerMove={(e) => {
+        const g = gestureRef.current
+        if (!g || g.id !== e.pointerId) return
+        if (!g.dragging) {
+          const dx = e.clientX - g.x0
+          const dy = e.clientY - g.y0
+          // capture only on clear horizontal intent — vertical stays native scroll
+          if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+            g.dragging = true
+            setDragging(true)
+            try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* ignore */ }
+            if (tour) tour.stop()
+          }
+        }
+        if (g.dragging) scrub(e.clientX)
+      }}
+      onPointerUp={(e) => {
+        const g = gestureRef.current
+        gestureRef.current = null
+        setDragging(false)
+        if (!g || g.id !== e.pointerId) return
+        try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* ignore */ }
+        const moved = Math.hypot(e.clientX - g.x0, e.clientY - g.y0)
+        if (!g.dragging && moved < 8 && performance.now() - g.t0 < 300) {
+          // tap → fly to the nearest stop
+          const el = stripRef.current
+          if (!el) return
+          if (tour) tour.stop()
+          const x = e.clientX - el.getBoundingClientRect().left - 16
+          flyToStop(tour, clamp(Math.round(geom.xToProg(x)), 0, geom.N - 1))
+        }
+      }}
+      onPointerCancel={() => { gestureRef.current = null; setDragging(false) }}
+      onKeyDown={(e) => {
+        // stopPropagation: see CourseBoard — don't let the triggering keypress
+        // cancel the fly tween it starts
+        const cur = clamp(Math.round(prog), 0, geom.N - 1)
+        if (e.key === 'ArrowRight') { e.preventDefault(); e.stopPropagation(); flyToStop(tour, Math.min(cur + 1, geom.N - 1)) }
+        else if (e.key === 'ArrowLeft') { e.preventDefault(); e.stopPropagation(); flyToStop(tour, Math.max(cur - 1, 0)) }
+        else if (e.key === 'Home') { e.preventDefault(); e.stopPropagation(); if (tour) tour.toStart() }
+        else if (e.key === 'End') { e.preventDefault(); e.stopPropagation(); if (tour) tour.toEnd() }
+      }}
+      style={{
+        position: 'fixed',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: `calc(${TRACKER_MOBILE_H}px + env(safe-area-inset-bottom))`,
+        padding: '5px 16px 0',
+        background: 'linear-gradient(to top, rgba(0,0,0,0.92) 60%, rgba(0,0,0,0))',
+        borderTop: '1px solid rgba(255,255,255,0.08)',
+        zIndex: 4,
+        opacity: visible ? 1 : 0,
+        transform: `translateY(${visible ? 0 : 10}px)`,
+        transition: 'opacity 0.5s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1)',
+        pointerEvents: visible ? 'auto' : 'none',
+        touchAction: 'pan-y',
+      }}
+    >
+      {/* kicker row: where you are · how far to LA */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 9, fontWeight: 600, letterSpacing: '1.2px', textTransform: 'uppercase', fontVariantNumeric: 'tabular-nums' }}>
+          {dragging
+            ? `${String(clamp(Math.round(prog), 0, geom.N - 1) + 1).padStart(2, '0')}/${geom.N} · ${scrubStop.region}`
+            : `Stop ${String(clamp(Math.round(prog), 0, geom.N - 1) + 1).padStart(2, '0')}/${geom.N}`}
+        </span>
+        <span style={{ color: nearLA ? 'rgb(0,180,255)' : 'rgba(255,255,255,0.55)', fontSize: 9, fontWeight: 600, letterSpacing: '1.2px', textTransform: 'uppercase', fontVariantNumeric: 'tabular-nums' }}>
+          {fmtNM(nm)} NM to LA
+        </span>
+      </div>
+
+      <svg width={geom.width} height={20} style={{ display: 'block', marginTop: 8, overflow: 'visible' }} aria-hidden="true">
+        <defs>
+          <linearGradient id="stripWakeGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="rgb(18,0,120)" />
+            <stop offset="100%" stopColor="rgb(0,80,255)" />
+          </linearGradient>
+        </defs>
+        {/* route ahead + sailed wake on the waterline */}
+        <line x1={boatX} y1={10} x2={geom.width} y2={10} stroke="rgba(255,255,255,0.28)" strokeWidth="1.5" strokeDasharray="2 5" />
+        <line
+          x1={0}
+          y1={10}
+          x2={boatX}
+          y2={10}
+          stroke="url(#stripWakeGrad)"
+          strokeWidth="2"
+          style={{ filter: 'drop-shadow(0 0 4px rgba(0,80,255,0.45))' }}
+        />
+        {/* marks: diamonds for majors, ticks for camps */}
+        {STOPS.map((s, i) => {
+          const x = geom.sx(i)
+          const active = i === current
+          const done = i < current
+          if (s.tier === 'key') {
+            const la = i === geom.N - 1
+            return (
+              <rect
+                key={s.id}
+                x={-3}
+                y={-3}
+                width={6}
+                height={6}
+                transform={`translate(${x} 10) rotate(45)`}
+                fill={active ? '#1E40FF' : done ? 'rgba(255,255,255,0.55)' : la && nearLA ? 'rgb(0,180,255)' : 'rgba(0,0,0,1)'}
+                stroke={active || done ? 'none' : la && nearLA ? 'rgb(0,180,255)' : 'rgba(255,255,255,0.5)'}
+                strokeWidth="1"
+              />
+            )
+          }
+          return (
+            <line
+              key={s.id}
+              x1={x}
+              y1={6.5}
+              x2={x}
+              y2={13.5}
+              stroke={active ? '#1E40FF' : done ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.35)'}
+              strokeWidth={active ? 2 : 1.5}
+            />
+          )
+        })}
+      </svg>
+
+      {/* the boat sits ON the waterline */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 16 + boatX,
+          top: LINE_Y,
+          transform: `translate(-50%, -88%) scale(${dragging ? 1.15 : 1})`,
+          transition: dragging ? 'none' : 'left 0.1s linear, transform 0.15s ease',
+          pointerEvents: 'none',
+          willChange: 'transform',
+        }}
+      >
+        <SailboatIcon variant="active" size={16} />
+      </div>
+    </div>
   )
 }
 
@@ -1267,7 +1832,7 @@ function BackButton({ onNavigate, docked, finaleT }) {
 function Hero({ visible, seamless }) {
   // After a seamless morph, hold the hero text back so it fades in LAST — after
   // the overlay has dissolved to the globe and the pins have faded in.
-  const entrance = usePageEntrance(3, { staggerMs: 150, initialDelayMs: seamless ? 1450 : 200 })
+  const entrance = usePageEntrance(2, { staggerMs: 150, initialDelayMs: seamless ? 1450 : 200 })
   return (
     <div
       style={{
@@ -1288,25 +1853,14 @@ function Hero({ visible, seamless }) {
       <h1 style={{ ...entrance.style(0), color: '#fff', fontSize: 'clamp(40px, 7vw, 88px)', fontWeight: 800, letterSpacing: '-3px', margin: 0 }}>
         The Road to LA 2028
       </h1>
-      {/* tagline — same typeface as the title, italic */}
-      <p style={{
-        ...entrance.style(1),
-        color: 'rgba(255,255,255,0.85)',
-        fontStyle: 'italic',
-        fontSize: 'clamp(17px, 2.2vw, 26px)',
-        fontWeight: 500,
-        letterSpacing: '-0.3px',
-        margin: '14px 0 0',
-      }}>
-        And every stop in between
-      </p>
-      {/* scroll cue — right beneath the tagline, large + white so it's obvious */}
-      <div style={{ ...entrance.style(2), marginTop: 30 }}>
+      {/* scroll cue — micro-caps kicker, the lone title carries the moment */}
+      <div style={{ ...entrance.style(1), marginTop: 34 }}>
         <div style={{
-          color: '#fff', fontSize: 22, fontWeight: 500, letterSpacing: '0.5px',
+          color: '#fff', fontSize: 12, fontWeight: 600, letterSpacing: '2.2px',
+          textTransform: 'uppercase',
           animation: 'scrollHint 1.6s ease-in-out infinite',
         }}>
-          scroll ↓
+          Scroll ↓
         </div>
       </div>
     </div>
@@ -1339,9 +1893,9 @@ function TourControls({ tour, playing }) {
   )
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      {btn('start', 'To Start', tour.toStart)}
+      {btn('start', 'Start', tour.toStart)}
       {btn('play', playing ? 'Pause' : 'Play', tour.toggle)}
-      {btn('end', 'To End', tour.toEnd)}
+      {btn('end', 'Finish', tour.toEnd)}
     </div>
   )
 }
@@ -1415,8 +1969,8 @@ function EndBlock({ onNavigate, isMobile }) {
             {/* per-glyph spans: the spray module measures each glyph's box */}
             {'LA 2028'.split('').map((ch, i) => (ch === ' ' ? ' ' : <span key={i}>{ch}</span>))}
           </h1>
-          <p ref={countdownRef} style={{ color: '#fff', fontSize: 18, fontWeight: 400, letterSpacing: '1px', margin: 0 }}>
-            {days} : {String(hrs).padStart(2, '0')} : {String(mins).padStart(2, '0')} : {String(secs).padStart(2, '0')}
+          <p ref={countdownRef} style={{ color: '#fff', fontSize: 18, fontWeight: 400, letterSpacing: '1px', margin: 0, fontVariantNumeric: 'tabular-nums' }}>
+            <CountdownUnits days={days} hrs={hrs} mins={mins} secs={secs} />
           </p>
         </div>
 
@@ -1459,6 +2013,23 @@ function StatSep() {
   return <span style={{ color: 'rgba(255,255,255,0.3)' }}>·</span>
 }
 
+// Self-labeling countdown: digits at full size, unit words as quiet micro-caps.
+function CountdownUnits({ days, hrs, mins, secs }) {
+  const unit = {
+    fontSize: 10, fontWeight: 600, letterSpacing: '1.6px',
+    color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase',
+  }
+  const sep = <span style={{ color: 'rgba(255,255,255,0.3)' }}>{' · '}</span>
+  return (
+    <>
+      {days} <span style={unit}>days</span>{sep}
+      {String(hrs).padStart(2, '0')} <span style={unit}>hrs</span>{sep}
+      {String(mins).padStart(2, '0')} <span style={unit}>min</span>{sep}
+      {String(secs).padStart(2, '0')} <span style={unit}>sec</span>
+    </>
+  )
+}
+
 // "Back to the top" — smooth-scrolls to the top of the tour. Styled like the tour
 // controls (white, bordered) for consistency.
 function BackToTop() {
@@ -1476,7 +2047,7 @@ function BackToTop() {
         transition: 'background 0.2s ease',
       }}
     >
-      ↑ Back to the top
+      ↑ Back to the start
     </button>
   )
 }
@@ -1492,19 +2063,15 @@ function StaticTimeline({ onNavigate }) {
         <h1 style={{ ...entrance.style(1), color: '#fff', fontSize: 'clamp(36px, 6vw, 64px)', fontWeight: 800, letterSpacing: '-2px', margin: 0 }}>
           The Road to LA 2028
         </h1>
-        {/* same tagline as the globe hero, so the fallback doesn't drift */}
-        <p style={{ ...entrance.style(1), color: 'rgba(255,255,255,0.85)', fontStyle: 'italic', fontSize: 'clamp(15px, 2vw, 20px)', fontWeight: 500, margin: '12px 0 0' }}>
-          And every stop in between
-        </p>
       </div>
 
       <div style={{ ...entrance.style(2), maxWidth: 720, margin: '0 auto', padding: '0 24px 50px' }}>
         {CHAPTERS.map((ch, ci) => (
           <div key={ch.id}>
-            {/* chapter header — the same half-year story the globe tour tells */}
+            {/* leg header — the same half-year story the globe tour tells */}
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', padding: '26px 0 14px' }}>
               <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600, letterSpacing: '1.6px', textTransform: 'uppercase', margin: '0 0 8px' }}>
-                Chapter {ci + 1} · {ch.label}
+                Leg {ci + 1} · {ch.label}
               </p>
               <h2
                 className={ch.chrome ? 'chrome-text' : undefined}
@@ -1512,7 +2079,7 @@ function StaticTimeline({ onNavigate }) {
               >
                 {ch.title}
               </h2>
-              <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', fontSize: 13, fontWeight: 500, margin: 0 }}>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 500, margin: 0 }}>
                 {ch.subtitle}
               </p>
             </div>
@@ -1533,14 +2100,11 @@ function StaticTimeline({ onNavigate }) {
                           objectPosition: s.photo.position, filter: 'brightness(0.75)', display: 'block',
                         }}
                       />
-                      <p style={{ color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', fontSize: 11.5, margin: '8px 0 0' }}>
-                        {s.photo.pastNote}
-                        {s.photo.credit && (
-                          <span style={{ color: 'rgba(255,255,255,0.3)', fontStyle: 'normal', fontSize: 10, letterSpacing: '1px', textTransform: 'uppercase' }}>
-                            {' '}· photo {s.photo.credit}
-                          </span>
-                        )}
-                      </p>
+                      {s.photo.credit && (
+                        <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase', margin: '8px 0 0' }}>
+                          Photo · {s.photo.credit}
+                        </p>
+                      )}
                     </div>
                   )}
                   <div
@@ -1553,14 +2117,15 @@ function StaticTimeline({ onNavigate }) {
                     }}
                   >
                     <div>
-                      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 500, letterSpacing: '1px', margin: '0 0 5px' }}>
-                        {ordinal(i + 1)} of {STOPS.length} Stops
+                      <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: 600, letterSpacing: '1px', fontVariantNumeric: 'tabular-nums', margin: '0 0 5px' }}>
+                        {String(i + 1).padStart(2, '0')} / {STOPS.length}
                       </p>
                       <p style={{ color: '#fff', fontSize: 15, fontWeight: 600, margin: '0 0 2px' }}>{s.region}</p>
                       <p style={{ color: s.tier === 'key' ? 'rgb(0,180,255)' : 'rgba(255,255,255,0.55)', fontSize: 13, fontWeight: 500, margin: '0 0 4px' }}>{s.event}</p>
-                      <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: 400, margin: 0 }}>{s.venues}</p>
+                      <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: 400, margin: 0 }}>{formatVenues(s.venues)}</p>
+                      {s.record && <RecordChip record={s.record} marginTop={10} />}
                     </div>
-                    <span style={{ color: 'rgba(255,255,255,0.92)', fontSize: 15, fontWeight: 400, flexShrink: 0 }}>{s.dates}</span>
+                    <span style={{ color: 'rgba(255,255,255,0.92)', fontSize: 15, fontWeight: 400, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{s.dates}</span>
                   </div>
                 </div>
               )
@@ -1580,8 +2145,8 @@ function StaticTimeline({ onNavigate }) {
         <h2 className="chrome-text" style={{ fontSize: 'clamp(40px, 7vw, 72px)', fontWeight: 800, letterSpacing: '-3px', margin: '0 0 8px' }}>
           LA 2028
         </h2>
-        <p style={{ color: '#fff', fontSize: 16, fontWeight: 400, letterSpacing: '1px', margin: 0 }}>
-          {days} : {String(hrs).padStart(2, '0')} : {String(mins).padStart(2, '0')} : {String(secs).padStart(2, '0')}
+        <p style={{ color: '#fff', fontSize: 16, fontWeight: 400, letterSpacing: '1px', margin: 0, fontVariantNumeric: 'tabular-nums' }}>
+          <CountdownUnits days={days} hrs={hrs} mins={mins} secs={secs} />
         </p>
       </div>
 
