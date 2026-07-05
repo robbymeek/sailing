@@ -16,6 +16,9 @@ import Support from './pages/Support'
 // bundle. Do NOT add it to the offscreen preload div below; that would boot
 // a hidden WebGL context permanently.
 const TheRoad = lazy(() => import('./pages/TheRoad'))
+// Hidden experiment: the /boat "ONE SAIL" showcase (r3f). Not in the nav, no
+// idle-prefetch — nobody transitions to it from a hot path; direct URL only.
+const Boat = lazy(() => import('./pages/Boat'))
 
 // Old URLs → new homes. Resolved BEFORE the route-transition machine ever
 // sees them (see the displayLocation initializer + redirect effect below), so
@@ -38,6 +41,7 @@ const INNER_BG = {
   '/contact': 'rgb(240,240,240)',
   '/support': 'rgb(240,240,240)',
   '/the-road': 'rgb(0,0,0)',
+  '/boat': 'rgb(0,0,0)',
 }
 
 const VARIANT_MAP = {
@@ -47,6 +51,7 @@ const VARIANT_MAP = {
   '/contact': 'light',
   '/support': 'light',
   '/the-road': 'dark',
+  '/boat': 'dark',
 }
 
 const CURRENT_MAP = {
@@ -72,6 +77,8 @@ function getNavMode(pathname) {
   // The Road is a fixed-canvas scrollytelling page — overlay the nav over
   // the dark hero and let it scroll away with the page.
   if (pathname === '/the-road') return 'overlay'
+  // /boat is the same fixed-canvas scrollytelling shape as The Road.
+  if (pathname === '/boat') return 'overlay'
   if (pathname === '/support') return 'static'
   // Contact is a single-viewport page — overlay the nav so the nav's height
   // counts toward the 100dvh and the page can stay exactly one screen tall.
@@ -529,6 +536,11 @@ export default function App() {
                 fromBiography={location.state?.from === 'Biography'}
                 onGlobeReady={() => { if (orbOverlay.holding) orbOverlay.crossfadeOut(250); blackBridge.fadeOut(500) }}
               />
+            </Suspense>
+          } />
+          <Route path="/boat" element={
+            <Suspense fallback={<div style={{ height: '100dvh', background: 'rgb(0,0,0)' }} />}>
+              <Boat />
             </Suspense>
           } />
         </Routes>
