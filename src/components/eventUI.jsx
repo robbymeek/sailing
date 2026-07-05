@@ -16,7 +16,7 @@ const PLACE_COLORS = {
 }
 
 function placeColor(place) {
-  return PLACE_COLORS[place] || 'rgba(255,255,255,0.55)'
+  return PLACE_COLORS[place] || '#fff'
 }
 
 function ordinal(n) {
@@ -38,7 +38,7 @@ function TagChip({ tag }) {
         fontWeight: 600,
         letterSpacing: '1.2px',
         textTransform: 'uppercase',
-        color: 'rgba(255,255,255,0.55)',
+        color: '#fff',
         border: '1px solid rgba(255,255,255,0.18)',
         borderRadius: 3,
         padding: '2px 7px',
@@ -79,7 +79,7 @@ export function GroupHeader({ title, years, open, onToggle }) {
     >
       <span
         style={{
-          color: hovered || open ? '#fff' : 'rgba(255,255,255,0.9)',
+          color: '#fff',
           fontSize: 13,
           fontWeight: 700,
           letterSpacing: '3px',
@@ -93,7 +93,7 @@ export function GroupHeader({ title, years, open, onToggle }) {
             display: 'inline-block',
             marginRight: 12,
             fontSize: 10,
-            color: hovered ? '#fff' : 'rgba(255,255,255,0.5)',
+            color: '#fff',
             transform: open ? 'rotate(90deg)' : 'none',
             transition: 'transform 0.25s ease, color 0.2s ease',
           }}
@@ -102,7 +102,7 @@ export function GroupHeader({ title, years, open, onToggle }) {
         </span>
         {title}
       </span>
-      <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, letterSpacing: '1px', flexShrink: 0 }}>
+      <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, letterSpacing: '1px', flexShrink: 0 }}>
         {years}
       </span>
     </button>
@@ -135,14 +135,14 @@ export function ResultRow({ result, isActive, isMobile, onActivate }) {
           <span style={{ color: placeColor(result.place), fontSize: isMobile ? 13 : 14, fontWeight: 700 }}>
             {ordinal(result.place)}
           </span>
-          <span style={{ color: 'rgba(255,255,255,0.32)', fontSize: isMobile ? 11 : 12 }}> of {result.fleet}</span>
+          <span style={{ color: '#fff', fontSize: isMobile ? 11 : 12 }}> of {result.fleet}</span>
         </span>
         <span style={{ flex: 1, minWidth: 0, overflowWrap: 'break-word' }}>
-          <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, fontWeight: 400 }}>
+          <span style={{ color: '#fff', fontSize: 14, fontWeight: 400 }}>
             {result.event}
           </span>
           {result.classNote && (
-            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12.5 }}> · {result.classNote}</span>
+            <span style={{ color: '#fff', fontSize: 12.5 }}> · {result.classNote}</span>
           )}
           {result.tag && (
             <span
@@ -156,7 +156,7 @@ export function ResultRow({ result, isActive, isMobile, onActivate }) {
             </span>
           )}
         </span>
-        <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, flexShrink: 0, marginLeft: isMobile ? 8 : 16 }}>
+        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, flexShrink: 0, marginLeft: isMobile ? 8 : 16 }}>
           {result.year}
         </span>
       </div>
@@ -226,7 +226,7 @@ export function EventModal({ result, group, onClose }) {
         }}
       >
         <p style={{
-          color: 'rgba(255,255,255,0.35)', fontSize: 12, letterSpacing: '2px',
+          color: '#fff', fontSize: 12, letterSpacing: '2px',
           textTransform: 'uppercase', margin: '0 0 10px',
         }}>
           {group.title} · {result.year}
@@ -234,23 +234,23 @@ export function EventModal({ result, group, onClose }) {
         <h2 style={{ color: '#fff', fontSize: 18, fontWeight: 600, margin: '0 0 14px', letterSpacing: '-0.3px' }}>
           {result.event}
           {result.classNote && (
-            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14, fontWeight: 400 }}> · {result.classNote}</span>
+            <span style={{ color: '#fff', fontSize: 14, fontWeight: 400 }}> · {result.classNote}</span>
           )}
         </h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 20px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: 24, fontWeight: 800, color: placeColor(result.place), letterSpacing: '-0.5px' }}>
             {ordinal(result.place)}
-            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 15, fontWeight: 400 }}> of {result.fleet}</span>
+            <span style={{ color: '#fff', fontSize: 15, fontWeight: 400 }}> of {result.fleet}</span>
           </span>
           {result.tag && <TagChip tag={result.tag} />}
         </div>
         {result.summary && (
-          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.7, margin: '0 0 20px' }}>
+          <p style={{ color: '#fff', fontSize: 14, lineHeight: 1.7, margin: '0 0 20px' }}>
             {result.summary}
           </p>
         )}
         {result.fleetNote && (
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, fontStyle: 'italic', margin: '0 0 20px' }}>
+          <p style={{ color: '#fff', fontSize: 13, fontStyle: 'italic', margin: '0 0 20px' }}>
             {result.fleetNote}
           </p>
         )}
@@ -261,7 +261,7 @@ export function EventModal({ result, group, onClose }) {
               target="_blank"
               rel="noopener noreferrer"
               style={{
-                color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: 400,
+                color: '#fff', fontSize: 13, fontWeight: 400,
                 border: '1px solid rgba(255,255,255,0.15)', padding: '8px 20px',
                 textDecoration: 'none', borderRadius: 4,
               }}
@@ -273,7 +273,7 @@ export function EventModal({ result, group, onClose }) {
             onClick={onClose}
             style={{
               background: 'none', border: '1px solid rgba(255,255,255,0.15)',
-              color: 'rgba(255,255,255,0.35)', fontSize: 13,
+              color: '#fff', fontSize: 13,
               padding: '8px 20px', cursor: 'pointer', borderRadius: 4,
             }}
           >

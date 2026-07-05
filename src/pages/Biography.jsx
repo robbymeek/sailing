@@ -529,7 +529,7 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
             </button>
           </div>
 
-          <p ref={hintRef} style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, margin: '16px 0 0' }}>
+          <p ref={hintRef} style={{ color: '#fff', fontSize: 12, margin: '16px 0 0' }}>
             Click on a result to learn more.
           </p>
         </div>
