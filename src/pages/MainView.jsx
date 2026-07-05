@@ -85,6 +85,35 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
     return () => window.removeEventListener('resize', h)
   }, [])
 
+  // Embedded exit fade — as the home frame scrolls off toward the film bridge,
+  // fade the WHOLE frame (photo, orb, text) to pure black, so the cut onto the
+  // bridge's black title card lands black-on-black instead of photo-on-black.
+  // Pure closed form of scroll (opacity = f(rect.top) — reverse scroll replays
+  // exactly, same invariant as Biography's parallax, which uses this same rAF +
+  // getBoundingClientRect pattern on this very page). The veil is pointer-
+  // events: none throughout, so the orb hotspot and nav links stay live while
+  // it is still translucent.
+  const homeRootRef = useRef(null)
+  const exitVeilRef = useRef(null)
+  useEffect(() => {
+    if (!embedded) return undefined // desktop home is a fixed viewport — never scrolls
+    let rafId
+    const update = () => {
+      const root = homeRootRef.current
+      const veil = exitVeilRef.current
+      if (root && veil) {
+        const rect = root.getBoundingClientRect()
+        // Fully black once 62% of the frame has scrolled away — the remaining
+        // 38% exits as pure black flush with the bridge below.
+        const gone = Math.min(1, Math.max(0, -rect.top / (rect.height * 0.62)))
+        veil.style.opacity = gone
+      }
+      rafId = requestAnimationFrame(update)
+    }
+    rafId = requestAnimationFrame(update)
+    return () => cancelAnimationFrame(rafId)
+  }, [embedded])
+
   // Skip check: respect the module-level played flag + reduced-motion.
   const skipIntro = forceSkip || introHasPlayed || prefersReducedMotion
 
@@ -453,7 +482,7 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
     : -1
 
   return (
-    <div style={{
+    <div ref={homeRootRef} style={{
       background: 'rgb(0,0,0)',
       height: '100dvh',
       width: '100%',
@@ -691,6 +720,24 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
           anchorValue={anchorValue}
           anchorMeta={anchorMeta}
           countdownText={countdownText}
+        />
+      )}
+
+      {/* Embedded exit veil — topmost layer of the home frame; the scroll-
+          linked effect above drives its opacity 0→1 as the frame scrolls off,
+          sinking everything (photo, orb, nav, countdown) into the film
+          bridge's black. Never interactive; invisible at rest. */}
+      {embedded && (
+        <div
+          ref={exitVeilRef}
+          aria-hidden="true"
+          style={{
+            position: 'absolute', inset: 0,
+            background: 'rgb(0,0,0)',
+            opacity: 0,
+            pointerEvents: 'none',
+            zIndex: 60,
+          }}
         />
       )}
     </div>

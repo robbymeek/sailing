@@ -7,6 +7,7 @@ import blackBridge from './lib/blackBridge'
 // Pages shown in the compact (narrow-viewport) overlay nav.
 const COMPACT_PAGES = ['Home', 'Biography', 'The Team', 'The Road', 'Contact', 'Support']
 import MainView from './pages/MainView'
+import HomeFilmBridge from './components/HomeFilmBridge'
 import Biography from './pages/Biography'
 import Team from './pages/Team'
 import Contact from './pages/Contact'
@@ -80,10 +81,14 @@ function getNavMode(pathname) {
 }
 
 // On mobile, the home route renders MainView + Biography as one scrollable page.
+// HomeFilmBridge sits between them: a black title-card beat so the dark home
+// frame hands off to the biography's film strip instead of hard-cutting into it
+// (MainView's embedded exit fade lands on the same black).
 function MobileHome({ onNavigate, hoverNavOpen, bioSectionRef }) {
   return (
     <div>
       <MainView onNavigate={onNavigate} hoverNavOpen={hoverNavOpen} embedded />
+      <HomeFilmBridge />
       <div ref={bioSectionRef}>
         <Biography onNavigate={onNavigate} scrollOffsetRef={bioSectionRef} />
       </div>

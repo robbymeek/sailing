@@ -91,6 +91,37 @@ export default function SailingBanner({ isMobile = false, hero = false, inert = 
     return undefined
   }, [inert, lite])
 
+  // Early warm (embedded mobile-home mode only — hero already ships
+  // preload='auto'): non-hero preload is 'none' so cold loads of the mobile
+  // home never pull the multi-MB film from visitors who don't scroll. But a
+  // fast flick down used to reach the strip before any fetch started and land
+  // on the poster. This one-shot observer arms ~1.5 viewports out — the first
+  // scroll gesture past the home frame starts the fetch, and the title-card
+  // bridge above the strip buys the download that extra screen of runway.
+  // Declared BEFORE the play/pause observer: same-batch IntersectionObserver
+  // callbacks fire in creation order, so on a jump straight into view the
+  // load() lands before play() rather than resetting it.
+  useEffect(() => {
+    if (inert || lite || hero) return undefined
+    const c = containerRef.current
+    const v = videoRef.current
+    if (!c || !v || typeof IntersectionObserver === 'undefined') return undefined
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return
+        io.disconnect()
+        // Already fetching or playing (e.g. autoplay kicked in first) — a
+        // load() here would reset the element mid-stream.
+        if (!v.paused || v.readyState > 0) return
+        v.preload = 'auto'
+        v.load()
+      },
+      { rootMargin: '150% 0px' }
+    )
+    io.observe(c)
+    return () => io.disconnect()
+  }, [inert, lite, hero])
+
   // Battery nicety only: pause when the strip is fully off-screen, resume in view.
   // Never gates loading — if IO never fires, native muted-autoplay still plays it.
   useEffect(() => {
