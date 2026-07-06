@@ -4,6 +4,7 @@ import Footer from '../components/Footer'
 import SailboatIcon from '../components/SailboatIcon'
 import ExitNav from '../components/ExitNav'
 import { EXIT_CARDS } from '../components/exitCards'
+import { hasWebGL2 } from '../lib/webglSupport'
 // Hero second beat + era photos that live in src/assets (the rest come from public/)
 import teamPhoto from '../assets/exit-cards/exit-path.jpg'
 import usstPhoto from '../assets/home-intro/p1177244.jpeg'
@@ -562,10 +563,11 @@ function YourNameInput({ onNavigate, showBoat = false }) {
 // sprays them apart and reforms them as chrome.
 function SponsorRollCall({ colored, isMobile }) {
   const names = SUPPORTERS.map((s) => s.name)
-  // Centered within the content column (which already sits right of the
-  // mobile spine) — the "centered feel" the owner asked for.
+  // Left-aligned to the content column (owner-directed) — a little larger than
+  // before. Mobile keeps the CSS chrome shimmer on beat 2 (the liquid-metal
+  // panel is a desktop enhancement; see RollCallOverlay).
   return (
-    <div style={{ marginTop: 30, textAlign: 'center' }}>
+    <div style={{ marginTop: 30, textAlign: 'left' }}>
       {names.map((n) => (
         <p
           key={n}
@@ -573,11 +575,11 @@ function SponsorRollCall({ colored, isMobile }) {
           style={{
             color: colored ? undefined : 'rgba(255,255,255,0.92)',
             fontStyle: 'italic',
-            fontSize: isMobile ? 13 : 'clamp(14px, 1.15vw, 17px)',
+            fontSize: isMobile ? 16 : 'clamp(16px, 1.4vw, 22px)',
             fontWeight: 500,
             letterSpacing: '-0.2px',
             lineHeight: 1.5,
-            margin: '0 0 7px',
+            margin: '0 0 10px',
           }}
         >
           {n}
@@ -587,159 +589,67 @@ function SponsorRollCall({ colored, isMobile }) {
   )
 }
 
-// ---------- Roll-call spray (desktop) ----------
+// ---------- Roll-call liquid metal (desktop) ----------
 
-// The chrome-text gradient stops, duplicated from index.css (keep in sync —
-// same convention as lib/textSpray.js). Sampled per-particle by x so the
-// reformed pixels match the real .chrome-text the DOM swaps back in.
-const CHROME_STOPS = [
-  [0.00, 180, 200, 255, 0.9], [0.12, 255, 255, 255, 1], [0.24, 100, 160, 255, 0.8],
-  [0.36, 200, 220, 255, 0.95], [0.48, 60, 120, 220, 0.7], [0.60, 255, 255, 255, 1],
-  [0.72, 140, 180, 255, 0.85], [0.84, 220, 235, 255, 0.95], [0.96, 80, 140, 240, 0.8],
-  [1.00, 180, 200, 255, 0.9],
-]
-function chromeAt(u) {
-  const x = Math.min(1, Math.max(0, u))
-  for (let i = 1; i < CHROME_STOPS.length; i++) {
-    if (x <= CHROME_STOPS[i][0]) {
-      const a = CHROME_STOPS[i - 1]
-      const b = CHROME_STOPS[i]
-      const f = (x - a[0]) / (b[0] - a[0] || 1)
-      return [
-        a[1] + (b[1] - a[1]) * f,
-        a[2] + (b[2] - a[2]) * f,
-        a[3] + (b[3] - a[3]) * f,
-        a[4] + (b[4] - a[4]) * f,
-      ]
-    }
-  }
-  return [255, 255, 255, 1]
-}
-
-// Deterministic per-particle "randomness" — a pure function of the particle
-// index, so reverse scroll replays the exact same flight paths backwards.
-const prand = (i) => {
-  const s = Math.sin(i * 12.9898) * 43758.5453
-  return s - Math.floor(s)
-}
 const clamp01 = (v) => Math.min(1, Math.max(0, v))
 const sstep = (a, b, x) => {
   const t = clamp01((x - a) / (b - a))
   return t * t * (3 - 2 * t)
 }
 
-// One fixed roll call in the timeline's sticky layer. Scroll choreography
-// (all a pure closed form of scrollY — no one-shot state, reverse scrub
-// reassembles): beat 0 shows the white italic list; scrolling toward beat 1
-// pixelates it into a downward spray (the headline sprays' motion language);
-// past halfway the pixels regather INTO the same glyphs, landing as chrome;
-// the real animated .chrome-text DOM takes over at rest. Fades out as the
-// era chapters arrive. Skipped for reduced motion (plain crossfade).
+// One fixed roll call in the timeline's sticky layer. Scroll choreography is a
+// pure closed form of scrollY (no one-shot state — reverse scrub reassembles):
+// beat 0 shows the white italic list; scrolling toward beat 1 crossfades the
+// white names into a living liquid-metal render of the SAME names (the letters
+// become flowing, refracting chrome), fully formed exactly at the beat-2 snap;
+// the whole panel fades out as the era chapters arrive. Reduced motion / no
+// WebGL2 / data-saver fall back to the CSS .chrome-text crossfade — the static
+// form of the same look (the DOM lists stay mounted as that fallback and as the
+// metal raster's source geometry).
 function RollCallOverlay() {
   const wrapRef = useRef(null)
   const whiteRef = useRef(null)
   const chromeRef = useRef(null)
   const canvasRef = useRef(null)
-  const particlesRef = useRef([])
-  const sizeRef = useRef({ w: 0, h: 0, dpr: 1 })
+  const sceneRef = useRef(null)
 
   useEffect(() => {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const saveData = !!(navigator.connection && navigator.connection.saveData)
+    let useMetal = hasWebGL2() && !reduced && !saveData
+    let built = false
+    let metal = null    // lazily-imported { createLiquidMetal, buildMetalField }
+    let canceled = false
+    const PAD = 44
 
-    // Rasterize the white list into particles. Geometry comes from the live
-    // DOM nodes so the canvas pixels sit exactly where the glyphs are — the
-    // white/chrome lists share font metrics (same size/weight/style), so one
-    // raster serves both endpoints.
-    const PAD_X = 80
-    const PAD_TOP = 40
-    const PAD_BOTTOM = 240 // room for the downward spray
-    const build = () => {
+    // Rasterize the live white list into a beveled depth field and size the
+    // WebGL canvas to the padded name block so the metal glyphs land exactly
+    // where the white DOM glyphs are (same getBoundingClientRect + computed
+    // font the crossfade registers against). Rebuilt on resize / fonts.ready.
+    const buildField = () => {
       const wrap = wrapRef.current
       const white = whiteRef.current
       const canvas = canvasRef.current
-      if (!wrap || !white || !canvas) return
+      const scene = sceneRef.current
+      if (!metal || !wrap || !white || !canvas || !scene) return
       const wrapRect = wrap.getBoundingClientRect()
       if (wrapRect.width === 0) return
       const dpr = Math.min(2, window.devicePixelRatio || 1)
-      const w = wrapRect.width + PAD_X * 2
-      const h = wrapRect.height + PAD_TOP + PAD_BOTTOM
-      canvas.width = Math.round(w * dpr)
-      canvas.height = Math.round(h * dpr)
-      canvas.style.width = `${w}px`
-      canvas.style.height = `${h}px`
-      canvas.style.left = `${-PAD_X}px`
-      canvas.style.top = `${-PAD_TOP}px`
-      sizeRef.current = { w, h, dpr }
-
-      // Offscreen raster of the list text, aligned to the DOM layout.
-      const off = document.createElement('canvas')
-      off.width = canvas.width
-      off.height = canvas.height
-      const octx = off.getContext('2d', { willReadFrequently: true })
-      octx.scale(dpr, dpr)
-      octx.fillStyle = '#fff'
-      for (const p of white.children) {
-        const r = p.getBoundingClientRect()
-        const cs = getComputedStyle(p)
-        octx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`
-        try { octx.letterSpacing = cs.letterSpacing } catch { /* older engines */ }
-        // The DOM rows are centered blocks — draw centered at the box middle
-        // so raster pixels land exactly on the glyphs.
-        octx.textAlign = 'center'
-        octx.textBaseline = 'middle'
-        octx.fillText(
-          p.textContent,
-          r.left - wrapRect.left + PAD_X + r.width / 2,
-          r.top - wrapRect.top + PAD_TOP + r.height / 2
-        )
-      }
-      const data = octx.getImageData(0, 0, off.width, off.height).data
-      const step = Math.max(2, Math.round(2 * dpr))
-      const pts = []
-      for (let y = 0; y < off.height; y += step) {
-        for (let x = 0; x < off.width; x += step) {
-          if (data[(y * off.width + x) * 4 + 3] > 100) {
-            pts.push([x / dpr, y / dpr])
-          }
-        }
-      }
-      particlesRef.current = pts
+      const field = metal.buildMetalField({ nameEls: white.children, wrapRect, pad: PAD, dpr })
+      canvas.style.left = `${-PAD}px`
+      canvas.style.top = `${-PAD}px`
+      canvas.style.width = `${wrapRect.width + PAD * 2}px`
+      canvas.style.height = `${wrapRect.height + PAD * 2}px`
+      scene.resize()
+      scene.setField(field)
+      built = true
     }
 
     // Scroll choreography windows, in viewport-heights of scrollY:
-    //   0.12 → 1.00  white → spray → chrome. The reform COMPLETES exactly at
-    //                the beat-2 snap (owner-directed): the chrome is only
-    //                fully formed once the boat is fully at the next stop.
-    //   1.45 → 1.92  whole roll call fades out as the first era arrives
-    const draw = (t, vis) => {
-      const canvas = canvasRef.current
-      if (!canvas) return
-      const { w, h, dpr } = sizeRef.current
-      const ctx = canvas.getContext('2d')
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      ctx.clearRect(0, 0, w, h)
-      const bell = Math.sin(Math.PI * t) // 0 → apart → 0
-      const mix = sstep(0.35, 0.65, t) // white → chrome mid-flight
-      const pts = particlesRef.current
-      for (let i = 0; i < pts.length; i++) {
-        const [x, y] = pts[i]
-        const u1 = prand(i * 4 + 1)
-        const u2 = prand(i * 4 + 2)
-        const u3 = prand(i * 4 + 3)
-        // Downward burst with a light sideways curl — the same family of
-        // motion as the headline spray, mirrored so it regathers.
-        const dx = (u1 - 0.5) * 120 * bell + Math.sin(t * Math.PI * 2 + u3 * 6.283) * 10 * bell
-        const dy = (25 + u2 * 185) * bell
-        const c = chromeAt(x / w)
-        const r = 235 + (c[0] - 235) * mix
-        const g = 235 + (c[1] - 235) * mix
-        const b = 255 + (c[2] - 255) * mix
-        const a = (0.92 + (c[3] - 0.92) * mix) * (1 - 0.45 * bell) * vis
-        ctx.fillStyle = `rgba(${r | 0},${g | 0},${b | 0},${a})`
-        ctx.fillRect(x + dx, y + dy, 2, 2)
-      }
-    }
-
+    //   0.12 → 1.00  white → liquid metal. The metal is fully formed exactly at
+    //                the beat-2 snap (owner-directed: only once the boat is fully
+    //                at the next stop).
+    //   1.45 → 1.92  whole roll call fades out as the first era arrives.
     let raf = 0
     const update = () => {
       raf = 0
@@ -753,40 +663,61 @@ function RollCallOverlay() {
       const t = sstep(0.12, 1, y)
       const vis = 1 - sstep(1.45, 1.92, y)
       wrap.style.opacity = String(vis)
-      if (reduced || particlesRef.current.length === 0) {
-        // Reduced motion (or raster unavailable): plain crossfade.
+
+      if (!useMetal || !built) {
+        // Fallback: the CSS white → .chrome-text crossfade (static form of the
+        // same look), used for reduced motion / no WebGL2 / data-saver and for
+        // the brief window before the metal field is built.
         white.style.opacity = String(1 - t)
         chrome.style.opacity = String(t)
-        canvas.style.display = 'none'
+        canvas.style.opacity = '0'
+        if (sceneRef.current) sceneRef.current.setRunning(false)
         return
       }
-      // Short overlap windows at both ends hide any sub-pixel raster/DOM
-      // mismatch: the DOM list fades while the particles are still at rest.
-      white.style.opacity = String(1 - sstep(0.02, 0.1, t))
-      chrome.style.opacity = String(sstep(0.9, 0.98, t))
-      if (t > 0.02 && t < 0.98 && vis > 0) {
-        canvas.style.display = 'block'
-        draw(t, vis)
-      } else {
-        canvas.style.display = 'none'
-      }
+      // Metal path: white fades early, the metal fades in and lands fully formed
+      // at the beat-2 snap (t ≈ 0.98). The chrome DOM stays hidden.
+      chrome.style.opacity = '0'
+      white.style.opacity = String(1 - sstep(0.02, 0.22, t))
+      canvas.style.opacity = String(sstep(0.16, 0.98, t))
+      sceneRef.current.setRunning(t > 0.02 && y < 1.95)
     }
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(update) }
-    const rebuild = () => { build(); onScroll() }
+    const rebuild = () => { if (useMetal) buildField(); onScroll() }
 
-    let fontsReady = true
-    if (document.fonts?.ready) {
-      fontsReady = false
-      document.fonts.ready.then(() => { fontsReady = true; rebuild() })
+    // Lazy-load the metal module (gated to desktop + capable clients) so it
+    // stays out of the main bundle and never loads on the fallback paths or
+    // off-route. Create the scene, then build the field once fonts settle so
+    // the glyph metrics match the DOM raster.
+    if (useMetal) {
+      import('../lib/liquidMetal').then((mod) => {
+        if (canceled) return
+        metal = mod
+        try {
+          sceneRef.current = mod.createLiquidMetal(canvasRef.current, { isMobile: false })
+        } catch (err) {
+          console.warn('Liquid-metal roll call unavailable, using chrome fallback', err)
+          useMetal = false
+          update()
+          return
+        }
+        const boot = () => { if (!canceled) { buildField(); onScroll() } }
+        if (document.fonts?.ready) document.fonts.ready.then(boot)
+        else boot()
+      }).catch((err) => {
+        console.warn('Liquid-metal roll call failed to load, using chrome fallback', err)
+        useMetal = false
+        update()
+      })
     }
-    if (fontsReady) build()
     update()
     window.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('resize', rebuild)
     return () => {
+      canceled = true
       if (raf) cancelAnimationFrame(raf)
       window.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', rebuild)
+      if (sceneRef.current) { sceneRef.current.dispose(); sceneRef.current = null }
     }
   }, [])
 
@@ -794,28 +725,29 @@ function RollCallOverlay() {
   const listStyle = (colored) => ({
     position: colored ? 'absolute' : 'relative',
     inset: colored ? 0 : undefined,
-    textAlign: 'center', // centered within the padded right-side box
+    textAlign: 'left', // left-aligned, reading rightward off the center spine
     opacity: colored ? 0 : 1,
   })
   const rowStyle = {
     fontStyle: 'italic',
-    fontSize: 'clamp(14px, 1.15vw, 17px)',
+    fontSize: 'clamp(16px, 1.4vw, 22px)',
     fontWeight: 500, // identical metrics on both lists — one raster serves both
     letterSpacing: '-0.2px',
     lineHeight: 1.5,
-    margin: '0 0 9px',
+    margin: '0 0 12px',
   }
 
-  // A padded box on the right side — NO scrim/shader behind the text (owner
-  // style rule: the names sit directly on the photo).
+  // A padded box just right of the center spine — left-aligned, so the roll
+  // call reads off the spine the way the era chapters do. NO scrim/shader
+  // behind the text (owner style rule: the names sit directly on the photo).
   return (
     <div style={{
       position: 'absolute',
-      right: 'clamp(24px, 4vw, 80px)',
+      left: 'calc(50% + 40px)', // same offset off the spine as the era chapters
       top: '50%',
       transform: 'translateY(-50%)',
       zIndex: 3,
-      padding: '36px clamp(28px, 3vw, 64px)',
+      padding: '36px 0',
       minWidth: 260,
     }}>
       <div ref={wrapRef} style={{ position: 'relative' }}>
@@ -832,7 +764,7 @@ function RollCallOverlay() {
         <canvas
           ref={canvasRef}
           aria-hidden="true"
-          style={{ position: 'absolute', display: 'none', pointerEvents: 'none' }}
+          style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
         />
       </div>
     </div>
