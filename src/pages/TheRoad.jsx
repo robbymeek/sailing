@@ -524,7 +524,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
   const [ready, setReady] = useState(false)
   const [card, setCard] = useState({
     stopIndex: 0, opacity: 0, prog: 0, showLabel: false, label: '', labelKey: 0,
-    mode: 'hero', chIdx: -1, chT: 0,
+    mode: 'hero', chIdx: -1, chapterIdx: -1, chT: 0,
   })
   const [finaleT, setFinaleT] = useState(0)
   const [heroDone, setHeroDone] = useState(false)
@@ -683,6 +683,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
           prev.labelKey === p.labelKey &&
           prev.mode === p.mode &&
           prev.chIdx === p.chapterCardIdx &&
+          prev.chapterIdx === p.chapterIdx &&
           prev.chT === p.chapterCardT
             ? prev
             : {
@@ -694,6 +695,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
                 labelKey: p.labelKey,
                 mode: p.mode,
                 chIdx: p.chapterCardIdx,
+                chapterIdx: p.chapterIdx,
                 chT: p.chapterCardT,
               }
         )
@@ -710,16 +712,31 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
     }
   }, [])
 
-  // The displayed stop + which of its waypoints the globe is at (multi-city
-  // stops tick their POSITION field per hop). Frames are contiguous per stop,
-  // so the active waypoint is just labelKey relative to the stop's first frame.
-  const dStop = STOPS[Math.min(card.stopIndex, STOPS.length - 1)]
-  const wpIdx = dStop.points
-    ? clamp(card.labelKey - STOP_FRAME[Math.min(card.stopIndex, STOPS.length - 1)], 0, dStop.points.length - 1)
-    : 0
-  // the chapter interstitial + recap own the screen — card/controls yield
-  const interlude = card.mode === 'chapter' || card.mode === 'recap'
-  const reelVisible = heroDone && finaleT < 0.05 && !interlude
+  // Which leg page shows + where its see-through banner sits. The leg page
+  // (Leg N / 5 + its stop list) persists across the WHOLE leg — the banner
+  // slides down the list to the active stop as you scroll and the globe flies
+  // alongside; at the next leg the pages cross-fade during the interstitial.
+  const legVisible =
+    heroDone && finaleT < 0.05 &&
+    card.mode !== 'recap' && card.mode !== 'finale-leg' && card.mode !== 'finale' &&
+    card.chapterIdx >= 0
+  const inIntro = card.mode === 'chapter'
+  const legEnter = inIntro ? smoothstep(0.05, 0.4, card.chT) : 1
+  const stopInLeg = (c) => clamp(card.prog - CHAPTERS[c].stopIndices[0], 0, CHAPTERS[c].stopIndices.length - 1)
+  // during an interstitial the previous leg cross-fades out under the incoming one
+  const outLeg = inIntro && card.chIdx > 0 ? card.chIdx - 1 : -1
+  const outOpacity = 1 - smoothstep(0, 0.3, card.chT)
+  // the readout + Play follow the leg page (hidden during the recap/finale climax)
+  const reelVisible = legVisible
+  // Header is TOP-ANCHORED (fixed paddingTop), not centred, so "Leg N / 5" lands
+  // in the SAME spot for every leg — a shorter leg is just a shorter list.
+  const legLaneStyle = {
+    position: 'fixed', left: LANE.left, right: LANE.right, top: 0, bottom: 0,
+    maxWidth: LANE.maxWidth, zIndex: 1,
+    display: 'flex', flexDirection: 'column', justifyContent: 'flex-start',
+    paddingTop: '29vh',
+    pointerEvents: 'none',
+  }
 
   return (
     <div style={{ background: 'rgb(0,0,0)' }}>
@@ -754,52 +771,34 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
 
       <Hero visible={!heroDone} seamless={seamless} isMobile={isMobile} />
 
-      {/* half-year chapter interstitial — every element a pure function of
-          scroll (chT), so scrubbing back plays the entrance in reverse */}
-      {card.chIdx >= 0 && <ChapterCard chapterIdx={card.chIdx} t={card.chT} isMobile={isMobile} />}
-
       {/* "Back to Biography" — only when arriving from the Biography page. Sits below
           the nav at the top, docks up with a little padding once scrolled, and fades
           out at the finale so the LA 2028 headline arrives on a clean top edge. */}
       {fromBiography && <BackButton onNavigate={onNavigate} docked={docked} finaleT={finaleT} />}
 
-      {/* desktop: the stop panel — one Chart Datum display at a time; the
-          arrival/departure envelope (card.opacity) is scrub-pure, so the inner
-          node carries NO CSS transition, only the wrapper's visibility fade */}
-      {!isMobile && (
-        <div
-          data-testid="stop-panel"
-          style={{
-            position: 'fixed',
-            left: LANE.left,
-            right: LANE.right,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            maxWidth: LANE.maxWidth,
-            zIndex: 1,
-            opacity: reelVisible ? 1 : 0,
-            transition: 'opacity 0.45s ease',
-            pointerEvents: 'none',
-          }}
-        >
-          <div
-            data-testid="stop-card"
-            style={{
-              opacity: card.opacity,
-              transform: `translateY(${(1 - card.opacity) * 14}px)`,
-            }}
-          >
-            <StopDisplay stop={dStop} index={card.stopIndex} waypointIdx={wpIdx} variant="desktop" />
+      {/* leg pages — the spine of the tour. The page (Leg N / 5 + its stop list)
+          persists across the whole leg; a see-through banner slides down the list
+          to the active stop as you scroll, the globe flying alongside. At the next
+          leg the pages cross-fade during the interstitial beat. */}
+      {legVisible && !isMobile && (
+        <>
+          {outLeg >= 0 && (
+            <div style={{ ...legLaneStyle, opacity: outOpacity }}>
+              <LegPage chapterIdx={outLeg} enter={1} stopInLeg={stopInLeg(outLeg)} isMobile={false} />
+            </div>
+          )}
+          <div style={{ ...legLaneStyle, opacity: legEnter }}>
+            <LegPage chapterIdx={card.chapterIdx} enter={legEnter} stopInLeg={stopInLeg(card.chapterIdx)} isMobile={false} />
           </div>
-        </div>
+        </>
       )}
 
-      {/* desktop: the passage readout + tour controls, bottom-right, left-aligned
-          to the stop panel's column (the left side is nothing but the globe now) */}
+      {/* desktop: passage readout + Play, bottom-right in the lane (fades in with
+          the leg page so the two arrive together at a leg's start) */}
       {!isMobile && (
         <div style={{
           position: 'fixed', left: LANE.left, right: LANE.right, bottom: 40, maxWidth: LANE.maxWidth, zIndex: 4,
-          opacity: reelVisible ? 1 : 0, transition: 'opacity 0.45s ease',
+          opacity: legVisible ? legEnter : 0, transition: 'opacity 0.35s ease',
           pointerEvents: reelVisible ? 'auto' : 'none',
         }}>
           <Readout prog={card.prog} />
@@ -807,33 +806,24 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
         </div>
       )}
 
-      {/* mobile: the single stop card, then the passage readout + controls
-          directly below it (no tracker strip — the globe stands alone) */}
+      {/* mobile: leg page pinned to the TOP of the bottom band (header always in
+          the same spot), readout + Play pinned to the bottom */}
       {isMobile && (
         <div style={{
           position: 'fixed', left: 20, right: 20,
-          // strict bottom half — the globe owns the top (top:50vh keeps a tall
-          // card from ever creeping up under it)
           top: MOBILE_LANE_TOP,
           bottom: 'calc(24px + env(safe-area-inset-bottom))',
           zIndex: 3,
-          display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+          display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
           pointerEvents: 'none',
         }}>
-          <div
-            data-testid="stop-card"
-            style={{
-              opacity: card.opacity,
-              transform: `translateY(${(1 - card.opacity) * 10}px)`,
-              pointerEvents: 'none',
-            }}
-          >
-            <StopDisplay stop={dStop} index={card.stopIndex} waypointIdx={wpIdx} variant="mobile" />
-          </div>
-          {/* readout + controls sit just below the displayed stop */}
+          {legVisible ? (
+            <div style={{ opacity: legEnter }}>
+              <LegPage chapterIdx={card.chapterIdx} enter={legEnter} stopInLeg={stopInLeg(card.chapterIdx)} isMobile />
+            </div>
+          ) : <div />}
           <div style={{
-            marginTop: 16,
-            opacity: reelVisible ? 1 : 0, transition: 'opacity 0.45s ease',
+            opacity: legVisible ? legEnter : 0, transition: 'opacity 0.35s ease',
             pointerEvents: reelVisible ? 'auto' : 'none',
           }}>
             <div style={{ maxWidth: 220, margin: '0 auto 12px' }}>
@@ -856,53 +846,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
   )
 }
 
-// ---------- Chart Datum stop display ----------
-// One stop on screen at a time, as an instrument readout: a hairline "datum
-// line" carries the stop index, labeled fields hang beneath it. Key regattas
-// arrive cinematic (cyan kicker, huge region hero, full field grid, result
-// chip); training camps read as quiet logbook entries (WHEN + POSITION only).
-// No prose, no in-card photos — the full-bleed backdrop is the photo layer.
-
-// Decimal degrees → nautical degrees + minutes: 53.2956,-6.1306 → 53°18′N 6°08′W
-function fmtPosition(lat, lng) {
-  const part = (v, pos, neg) => {
-    const hemi = v >= 0 ? pos : neg
-    const a = Math.abs(v)
-    let d = Math.floor(a)
-    let m = Math.round((a - d) * 60)
-    if (m === 60) { d += 1; m = 0 }
-    return `${d}°${String(m).padStart(2, '0')}′${hemi}`
-  }
-  return `${part(lat, 'N', 'S')} ${part(lng, 'E', 'W')}`
-}
-
-const STATUS_LABEL = { confirmed: 'Confirmed', projected: 'Projected', training: 'Training', finale: 'Confirmed' }
-
-// label-over-value instrument field
-function Field({ label, size = 15, children }) {
-  return (
-    <div>
-      <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 9.5, fontWeight: 600, letterSpacing: '1.8px', textTransform: 'uppercase', margin: '0 0 5px' }}>
-        {label}
-      </p>
-      <p style={{ color: '#fff', fontSize: size, fontWeight: 600, letterSpacing: '0.2px', fontVariantNumeric: 'tabular-nums', textTransform: 'uppercase', margin: 0 }}>
-        {children}
-      </p>
-    </div>
-  )
-}
-
-// the signature device: stop index + hairline rule
-function DatumLine({ index }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 16px' }}>
-      <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: 600, letterSpacing: '1px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-        {String(index + 1).padStart(2, '0')} / {STOPS.length}
-      </span>
-      <span style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.18)' }} />
-    </div>
-  )
-}
+// ---------- shared stop bits (used by the reduced-motion StaticTimeline) ----------
 
 // structured past fact — GOLD is hardware, so it gets the filled cyan chip;
 // RACED/TRAINED are plain tracked caption lines
@@ -930,164 +874,91 @@ function RecordChip({ record, marginTop = 20 }) {
   )
 }
 
-// multi-city stops: the waypoint chain; the active city pops as the dot lands
-function WaypointChain({ points, activeIdx, marginBottom = 14 }) {
+// Half-year timeline tracker beside the leg counter — one box per leg (the five
+// half-years to 2028), the current leg lit blue. Gives at-a-glance context of
+// where you are in the campaign. Same abbreviation as the old rail ticks.
+const legAbbr = (label) => {
+  const m = label.match(/^([A-Za-z]{3}).*(\d{2})$/)
+  return m ? `${m[1]} ’${m[2]}` : label
+}
+function LegTimeline({ current, isMobile }) {
   return (
-    <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', lineHeight: 1.8, margin: `0 0 ${marginBottom}px` }}>
-      {points.map((pt, i) => (
-        <span key={pt.label}>
-          {i > 0 && <span style={{ color: 'rgba(255,255,255,0.3)' }}>{' · '}</span>}
+    <div style={{ display: 'flex', gap: isMobile ? 4 : 5, alignItems: 'center' }}>
+      {CHAPTERS.map((ch, i) => {
+        const on = i === current
+        return (
           <span
-            key={`${pt.label}-${i === activeIdx}`}
-            className={i === activeIdx ? 'cs-pop' : undefined}
+            key={ch.id}
             style={{
-              display: 'inline-block',
-              color: i === activeIdx ? '#fff' : 'rgba(255,255,255,0.4)',
-              fontWeight: i === activeIdx ? 700 : 600,
+              padding: isMobile ? '3px 5px' : '4px 7px',
+              border: `1px solid ${on ? 'rgb(0,80,255)' : 'rgba(255,255,255,0.18)'}`,
+              background: on ? 'rgb(0,80,255)' : 'rgba(255,255,255,0.03)',
+              color: on ? '#fff' : 'rgba(255,255,255,0.4)',
+              fontSize: isMobile ? 8.5 : 9.5, fontWeight: 600, letterSpacing: '0.6px',
+              textTransform: 'uppercase', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums',
+              boxShadow: on ? '0 0 14px rgba(0,80,255,0.5)' : 'none',
             }}
           >
-            {pt.label}
+            {legAbbr(ch.label)}
           </span>
-        </span>
-      ))}
-    </p>
-  )
-}
-
-// Narrow-desktop gate (mount-time, like isMobile): below this the dollied
-// globe's limb reaches under the panel, so the key hero caps smaller and the
-// panel narrows to keep text on dark space.
-const NARROW_DESKTOP = typeof window !== 'undefined' && window.innerWidth < 1160
-
-function StopDisplay({ stop, index, waypointIdx, variant }) {
-  const isKey = stop.tier === 'key'
-  const mobile = variant === 'mobile'
-  // POSITION reads the active waypoint on multi-city stops — the coordinates
-  // tick over per hop, chart-plotter style
-  const at = stop.points ? stop.points[clamp(waypointIdx, 0, stop.points.length - 1)] : stop
-  const position = (
-    <span
-      key={stop.points ? `${index}-${waypointIdx}` : index}
-      className={stop.points ? 'cs-pop' : undefined}
-      style={{ display: 'inline-block' }}
-    >
-      {fmtPosition(at.lat, at.lng)}
-    </span>
-  )
-  const fieldSize = mobile || !isKey ? 12.5 : 15
-
-  return (
-    <div style={{ maxWidth: !mobile && !isKey ? 320 : undefined }}>
-      <p
-        style={{
-          color: isKey ? 'rgb(0,180,255)' : 'rgba(255,255,255,0.45)',
-          fontSize: isKey ? (mobile ? 10.5 : 12) : 10.5,
-          fontWeight: isKey ? 700 : 600,
-          letterSpacing: isKey ? '2.2px' : '2px',
-          textTransform: 'uppercase',
-          margin: isKey ? '0 0 14px' : '0 0 10px',
-        }}
-      >
-        {stop.event}
-      </p>
-      <h2
-        style={{
-          color: '#fff',
-          fontSize: isKey ? (mobile ? 28 : NARROW_DESKTOP ? 36 : 'clamp(40px, 4.6vw, 64px)') : mobile ? 19 : 22,
-          fontWeight: isKey ? 800 : 700,
-          letterSpacing: isKey ? '-2px' : '-0.4px',
-          lineHeight: 0.98,
-          margin: isKey ? (mobile ? '0 0 16px' : '0 0 26px') : '0 0 14px',
-        }}
-      >
-        {stop.region}
-      </h2>
-      {!isKey && stop.points && <WaypointChain points={stop.points} activeIdx={waypointIdx} />}
-      <DatumLine index={index} />
-      {isKey && !mobile ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 28px' }}>
-          <Field label="When" size={fieldSize}>{stop.dates}</Field>
-          <Field label="Venue" size={fieldSize}>{formatVenues(stop.venues)}</Field>
-          <Field label="Position" size={fieldSize}>{position}</Field>
-          <Field label="Status" size={fieldSize}>{STATUS_LABEL[stop.status]}</Field>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 26px' }}>
-          <Field label="When" size={fieldSize}>{stop.dates}</Field>
-          <Field label="Position" size={fieldSize}>{position}</Field>
-          {isKey && <Field label="Status" size={fieldSize}>{STATUS_LABEL[stop.status]}</Field>}
-        </div>
-      )}
-      <RecordChip record={stop.record} marginTop={mobile ? 14 : 20} />
+        )
+      })}
     </div>
   )
 }
 
-// Full-screen half-year interstitial. Rendered only during a 'chapter' segment;
-// every element's entrance/exit is a pure function of chapterT (no CSS
-// transitions), so a reverse scrub reassembles it exactly. Sits over the globe
-// while the chapter's pins constellate in behind the text.
-function ChapterCard({ chapterIdx, t, isMobile }) {
+// The leg page — the spine of the tour. Shows the leg counter ("Leg N / 5")
+// with the months grey to its right, then the leg's stops as a vertical
+// itinerary (each with its date grey on the right; the Worlds render in chrome).
+// A see-through banner slides down the list to the ACTIVE stop as you scroll
+// (stopInLeg is fractional → the banner glides between rows), and the globe
+// flies to that stop alongside. Content-only + everything a pure function of
+// scroll (stopInLeg / enter), so reverse-scrub reassembles it exactly.
+function LegPage({ chapterIdx, enter, stopInLeg, isMobile }) {
   const ch = CHAPTERS[chapterIdx]
   if (!ch) return null
-  const gone = smoothstep(0.82, 0.97, t) // exit: fade + drift up
-  const el = (a, b) => {
-    const e = smoothstep(a, b, t)
-    return { opacity: e * (1 - gone), transform: `translateY(${(1 - e) * 22 - gone * 16}px)` }
-  }
-  // Lives in the SAME lane as the stop cards (right column desktop / bottom band
-  // mobile), left-aligned — so the leg title/months/stops sit clear of the globe
-  // (which constellates the leg's pins on the left) instead of overlapping it.
-  const laneBox = isMobile
-    ? { position: 'fixed', left: 20, right: 20, top: MOBILE_LANE_TOP, bottom: 'calc(24px + env(safe-area-inset-bottom))', justifyContent: 'center' }
-    : { position: 'fixed', left: LANE.left, right: LANE.right, top: 0, bottom: 0, maxWidth: LANE.maxWidth, justifyContent: 'center' }
+  const n = ch.stopIndices.length
+  const itemH = isMobile ? 34 : 42
+  const pos = clamp(stopInLeg, 0, n - 1)
+  const active = Math.round(pos)
   return (
-    <div
-      style={{
-        ...laneBox,
-        zIndex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-start',
-        textAlign: 'left',
-        pointerEvents: 'none',
-      }}
-    >
-      {/* big leg counter (was the leg's name) + the months it covers */}
-      <h2
-        style={{
-          ...el(0.12, 0.28),
-          color: '#fff',
-          fontSize: 'clamp(34px, 5.5vw, 64px)',
-          fontWeight: 800,
-          letterSpacing: '-2px',
-          lineHeight: 1.02,
-          margin: '0 0 10px',
-        }}
-      >
-        Leg {chapterIdx + 1} / {CHAPTERS.length}
-      </h2>
-      <p style={{ ...el(0.16, 0.32), color: 'rgba(255,255,255,0.55)', fontSize: 'clamp(13px, 1.5vw, 16px)', fontWeight: 600, letterSpacing: '2.4px', textTransform: 'uppercase', margin: '0 0 26px' }}>
-        {ch.label}
-      </p>
-      {/* the leg's stops, top to bottom — a vertical itinerary; the Worlds
-          (the pinnacle events) render in chrome */}
-      <ul style={{ ...el(0.2, 0.36), listStyle: 'none', margin: 0, padding: 0, textAlign: 'left', fontSize: isMobile ? 15 : 17, lineHeight: 1.9 }}>
-        {ch.stopIndices.map((si) => {
+    <div style={{ opacity: enter, transform: `translateY(${(1 - enter) * 18}px)`, textAlign: 'left' }}>
+      {/* leg counter + the half-year timeline tracker (current leg lit blue) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', margin: '0 0 22px' }}>
+        <h2 style={{ color: '#fff', fontSize: isMobile ? 30 : 'clamp(34px, 5vw, 60px)', fontWeight: 800, letterSpacing: '-2px', lineHeight: 1, margin: 0 }}>
+          Leg {chapterIdx + 1} / {CHAPTERS.length}
+        </h2>
+        <LegTimeline current={chapterIdx} isMobile={isMobile} />
+      </div>
+      <ul style={{ position: 'relative', listStyle: 'none', margin: 0, padding: 0 }}>
+        {/* the see-through banner — glides to the active stop */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute', left: -16, right: -8, top: pos * itemH, height: itemH,
+            background: 'linear-gradient(90deg, rgba(0,80,255,0.16), rgba(0,80,255,0.02))',
+            borderLeft: '2px solid rgb(0,80,255)',
+          }}
+        />
+        {ch.stopIndices.map((si, i) => {
           const s = STOPS[si]
           const worlds = s.short === 'Worlds'
+          const on = i === active
           return (
-            <li key={s.id} style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-              <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9 }}>●</span>
-              <span style={{ color: '#fff', fontWeight: 600 }}>{s.region}</span>
+            <li key={s.id} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10, height: itemH, fontSize: isMobile ? 14 : 17 }}>
+              <span style={{ color: on ? 'rgb(0,120,255)' : 'rgba(255,255,255,0.3)', fontSize: 9 }}>●</span>
+              <span style={{ color: on ? '#fff' : 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{s.region}</span>
               {s.short && (
                 <span
                   className={worlds ? 'chrome-text' : undefined}
-                  style={worlds ? { fontWeight: 700 } : { color: 'rgba(255,255,255,0.45)', fontWeight: 400 }}
+                  style={worlds ? { fontWeight: 700 } : { color: on ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.4)', fontWeight: 400 }}
                 >
                   {s.short}
                 </span>
               )}
+              <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.42)', fontSize: isMobile ? 11 : 12.5, fontWeight: 600, letterSpacing: '0.5px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                {s.dates}
+              </span>
             </li>
           )
         })}
