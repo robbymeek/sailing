@@ -97,12 +97,30 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
   let baseZ = fitCameraZ(camera.aspect)
   camera.position.set(0, 0, baseZ)
 
-  // anchor carries the screen-position offset (globe sits left of the cards
-  // on desktop, above the card on mobile); the inner globe group carries the
+  // anchor carries the screen-position offset (globe sits left of the content
+  // on desktop, above it on mobile); the inner globe group carries the
   // scroll-driven rotation so the atmosphere doesn't need to rotate.
+  //
+  // ENTRY_OFFSET is the orb morph's END pose and MUST stay byte-identical to
+  // glassOrbScene's baseOffset, or the seamless orb→globe hand-off pops. The
+  // globe boots here (full size) so the crossfade lands matched, then eases to
+  // its confined RESTING pose — pushed hard left (desktop) / high (mobile) and
+  // shrunk via anchor.scale (globe-only: leaves the shared camera fit and the
+  // home orb untouched) so page text never overlaps it. The ease is time-based
+  // (see frame()), never encoded in scrollY, so direct loads / reverse-scrub
+  // rest at the confined pose instantly.
   const anchor = new THREE.Group()
-  const baseOffset = isMobile ? new THREE.Vector3(0, 0.4, 0) : new THREE.Vector3(-0.55, 0, 0)
-  anchor.position.copy(baseOffset)
+  const ENTRY_OFFSET = isMobile ? new THREE.Vector3(0, 0.4, 0) : new THREE.Vector3(-0.55, 0, 0)
+  const restOffset = isMobile ? new THREE.Vector3(0, 1.05, 0) : new THREE.Vector3(-0.95, 0, 0)
+  const REST_SCALE = isMobile ? 0.6 : 0.56
+  // Where a zoomed-in key-stop pin should sit on screen (NDC, −1..1). Centre-left
+  // on desktop / upper-mid on mobile — pulled in from the far edge so the spot is
+  // readable, but not so far that the zoomed globe's limb crosses into the content
+  // lane (right column desktop / bottom band mobile).
+  const FOCUS_NDC_DESKTOP = -0.42
+  const FOCUS_NDC_MOBILE = 0.5
+  const TAN_HALF_V = Math.tan((FOV / 2) * (Math.PI / 180))
+  anchor.position.copy(ENTRY_OFFSET)
   scene.add(anchor)
 
   const globe = new THREE.Group()
@@ -512,11 +530,45 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
       }
     }
 
-    // ---------- camera: per-segment zoom × finale dolly; recentre ----------
+    // ---------- camera: per-segment zoom × finale dolly; recentre + confine ----------
     const f = easeInOut(p.finaleT)
-    camera.position.z = baseZ * (p.zoom || 1) * (1 - 0.27 * f)
+    const camZ = baseZ * (p.zoom || 1) * (1 - 0.27 * f)
+    camera.position.z = camZ
     const c = Math.max(p.center || 0, f)
-    anchor.position.set(baseOffset.x * (1 - c), baseOffset.y * (1 - c), 0)
+    // Confined resting pose (small + hard left/high), eased in from the orb's
+    // morph-end pose only on a seamless arrival — the tween is time-based off
+    // startedAt (never in scrollY), so reverse-scrub and direct loads sit at
+    // rest with entryT=1. As the recap/finale recentre (c→1) the globe grows
+    // back to full + centred so the LA 2028 climax fills the frame.
+    const entryT = seamless
+      ? smoothstep(startedAt + 0.35, startedAt + 1.25, performance.now() / 1000)
+      : 1
+    const baseX = ENTRY_OFFSET.x + (restOffset.x * (1 - c) - ENTRY_OFFSET.x) * entryT
+    const baseY = ENTRY_OFFSET.y + (restOffset.y * (1 - c) - ENTRY_OFFSET.y) * entryT
+    // Focus: a key-stop dolly zooms IN, and because the camera magnifies about
+    // screen-centre the off-centre globe would get shoved to the edge (Dublin was
+    // ending up jammed far-left). Instead, hold the featured pin (globe front-
+    // centre) at a fixed comfortable screen spot — centre-left on desktop, upper-
+    // mid on mobile — so the dolly reads as zooming INTO the spot. The target
+    // world offset that lands the pin at FOCUS_NDC is derived from the live camera
+    // distance, so it tracks the zoom exactly; blended in by p.focus (0 at rest).
+    // FOCUS_NDC is bounded so the zoomed globe's far limb still clears the content
+    // lane. Gated by entryT so the seamless entry ease is never disturbed.
+    const focus = (p.focus || 0) * entryT
+    let ax = baseX
+    let ay = baseY
+    if (focus > 0) {
+      if (isMobile) {
+        const targetY = FOCUS_NDC_MOBILE * camZ * TAN_HALF_V
+        ay = baseY + (targetY - baseY) * focus
+      } else {
+        const targetX = FOCUS_NDC_DESKTOP * camZ * TAN_HALF_V * camera.aspect
+        ax = baseX + (targetX - baseX) * focus
+      }
+    }
+    anchor.position.set(ax, ay, 0)
+    const restScaleNow = REST_SCALE + (1 - REST_SCALE) * c
+    anchor.scale.setScalar(1 + (restScaleNow - 1) * entryT)
     atmosMat.uniforms.uIntensity.value =
       1 + 1.2 * p.finaleT + (p.mode === 'recap' ? 0.3 * Math.sin(Math.PI * p.recapT) : 0)
 

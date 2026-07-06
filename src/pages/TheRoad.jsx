@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import STOPS from '../data/campaignStops'
-import CHAPTERS, { rollCall, TOUR_STATS } from '../data/tourChapters'
+import CHAPTERS, { formatVenues, TOUR_STATS } from '../data/tourChapters'
 import createGlobeScene from '../lib/globeScene'
 import { hasWebGL2 } from '../lib/webglSupport'
 import Footer from '../components/Footer'
-import SailboatIcon from '../components/SailboatIcon'
 import ExitNav from '../components/ExitNav'
 import useCountdown from '../hooks/useCountdown'
 import usePageEntrance from '../hooks/usePageEntrance'
@@ -13,6 +12,13 @@ import useTextSpray from '../hooks/useTextSpray'
 import { EXIT_CARDS } from '../components/exitCards'
 
 const BASE = import.meta.env.BASE_URL
+
+// Content lane (desktop): all text lives in the RIGHT column, its inner edge
+// hard-pinned at 50vw so it can never overlap the globe (confined to the left
+// half by globeScene's restOffset). Mobile content lives in a strict bottom
+// band (top:50vh) below the globe's top-half zone.
+const LANE = { left: '50vw', right: '7vw', maxWidth: 520 }
+const MOBILE_LANE_TOP = '50vh'
 
 // Scroll choreography in viewport-height units. A "stop" is a card; a stop can
 // span several waypoints (e.g. Australia hopping Adelaide → Perth → Sydney),
@@ -42,7 +48,7 @@ const WAYPOINT_HOP = 0.12
 const FINALE_EXTRA = 1.0 // runway for the LA 2028 zoom
 const CHAPTER_LEN = 1.35 // chapter interstitial beat
 const ENTRY_LEG = 0.6 // chapter-0 overview → first stop
-const RECAP_LEN = 2.4 // "totally travelled" full-globe spin before the last leg
+const RECAP_LEN = 1.9 // "totally travelled" full-globe spin before the last leg
 const KEY_ZOOM = 0.85 // camera dolly-in at key-stop arrivals (fraction of baseZ)
 const RECAP_ZOOM = 1.15 // pull-back during the recap (and the final chapter's intro)
 
@@ -257,58 +263,30 @@ const STOP_FRAME = (() => {
 })()
 const STOP_Y = STOP_FRAME.map((fi) => LAND_Y[fi])
 
-// Desktop reel: photo cards are taller than text cards, so entries sit at
-// cumulative centres (variable pitch) instead of one fixed spacing.
-const ENTRY_H = STOPS.map((s) => (s.photo ? 330 : s.tier === 'key' ? 172 : 152))
-const ENTRY_C = (() => {
+// ---------- distance made good ----------
+// Real great-circle miles along the route (the readout's "NM TO LA").
+const NM_PER_RAD = 3440.065
+const FRAME_NM = (() => {
   const c = [0]
-  for (let i = 1; i < STOPS.length; i++) c[i] = c[i - 1] + (ENTRY_H[i - 1] + ENTRY_H[i]) / 2
+  for (let i = 1; i < F; i++) c[i] = c[i - 1] + centralAngle(FRAMES[i - 1], FRAMES[i]) * NM_PER_RAD
   return c
 })()
-function entryCenterAt(prog) {
+const STOP_NM = STOP_FRAME.map((fi) => FRAME_NM[fi])
+const TOTAL_NM = FRAME_NM[F - 1]
+function nmToLA(prog) {
   const p = clamp(prog, 0, STOPS.length - 1)
   const lo = Math.floor(p)
   const hi = Math.min(lo + 1, STOPS.length - 1)
-  return ENTRY_C[lo] + (ENTRY_C[hi] - ENTRY_C[lo]) * (p - lo)
+  return Math.max(0, TOTAL_NM - (STOP_NM[lo] + (STOP_NM[hi] - STOP_NM[lo]) * (p - lo)))
 }
+const fmtNM = (nm) => Math.round(nm).toLocaleString('en-US')
+// computed once at module load — no ticking; the finale countdown owns live time
+const DAYS_TO_GAMES = Math.max(0, Math.ceil((new Date('2028-07-14T00:00:00') - Date.now()) / 864e5))
 
-// Left progress rail: bigger, easier-to-click dots with an extra gap between
-// chapter clusters (a half-year tick label sits in each gap), and a sailboat
-// that rides from dot to dot (holding at each stop as you scroll).
-const RAIL_PITCH = 26 // px between dot centres
-const RAIL_GROUP_GAP = 16 // extra px between chapter clusters
-const RAIL_DOT_X = 30 // dot-column x within the rail container
-const RAIL_BOAT_X = 11 // sailboat x (just left of the dots)
-const RAIL_H = STOPS.length * RAIL_PITCH + (N_CHAPTERS - 1) * RAIL_GROUP_GAP
-const railY = (i) => i * RAIL_PITCH + STOPS[i].chapter * RAIL_GROUP_GAP + RAIL_PITCH / 2
-function railYAt(prog) {
-  const p = clamp(prog, 0, STOPS.length - 1)
-  const lo = Math.floor(p)
-  const hi = Math.min(lo + 1, STOPS.length - 1)
-  return railY(lo) + (railY(hi) - railY(lo)) * (p - lo)
-}
-// First stop of each chapter (tick label position) + compact tick labels
-// derived from the chapter date ranges: 'JAN – JUN 2027' → 'JAN ’27'.
-const CH_FIRST_STOP = (() => {
-  const m = []
-  STOPS.forEach((s, i) => { if (m[s.chapter] == null) m[s.chapter] = i })
-  return m
-})()
-const railTick = (label) => {
-  const m = label.match(/^([A-Za-z]+).*(\d{2})$/)
-  return m ? `${m[1]} ’${m[2]}` : label
-}
-
-// 1 → "1st", 2 → "2nd", 3 → "3rd", … for the "Nth of 18 stops" counter.
-function ordinal(n) {
-  const s = ['th', 'st', 'nd', 'rd']
-  const v = n % 100
-  return n + (s[(v - 20) % 10] || s[v] || s[0])
-}
-
-// dotT past which the globe is "arriving" at the next waypoint: the card/label
-// for the destination pops up here — just before the dot reaches the pin.
-const ARRIVE = 0.74
+// dotT past which the globe is "arriving" at the next waypoint: the card for
+// the destination pops up here — just before the dot reaches the pin. Key
+// regattas open earlier (synced with their camera dolly-in) so they dwell.
+const arriveAt = (stopIndex) => (STOPS[stopIndex].tier === 'key' ? 0.64 : 0.74)
 
 function zoomEase(kind, t) {
   if (kind === 'late') return smoothstep(0.55, 0.95, t) // dolly in as the dot lands
@@ -334,6 +312,7 @@ const P = {
   arcT: 0, // eased progress along that hop
   frontier: -1, // continuous visited frontier: pin i is VISITED ⇔ i ≤ frontier
   zoom: 1, // camera distance multiplier (composes with the finale dolly)
+  focus: 0, // 0 → globe rests at its screen offset, 1 → key-stop dolly is full in
   center: 0, // 0 → globe at its screen offset, 1 → recentred
   recapT: 0,
   spinT: 0, // extra full-turn yaw during the recap
@@ -371,6 +350,11 @@ function computeScroll() {
   P.finaleT = seg.type === 'finale' ? segT : 0
   P.isFinaleFrame = seg.type === 'finale'
   P.zoom = seg.zoomFrom + (seg.zoomTo - seg.zoomFrom) * zoomEase(seg.zEase, segT)
+  // How far the key-stop dolly is engaged (0 rest → 1 full KEY_ZOOM). The globe
+  // scene uses this to slide the zoomed-in pin toward centre-of-screen instead of
+  // letting the dolly shove the left-offset globe off the edge. Only key arrivals
+  // dip zoom below 1, so this is 0 everywhere else (recap pull-back is >1 → clamped).
+  P.focus = clamp((1 - P.zoom) / (1 - KEY_ZOOM), 0, 1)
   P.center = seg.centerFrom + (seg.centerTo - seg.centerFrom) * smoothstep(0, 0.3, segT)
   P.recapT = recap ? segT : 0
   P.spinT = recap ? easeInOut(clamp((segT - 0.15) / 0.7, 0, 1)) : 0
@@ -394,11 +378,15 @@ function computeScroll() {
   if (travel) {
     const dst = FRAMES[seg.dest]
     const dotT = P.arcT
-    const arriving = dotT >= ARRIVE
+    // ONE shared arrival threshold per destination (tiered: key stops open
+    // earlier) — it gates the card switch, the opacity ramp, AND the label
+    // frame below, so the three can never desync mid-leg.
+    const ARR = arriveAt(dst.stopIndex)
+    const arriving = dotT >= ARR
     if (seg.arcIdx < 0) {
       // entry leg — no departure card; the first stop pops as the globe settles
       P.bodyStopIndex = dst.stopIndex
-      P.bodyOpacity = smoothstep(ARRIVE, 0.9, dotT)
+      P.bodyOpacity = smoothstep(ARR, 0.9, dotT)
       P.stopProgress = 0
     } else if (holdFrame.stopIndex === dst.stopIndex) {
       // hop within one multi-waypoint stop: the card just stays up
@@ -407,13 +395,17 @@ function computeScroll() {
       P.stopProgress = holdFrame.stopIndex
     } else if (arriving) {
       P.bodyStopIndex = dst.stopIndex
-      P.bodyOpacity = smoothstep(ARRIVE, 0.9, dotT)
+      P.bodyOpacity = smoothstep(ARR, 0.9, dotT)
       P.stopProgress = holdFrame.stopIndex + smoothstep(0.18, 0.82, dotT)
     } else {
       P.bodyStopIndex = holdFrame.stopIndex
       // legs right after an interstitial: the departing card already faded out
-      // under the chapter card — only the arrival pop shows on this leg
-      P.bodyOpacity = seg.afterChapter ? 0 : 1 - smoothstep(0.16, 0.46, dotT)
+      // under the chapter card — only the arrival pop shows on this leg.
+      // Key stops linger a touch longer before letting go.
+      const key = STOPS[holdFrame.stopIndex].tier === 'key'
+      P.bodyOpacity = seg.afterChapter
+        ? 0
+        : 1 - (key ? smoothstep(0.2, 0.55, dotT) : smoothstep(0.16, 0.46, dotT))
       P.stopProgress = holdFrame.stopIndex + smoothstep(0.18, 0.82, dotT)
     }
     if (seg.type === 'finale-leg') P.bodyOpacity = 0 // clean centred approach to LA
@@ -447,13 +439,20 @@ function computeScroll() {
 // tour lingers on the chapter interstitials and the recap instead of blowing
 // through them. Piecewise-linear map between scroll (vh units) and warped units.
 const PLAY_MS_PER_UNIT = 1100 // pace knob — bigger = calmer tour
-const PLAY_WEIGHT = { chapter: 1.8, recap: 1.3 }
+// One weight function shared by the map and its inverse (they must agree):
+// interstitials linger most, the recap breathes, key arrivals get a beat.
+const weightOf = (seg) => {
+  if (seg.type === 'chapter') return 1.8
+  if (seg.type === 'recap') return 1.3
+  if (seg.type === 'leg' && seg.dest != null && FRAMES[seg.dest].keyArrival) return 1.2
+  return 1
+}
 const PLAY_CUMU = (() => {
   const cumu = []
   let acc = 0
   for (const seg of SEGMENTS) {
     cumu.push(acc)
-    acc += seg.len * (PLAY_WEIGHT[seg.type] || 1)
+    acc += seg.len * weightOf(seg)
   }
   cumu.push(acc) // sentinel: warped units at the end of the last segment
   return cumu
@@ -468,8 +467,7 @@ function playUOfY(yVh) {
     else break
   }
   const seg = SEGMENTS[k]
-  const w = PLAY_WEIGHT[seg.type] || 1
-  return PLAY_CUMU[k] + clamp((yVh - seg.start) / seg.len, 0, 1) * seg.len * w
+  return PLAY_CUMU[k] + clamp((yVh - seg.start) / seg.len, 0, 1) * seg.len * weightOf(seg)
 }
 
 function playYOfU(u) {
@@ -484,8 +482,7 @@ function playYOfU(u) {
     else break
   }
   const seg = SEGMENTS[k]
-  const w = PLAY_WEIGHT[seg.type] || 1
-  return seg.start + (u - PLAY_CUMU[k]) / w
+  return seg.start + (u - PLAY_CUMU[k]) / weightOf(seg)
 }
 
 // seamless: arrived via the home orb→globe morph. The body-level orb overlay is
@@ -527,15 +524,13 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
   const [ready, setReady] = useState(false)
   const [card, setCard] = useState({
     stopIndex: 0, opacity: 0, prog: 0, showLabel: false, label: '', labelKey: 0,
-    mode: 'hero', chIdx: -1, chT: 0,
+    mode: 'hero', chIdx: -1, chapterIdx: -1, chT: 0,
   })
   const [finaleT, setFinaleT] = useState(0)
   const [heroDone, setHeroDone] = useState(false)
   const [isMobile] = useState(() => window.innerWidth < 700)
   const [playing, setPlaying] = useState(false)
-  const [dragging, setDragging] = useState(false)
   const [docked, setDocked] = useState(false) // "Back to Biography" docks to the top once scrolled past the nav
-  const draggingRef = useRef(false)
   // Save-Data / 2g → skip the photo backdrops + warm-ahead entirely (the same
   // lite gate SailingBanner uses; reduced-motion already fell back upstream).
   const [lite] = useState(() => {
@@ -562,29 +557,6 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
     const t = setTimeout(() => warmStop(0), 800)
     return () => clearTimeout(t)
   }, [ready, lite]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Drag the rail sailboat → scrub the tour. Map the pointer's Y within the rail to a
-  // fractional stop, then scroll to the interpolated stop offset; the boat (driven by
-  // card.prog) follows. The last stop maps to the finale (climax) like its dot does.
-  const dragBoatTo = (clientY) => {
-    const N = STOPS.length
-    const railTop = window.innerHeight / 2 - RAIL_H / 2
-    const yPx = clientY - railTop
-    // invert the (piecewise-linear, chapter-gapped) boat map → fractional stop
-    let prog
-    if (yPx <= railY(0)) prog = 0
-    else if (yPx >= railY(N - 1)) prog = N - 1
-    else {
-      let lo = 0
-      while (lo < N - 2 && railY(lo + 1) < yPx) lo++
-      prog = lo + (yPx - railY(lo)) / (railY(lo + 1) - railY(lo))
-    }
-    const stopVh = (i) => (i >= N - 1 ? TOTAL_VH / 100 : STOP_Y[i])
-    const lo = Math.floor(prog)
-    const hi = Math.min(lo + 1, N - 1)
-    const vh = stopVh(lo) + (stopVh(hi) - stopVh(lo)) * (prog - lo)
-    window.scrollTo(0, vh * window.innerHeight)
-  }
 
   // Tour controls (additive — the page stays scroll-driven). A shared rAF tween of
   // window.scrollY powers "to the start / play / to the end"; any real user input
@@ -711,6 +683,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
           prev.labelKey === p.labelKey &&
           prev.mode === p.mode &&
           prev.chIdx === p.chapterCardIdx &&
+          prev.chapterIdx === p.chapterIdx &&
           prev.chT === p.chapterCardT
             ? prev
             : {
@@ -722,6 +695,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
                 labelKey: p.labelKey,
                 mode: p.mode,
                 chIdx: p.chapterCardIdx,
+                chapterIdx: p.chapterIdx,
                 chT: p.chapterCardT,
               }
         )
@@ -738,20 +712,31 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
     }
   }, [])
 
-  // Mobile shows a single card keyed off the popping bodyStopIndex/opacity.
-  const mStop = STOPS[Math.min(card.stopIndex, STOPS.length - 1)]
-
-  // Desktop reel: a window of stop entries around the current progress.
-  const currentStop = isMobile ? card.stopIndex : Math.round(card.prog)
-  const labelInfo = { show: card.showLabel, text: card.label, key: card.labelKey }
-  const reelLo = Math.max(0, Math.round(card.prog) - 2)
-  const reelHi = Math.min(STOPS.length - 1, Math.round(card.prog) + 2)
-  const reelIndices = []
-  for (let k = reelLo; k <= reelHi; k++) reelIndices.push(k)
-  // the chapter interstitial + recap own the screen — rail/reel/controls yield
-  const interlude = card.mode === 'chapter' || card.mode === 'recap'
-  const reelVisible = heroDone && finaleT < 0.05 && !interlude
-  const railVisible = heroDone && finaleT === 0 && !interlude
+  // Which leg page shows + where its see-through banner sits. The leg page
+  // (Leg N / 5 + its stop list) persists across the WHOLE leg — the banner
+  // slides down the list to the active stop as you scroll and the globe flies
+  // alongside; at the next leg the pages cross-fade during the interstitial.
+  const legVisible =
+    heroDone && finaleT < 0.05 &&
+    card.mode !== 'recap' && card.mode !== 'finale-leg' && card.mode !== 'finale' &&
+    card.chapterIdx >= 0
+  const inIntro = card.mode === 'chapter'
+  const legEnter = inIntro ? smoothstep(0.05, 0.4, card.chT) : 1
+  const stopInLeg = (c) => clamp(card.prog - CHAPTERS[c].stopIndices[0], 0, CHAPTERS[c].stopIndices.length - 1)
+  // during an interstitial the previous leg cross-fades out under the incoming one
+  const outLeg = inIntro && card.chIdx > 0 ? card.chIdx - 1 : -1
+  const outOpacity = 1 - smoothstep(0, 0.3, card.chT)
+  // the readout + Play follow the leg page (hidden during the recap/finale climax)
+  const reelVisible = legVisible
+  // Header is TOP-ANCHORED (fixed paddingTop), not centred, so "Leg N / 5" lands
+  // in the SAME spot for every leg — a shorter leg is just a shorter list.
+  const legLaneStyle = {
+    position: 'fixed', left: LANE.left, right: LANE.right, top: 0, bottom: 0,
+    maxWidth: LANE.maxWidth, zIndex: 1,
+    display: 'flex', flexDirection: 'column', justifyContent: 'flex-start',
+    paddingTop: '29vh',
+    pointerEvents: 'none',
+  }
 
   return (
     <div style={{ background: 'rgb(0,0,0)' }}>
@@ -784,181 +769,69 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
       {/* scroll runway — all visible content is fixed-position above it */}
       <div style={{ height: `${TOTAL_VH}vh` }} />
 
-      <Hero visible={!heroDone} seamless={seamless} />
-
-      {/* half-year chapter interstitial — every element a pure function of
-          scroll (chT), so scrubbing back plays the entrance in reverse */}
-      {card.chIdx >= 0 && <ChapterCard chapterIdx={card.chIdx} t={card.chT} isMobile={isMobile} />}
+      <Hero visible={!heroDone} seamless={seamless} isMobile={isMobile} />
 
       {/* "Back to Biography" — only when arriving from the Biography page. Sits below
           the nav at the top, docks up with a little padding once scrolled, and fades
           out at the finale so the LA 2028 headline arrives on a clean top edge. */}
       {fromBiography && <BackButton onNavigate={onNavigate} docked={docked} finaleT={finaleT} />}
 
-      {/* progress rail (desktop) — one clickable dot per stop; click flies the globe
-          there (last dot = jump to the LA 2028 end). Hover reveals the stop label. */}
-      {!isMobile && (
-        <div
-          style={{
-            position: 'fixed',
-            left: 18,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: 52,
-            height: RAIL_H,
-            zIndex: 4,
-            opacity: railVisible ? 1 : 0,
-            transition: 'opacity 0.5s ease',
-            pointerEvents: railVisible ? 'auto' : 'none',
-          }}
-        >
-          {/* half-year tick labels sit in the gaps between chapter clusters */}
-          {CHAPTERS.slice(1).map((ch, k) => (
-            <span
-              key={ch.id}
-              style={{
-                position: 'absolute',
-                left: RAIL_DOT_X,
-                top: railY(CH_FIRST_STOP[k + 1]) - (RAIL_PITCH + RAIL_GROUP_GAP) / 2,
-                transform: 'translate(-50%, -50%)',
-                color: 'rgba(255,255,255,0.35)',
-                fontSize: 9,
-                fontWeight: 600,
-                letterSpacing: '1.2px',
-                textTransform: 'uppercase',
-                whiteSpace: 'nowrap',
-                pointerEvents: 'none',
-              }}
-            >
-              {railTick(ch.label)}
-            </span>
-          ))}
-          {STOPS.map((s, i) => (
-            <RailDot
-              key={s.id}
-              top={railY(i)}
-              name={s.region}
-              dates={s.dates}
-              isKey={s.tier === 'key'}
-              active={i === currentStop}
-              done={i < currentStop}
-              onClick={() => {
-                const y =
-                  i >= STOPS.length - 1
-                    ? (TOTAL_VH / 100) * window.innerHeight
-                    : STOP_Y[i] * window.innerHeight
-                if (tourRef.current) tourRef.current.toY(y)
-              }}
-            />
-          ))}
-          {/* sailboat rides the rail — holds at each stop's dot, sails between them.
-              Grab + drag it up/down to scrub the whole tour. */}
-          <div
-            role="slider"
-            aria-label="Drag to move through the stops"
-            onPointerDown={(e) => {
-              e.preventDefault()
-              try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* ignore */ }
-              draggingRef.current = true
-              setDragging(true)
-              if (tourRef.current) tourRef.current.stop()
-              dragBoatTo(e.clientY)
-            }}
-            onPointerMove={(e) => { if (draggingRef.current) dragBoatTo(e.clientY) }}
-            onPointerUp={(e) => {
-              draggingRef.current = false
-              setDragging(false)
-              try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* ignore */ }
-            }}
-            onPointerCancel={() => { draggingRef.current = false; setDragging(false) }}
-            style={{
-              position: 'absolute',
-              left: RAIL_BOAT_X,
-              top: railYAt(card.prog),
-              transform: `translate(-50%, -50%) scale(${dragging ? 1.18 : 1})`,
-              transition: dragging ? 'none' : 'top 0.1s linear, transform 0.15s ease',
-              cursor: dragging ? 'grabbing' : 'grab',
-              touchAction: 'none',
-              zIndex: 5,
-            }}
-          >
-            <SailboatIcon variant="glow" size={22} />
+      {/* leg pages — the spine of the tour. The page (Leg N / 5 + its stop list)
+          persists across the whole leg; a see-through banner slides down the list
+          to the active stop as you scroll, the globe flying alongside. At the next
+          leg the pages cross-fade during the interstitial beat. */}
+      {legVisible && !isMobile && (
+        <>
+          {outLeg >= 0 && (
+            <div style={{ ...legLaneStyle, opacity: outOpacity }}>
+              <LegPage chapterIdx={outLeg} enter={1} stopInLeg={stopInLeg(outLeg)} isMobile={false} />
+            </div>
+          )}
+          <div style={{ ...legLaneStyle, opacity: legEnter }}>
+            <LegPage chapterIdx={card.chapterIdx} enter={legEnter} stopInLeg={stopInLeg(card.chapterIdx)} isMobile={false} />
           </div>
-        </div>
+        </>
       )}
 
-      {/* desktop: slot-machine reel — current stop centered, prev/next faded
-          above/below, scrolling with the dot on each cross-stop hop */}
-      {!isMobile && (
-        <div
-          data-testid="reel"
-          style={{
-            position: 'fixed',
-            right: '7vw',
-            top: '50%',
-            width: 340,
-            height: 0,
-            zIndex: 1,
-            opacity: reelVisible ? 1 : 0,
-            transition: 'opacity 0.45s ease',
-            pointerEvents: 'none',
-          }}
-        >
-          {reelIndices.map((k) => (
-            <ReelEntry
-              key={k}
-              stopIndex={k}
-              diff={k - card.prog}
-              offsetPx={ENTRY_C[k] - entryCenterAt(card.prog)}
-              labelInfo={labelInfo}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* desktop: tour controls sit at the bottom-right, below the reel (the stop
-          "slider"), left-aligned to the reel column */}
+      {/* desktop: passage readout + Play, bottom-right in the lane (fades in with
+          the leg page so the two arrive together at a leg's start) */}
       {!isMobile && (
         <div style={{
-          position: 'fixed', right: '7vw', bottom: 40, width: 340, zIndex: 4,
-          opacity: reelVisible ? 1 : 0, transition: 'opacity 0.45s ease',
+          position: 'fixed', left: LANE.left, right: LANE.right, bottom: 40, maxWidth: LANE.maxWidth, zIndex: 4,
+          opacity: legVisible ? legEnter : 0, transition: 'opacity 0.35s ease',
           pointerEvents: reelVisible ? 'auto' : 'none',
         }}>
+          <Readout prog={card.prog} />
           <TourControls tour={tourRef.current} playing={playing} />
         </div>
       )}
 
-      {/* mobile: the single stop card, with the tour controls directly BELOW it */}
+      {/* mobile: leg page pinned to the TOP of the bottom band (header always in
+          the same spot), readout + Play pinned to the bottom */}
       {isMobile && (
         <div style={{
-          position: 'fixed', left: 20, right: 20, bottom: 24, zIndex: 3,
+          position: 'fixed', left: 20, right: 20,
+          top: MOBILE_LANE_TOP,
+          bottom: 'calc(24px + env(safe-area-inset-bottom))',
+          zIndex: 3,
+          display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+          pointerEvents: 'none',
         }}>
-          <div data-testid="stop-card" style={{ opacity: card.opacity, pointerEvents: 'none' }}>
-            {!lite && mStop.photo && <MobilePhotoStrip key={card.stopIndex} photo={mStop.photo} />}
-            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: 600, letterSpacing: '1.6px', margin: '0 0 14px' }}>
-              {ordinal(card.stopIndex + 1)} of {STOPS.length} Stops
-            </p>
-            {/* PRIMARY: where + why */}
-            <h2 style={{ color: '#fff', fontSize: 25, fontWeight: 800, letterSpacing: '-0.6px', lineHeight: 1.05, margin: '0 0 6px' }}>
-              {mStop.region}
-            </h2>
-            <p style={{ color: '#fff', fontSize: 15, fontWeight: 600, lineHeight: 1.3, margin: '0 0 18px' }}>{mStop.event}</p>
-            {/* SECONDARY: when + exactly where */}
-            <p style={{ color: '#fff', fontSize: 14, fontWeight: 500, margin: '0 0 4px' }}>{mStop.dates}</p>
-            <p style={{ color: 'rgba(255,255,255,0.82)', fontSize: 13, fontWeight: 400, lineHeight: 1.45, margin: 0 }}>{mStop.venues}</p>
-            {mStop.photo && mStop.photo.pastNote && (
-              <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', fontSize: 11.5, lineHeight: 1.4, margin: '8px 0 0' }}>
-                {mStop.photo.pastNote}
-              </p>
-            )}
-          </div>
-          {/* controls sit just below the displayed stop */}
+          {legVisible ? (
+            <div style={{ opacity: legEnter }}>
+              <LegPage chapterIdx={card.chapterIdx} enter={legEnter} stopInLeg={stopInLeg(card.chapterIdx)} isMobile />
+            </div>
+          ) : <div />}
           <div style={{
-            marginTop: 16, display: 'flex', justifyContent: 'center',
-            opacity: reelVisible ? 1 : 0, transition: 'opacity 0.45s ease',
+            opacity: legVisible ? legEnter : 0, transition: 'opacity 0.35s ease',
             pointerEvents: reelVisible ? 'auto' : 'none',
           }}>
-            <TourControls tour={tourRef.current} playing={playing} />
+            <div style={{ maxWidth: 220, margin: '0 auto 12px' }}>
+              <Readout prog={card.prog} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <TourControls tour={tourRef.current} playing={playing} />
+            </div>
           </div>
         </div>
       )}
@@ -973,139 +846,123 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
   )
 }
 
-// One card in the desktop reel. Positioned by its cumulative centre offset
-// (photo cards are taller than text cards); the center is full and bright,
-// neighbours fade. Key stops read bigger; stops with a real photo carry it as
-// a masked header fading into the page black, with the past-result note below.
-function ReelEntry({ stopIndex, diff, offsetPx, labelInfo }) {
-  const stop = STOPS[stopIndex]
-  const [imgFailed, setImgFailed] = useState(false)
-  const absDiff = Math.abs(diff)
-  const entryOpacity = absDiff <= 1 ? 1 - 0.82 * absDiff : Math.max(0, 0.18 - 0.36 * (absDiff - 1))
-  const isCenter = absDiff < 0.5
-  const isKey = stop.tier === 'key'
-  const showPhoto = !!stop.photo && !imgFailed
+// ---------- shared stop bits (used by the reduced-motion StaticTimeline) ----------
+
+// structured past fact — GOLD is hardware, so it gets the filled cyan chip;
+// RACED/TRAINED are plain tracked caption lines
+function RecordChip({ record, marginTop = 20 }) {
+  if (!record) return null
+  const gold = record.result === 'GOLD'
   return (
-    <div
-      data-testid={isCenter ? 'stop-card' : undefined}
+    <p
       style={{
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        top: 0,
-        transform: `translateY(calc(-50% + ${offsetPx}px))`,
-        opacity: entryOpacity,
-        pointerEvents: 'none',
+        display: 'inline-block',
+        margin: `${marginTop}px 0 0`,
+        padding: gold ? '5px 10px' : 0,
+        border: gold ? '1px solid rgba(0,180,255,0.5)' : 'none',
+        background: gold ? 'rgba(0,180,255,0.12)' : 'none',
+        color: gold ? 'rgb(0,180,255)' : 'rgba(255,255,255,0.6)',
+        fontSize: 10,
+        fontWeight: gold ? 700 : 600,
+        letterSpacing: '1.6px',
+        textTransform: 'uppercase',
+        lineHeight: 1.5,
       }}
     >
-      {showPhoto && (
-        <div style={{ position: 'relative', height: 132, marginBottom: 14 }}>
-          <img
-            src={`${BASE}${stop.photo.src}`}
-            alt={stop.photo.alt}
-            loading="lazy"
-            decoding="async"
-            onError={() => setImgFailed(true)}
+      {record.result} · {record.detail} · {record.date}
+    </p>
+  )
+}
+
+// Half-year timeline tracker beside the leg counter — one box per leg (the five
+// half-years to 2028), the current leg lit blue. Gives at-a-glance context of
+// where you are in the campaign. Same abbreviation as the old rail ticks.
+const legAbbr = (label) => {
+  const m = label.match(/^([A-Za-z]{3}).*(\d{2})$/)
+  return m ? `${m[1]} ’${m[2]}` : label
+}
+function LegTimeline({ current, isMobile }) {
+  return (
+    <div style={{ display: 'flex', gap: isMobile ? 4 : 5, alignItems: 'center' }}>
+      {CHAPTERS.map((ch, i) => {
+        const on = i === current
+        return (
+          <span
+            key={ch.id}
             style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              objectPosition: stop.photo.position,
-              display: 'block',
-              filter: 'grayscale(0.15) contrast(1.08) brightness(0.7)',
-              // square corners; the photo dissolves into the page black below
-              WebkitMaskImage: 'linear-gradient(to bottom, #000 45%, transparent 100%)',
-              maskImage: 'linear-gradient(to bottom, #000 45%, transparent 100%)',
+              padding: isMobile ? '3px 5px' : '4px 7px',
+              border: `1px solid ${on ? 'rgb(0,80,255)' : 'rgba(255,255,255,0.18)'}`,
+              background: on ? 'rgb(0,80,255)' : 'rgba(255,255,255,0.03)',
+              color: on ? '#fff' : 'rgba(255,255,255,0.4)',
+              fontSize: isMobile ? 8.5 : 9.5, fontWeight: 600, letterSpacing: '0.6px',
+              textTransform: 'uppercase', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums',
+              boxShadow: on ? '0 0 14px rgba(0,80,255,0.5)' : 'none',
             }}
-          />
-        </div>
-      )}
-      {isKey && !showPhoto && (
-        <p style={{ color: 'rgb(0,180,255)', fontSize: 11, fontWeight: 600, letterSpacing: '1.6px', textTransform: 'uppercase', margin: '0 0 10px' }}>
-          {stop.event}
-        </p>
-      )}
-      <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: 600, letterSpacing: '1.6px', margin: '0 0 14px' }}>
-        {ordinal(stopIndex + 1)} of {STOPS.length} Stops
-      </p>
-      {/* PRIMARY: where + why */}
-      <h2 style={{ color: '#fff', fontSize: isKey ? 30 : 27, fontWeight: 800, letterSpacing: '-0.7px', lineHeight: 1.05, margin: '0 0 6px' }}>
-        {stop.region}
-      </h2>
-      <p style={{ color: '#fff', fontSize: 16, fontWeight: 600, lineHeight: 1.3, margin: '0 0 18px' }}>{stop.event}</p>
-      {/* SECONDARY: when + exactly where */}
-      <p style={{ color: '#fff', fontSize: 14, fontWeight: 500, margin: '0 0 4px' }}>{stop.dates}</p>
-      <p style={{ color: 'rgba(255,255,255,0.82)', fontSize: 13, fontWeight: 400, lineHeight: 1.45, margin: 0 }}>{stop.venues}</p>
-      {stop.photo && stop.photo.pastNote && (
-        <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', fontSize: 12.5, lineHeight: 1.4, margin: '10px 0 0' }}>
-          {stop.photo.pastNote}
-          {stop.photo.credit && (
-            <span style={{ color: 'rgba(255,255,255,0.3)', fontStyle: 'normal', fontSize: 10, letterSpacing: '1px', textTransform: 'uppercase' }}>
-              {' '}· photo {stop.photo.credit}
-            </span>
-          )}
-        </p>
-      )}
+          >
+            {legAbbr(ch.label)}
+          </span>
+        )
+      })}
     </div>
   )
 }
 
-// Full-screen half-year interstitial. Rendered only during a 'chapter' segment;
-// every element's entrance/exit is a pure function of chapterT (no CSS
-// transitions), so a reverse scrub reassembles it exactly. Sits over the globe
-// while the chapter's pins constellate in behind the text.
-function ChapterCard({ chapterIdx, t, isMobile }) {
+// The leg page — the spine of the tour. Shows the leg counter ("Leg N / 5")
+// with the months grey to its right, then the leg's stops as a vertical
+// itinerary (each with its date grey on the right; the Worlds render in chrome).
+// A see-through banner slides down the list to the ACTIVE stop as you scroll
+// (stopInLeg is fractional → the banner glides between rows), and the globe
+// flies to that stop alongside. Content-only + everything a pure function of
+// scroll (stopInLeg / enter), so reverse-scrub reassembles it exactly.
+function LegPage({ chapterIdx, enter, stopInLeg, isMobile }) {
   const ch = CHAPTERS[chapterIdx]
   if (!ch) return null
-  const gone = smoothstep(0.82, 0.97, t) // exit: fade + drift up
-  const el = (a, b) => {
-    const e = smoothstep(a, b, t)
-    return { opacity: e * (1 - gone), transform: `translateY(${(1 - e) * 22 - gone * 16}px)` }
-  }
+  const n = ch.stopIndices.length
+  const itemH = isMobile ? 34 : 42
+  const pos = clamp(stopInLeg, 0, n - 1)
+  const active = Math.round(pos)
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
-        padding: '0 24px',
-        pointerEvents: 'none',
-      }}
-    >
-      <p style={{ ...el(0.1, 0.26), color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600, letterSpacing: '1.6px', textTransform: 'uppercase', margin: '0 0 16px' }}>
-        Chapter {chapterIdx + 1} · {ch.label}
-      </p>
-      <h2
-        className={ch.chrome ? 'chrome-text' : undefined}
-        style={{
-          ...el(0.14, 0.3),
-          color: ch.chrome ? undefined : '#fff',
-          fontSize: 'clamp(34px, 5.5vw, 64px)',
-          fontWeight: 800,
-          letterSpacing: '-2px',
-          lineHeight: 1.02,
-          margin: '0 0 12px',
-        }}
-      >
-        {ch.title}
-      </h2>
-      <p style={{ ...el(0.18, 0.34), color: 'rgba(255,255,255,0.75)', fontStyle: 'italic', fontSize: 'clamp(15px, 1.8vw, 19px)', fontWeight: 500, letterSpacing: '-0.2px', margin: '0 0 22px', maxWidth: 560 }}>
-        {ch.subtitle}
-      </p>
-      {/* roll-call: the chapter's regattas name-checked, camps counted */}
-      <p style={{ ...el(0.22, 0.38), fontSize: isMobile ? 13 : 13.5, lineHeight: 1.7, letterSpacing: '0.2px', maxWidth: 640, margin: 0 }}>
-        {rollCall(ch).map((seg, i) => (
-          <span key={i}>
-            {i > 0 && <span style={{ color: 'rgba(255,255,255,0.35)' }}>{' · '}</span>}
-            <span style={{ color: seg.em ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: seg.em ? 600 : 400 }}>{seg.t}</span>
-          </span>
-        ))}
-      </p>
+    <div style={{ opacity: enter, transform: `translateY(${(1 - enter) * 18}px)`, textAlign: 'left' }}>
+      {/* leg counter + the half-year timeline tracker (current leg lit blue) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', margin: '0 0 22px' }}>
+        <h2 style={{ color: '#fff', fontSize: isMobile ? 30 : 'clamp(34px, 5vw, 60px)', fontWeight: 800, letterSpacing: '-2px', lineHeight: 1, margin: 0 }}>
+          Leg {chapterIdx + 1} / {CHAPTERS.length}
+        </h2>
+        <LegTimeline current={chapterIdx} isMobile={isMobile} />
+      </div>
+      <ul style={{ position: 'relative', listStyle: 'none', margin: 0, padding: 0 }}>
+        {/* the see-through banner — glides to the active stop */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute', left: -16, right: -8, top: pos * itemH, height: itemH,
+            background: 'linear-gradient(90deg, rgba(0,80,255,0.16), rgba(0,80,255,0.02))',
+            borderLeft: '2px solid rgb(0,80,255)',
+          }}
+        />
+        {ch.stopIndices.map((si, i) => {
+          const s = STOPS[si]
+          const worlds = s.short === 'Worlds'
+          const on = i === active
+          return (
+            <li key={s.id} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10, height: itemH, fontSize: isMobile ? 14 : 17 }}>
+              <span style={{ color: on ? 'rgb(0,120,255)' : 'rgba(255,255,255,0.3)', fontSize: 9 }}>●</span>
+              <span style={{ color: on ? '#fff' : 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{s.region}</span>
+              {s.short && (
+                <span
+                  className={worlds ? 'chrome-text' : undefined}
+                  style={worlds ? { fontWeight: 700 } : { color: on ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.4)', fontWeight: 400 }}
+                >
+                  {s.short}
+                </span>
+              )}
+              <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.42)', fontSize: isMobile ? 11 : 12.5, fontWeight: 600, letterSpacing: '0.5px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                {s.dates}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }
@@ -1159,80 +1016,52 @@ function TourBackdrops({ mode, stopIndex, opacity, prog, isMobile }) {
           background: 'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.3) 45%, rgba(0,0,0,0.15) 100%)',
         }}
       />
-    </div>
-  )
-}
-
-// Compact photo strip atop the mobile stop card — same mask-into-black grammar
-// as the desktop reel header. Keyed by stop so the error state resets per stop.
-function MobilePhotoStrip({ photo }) {
-  const [failed, setFailed] = useState(false)
-  if (failed) return null
-  return (
-    <div style={{ position: 'relative', height: 84, marginBottom: 12 }}>
-      <img
-        src={`${BASE}${photo.srcMobile || photo.src}`}
-        alt={photo.alt}
-        loading="lazy"
-        decoding="async"
-        onError={() => setFailed(true)}
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          objectPosition: photo.position,
-          display: 'block',
-          filter: 'grayscale(0.15) contrast(1.08) brightness(0.7)',
-          WebkitMaskImage: 'linear-gradient(to bottom, #000 45%, transparent 100%)',
-          maskImage: 'linear-gradient(to bottom, #000 45%, transparent 100%)',
-        }}
-      />
-    </div>
-  )
-}
-
-// One clickable dot on the left progress rail — flies the globe to that stop and
-// reveals the stop's name/dates on hover. Key regattas read heavier: bigger dot
-// plus a persistent blue halo ring.
-function RailDot({ top, name, dates, active, done, isKey, onClick }) {
-  const [hover, setHover] = useState(false)
-  const size = hover || active ? (isKey ? 16 : 15) : isKey ? 13 : 10
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      aria-label={name}
-      style={{
-        position: 'absolute', left: RAIL_DOT_X, top,
-        transform: 'translate(-50%, -50%)',
-        background: 'none', border: 'none', margin: 0,
-        padding: 8, // bigger invisible hit area → easy to click
-        cursor: 'pointer', display: 'flex', alignItems: 'center',
-      }}
-    >
-      <span style={{
-        display: 'block', width: size, height: size, borderRadius: '50%',
-        background: active ? '#1E40FF' : done ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.3)',
-        boxShadow: hover
-          ? '0 0 0 5px rgba(30,64,255,0.25)'
-          : isKey
-            ? '0 0 0 3px rgba(0,80,255,0.22)'
-            : 'none',
-        transition: 'width 0.2s ease, height 0.2s ease, background 0.3s ease, box-shadow 0.2s ease',
-      }} />
-      {hover && (
-        <span style={{
-          position: 'absolute', left: 30, whiteSpace: 'nowrap',
-          background: 'rgba(0,0,0,0.78)', color: '#fff',
-          fontSize: 12, fontWeight: 500, letterSpacing: '0.2px',
-          padding: '6px 10px', borderRadius: 5, pointerEvents: 'none',
-          border: '1px solid rgba(255,255,255,0.14)',
-        }}>
-          {name} <span style={{ color: 'rgba(255,255,255,0.5)' }}>· {dates}</span>
-        </span>
+      {/* photo credit rides the backdrop it belongs to (desktop only — the
+          mobile bottom edge belongs to the card + waterline strip) */}
+      {!isMobile && activeIdx >= 0 && STOPS[activeIdx].photo.credit && (
+        <p
+          style={{
+            position: 'absolute', left: 20, bottom: 16, margin: 0,
+            color: 'rgba(255,255,255,0.3)', fontSize: 9, fontWeight: 600,
+            letterSpacing: '1.5px', textTransform: 'uppercase', opacity: o,
+          }}
+        >
+          Photo · {STOPS[activeIdx].photo.credit}
+        </p>
       )}
-    </button>
+    </div>
+  )
+}
+
+// ---------- passage readout ----------
+
+// readout row: label left, numeral right
+function ReadoutRow({ label, value, cyan }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 6 }}>
+      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9, fontWeight: 600, letterSpacing: '1.6px', textTransform: 'uppercase' }}>
+        {label}
+      </span>
+      <span style={{ color: cyan ? 'rgb(0,180,255)' : '#fff', fontSize: 11, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+        {value}
+      </span>
+    </div>
+  )
+}
+
+// Passage readout — where you are, how far to LA, days to the Games. Sits above
+// the Start/Play/Finish controls (the sailboat course line it used to ride is
+// gone; the globe owns the left side now). Pure function of scroll progress.
+function Readout({ prog }) {
+  const N = STOPS.length
+  const stop = clamp(Math.round(prog), 0, N - 1)
+  const nearLA = prog > N - 2
+  return (
+    <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 8, marginBottom: 14 }}>
+      <ReadoutRow label="Stop" value={`${String(stop + 1).padStart(2, '0')} / ${N}`} />
+      <ReadoutRow label="NM to LA" value={fmtNM(nmToLA(prog))} cyan={nearLA} />
+      <ReadoutRow label="Days" value={String(DAYS_TO_GAMES)} />
+    </div>
   )
 }
 
@@ -1264,85 +1093,90 @@ function BackButton({ onNavigate, docked, finaleT }) {
   )
 }
 
-function Hero({ visible, seamless }) {
+function Hero({ visible, seamless, isMobile }) {
   // After a seamless morph, hold the hero text back so it fades in LAST — after
-  // the overlay has dissolved to the globe and the pins have faded in.
-  const entrance = usePageEntrance(3, { staggerMs: 150, initialDelayMs: seamless ? 1450 : 200 })
+  // the overlay has dissolved to the globe and it has settled small + left.
+  const entrance = usePageEntrance(2, { staggerMs: 150, initialDelayMs: seamless ? 1450 : 200 })
+  // Same lane as the rest of the content — right column (desktop) / bottom band
+  // (mobile), left-aligned — so the title never overlaps the globe.
+  const laneBox = isMobile
+    ? { position: 'fixed', left: 20, right: 20, top: MOBILE_LANE_TOP, bottom: 'calc(24px + env(safe-area-inset-bottom))', justifyContent: 'center' }
+    : { position: 'fixed', left: LANE.left, right: LANE.right, top: 0, bottom: 0, maxWidth: LANE.maxWidth, justifyContent: 'center' }
   return (
     <div
       style={{
-        position: 'fixed',
-        inset: 0,
+        ...laneBox,
         zIndex: 1,
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
+        alignItems: 'flex-start',
+        textAlign: 'left',
         opacity: visible ? 1 : 0,
         transition: 'opacity 0.6s ease',
         pointerEvents: 'none',
-        padding: '0 20px',
       }}
     >
-      <h1 style={{ ...entrance.style(0), color: '#fff', fontSize: 'clamp(40px, 7vw, 88px)', fontWeight: 800, letterSpacing: '-3px', margin: 0 }}>
+      <h1 style={{ ...entrance.style(0), color: '#fff', fontSize: 'clamp(34px, 4vw, 62px)', fontWeight: 800, letterSpacing: '-2px', lineHeight: 1.02, margin: 0 }}>
         The Road to LA 2028
       </h1>
-      {/* tagline — same typeface as the title, italic */}
-      <p style={{
-        ...entrance.style(1),
-        color: 'rgba(255,255,255,0.85)',
-        fontStyle: 'italic',
-        fontSize: 'clamp(17px, 2.2vw, 26px)',
-        fontWeight: 500,
-        letterSpacing: '-0.3px',
-        margin: '14px 0 0',
-      }}>
-        And every stop in between
-      </p>
-      {/* scroll cue — right beneath the tagline, large + white so it's obvious */}
-      <div style={{ ...entrance.style(2), marginTop: 30 }}>
+      {/* scroll cue — micro-caps kicker, the lone title carries the moment */}
+      <div style={{ ...entrance.style(1), marginTop: 28 }}>
         <div style={{
-          color: '#fff', fontSize: 22, fontWeight: 500, letterSpacing: '0.5px',
+          color: '#fff', fontSize: 12, fontWeight: 600, letterSpacing: '2.2px',
+          textTransform: 'uppercase',
           animation: 'scrollHint 1.6s ease-in-out infinite',
         }}>
-          scroll ↓
+          Scroll ↓
         </div>
       </div>
     </div>
   )
 }
 
-// Positionless control row ("to the start • play • to the end"). Placement +
-// visibility are handled by the wrapper — under the rail on desktop, under the
-// stop card on mobile.
+// A single Play / Pause pill — the tour's one control (auto-plays through the
+// stops; scrolling still works manually). Placement + visibility are handled by
+// the wrapper. Blue-accented icon chip + label, glows on hover.
 function TourControls({ tour, playing }) {
-  const [hover, setHover] = useState(null)
+  const [hover, setHover] = useState(false)
   if (!tour) return null
-  const btn = (id, label, onClick) => (
+  return (
     <button
-      onClick={onClick}
-      onMouseEnter={() => setHover(id)}
-      onMouseLeave={() => setHover(null)}
+      onClick={tour.toggle}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      aria-label={playing ? 'Pause the tour' : 'Play the tour'}
       style={{
-        background: hover === id ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.05)',
-        border: '1px solid rgba(255,255,255,0.4)',
-        borderRadius: 3,
-        color: '#fff', cursor: 'pointer', padding: '9px 16px',
-        fontSize: 15, fontWeight: 600, letterSpacing: '0.3px', fontFamily: 'inherit',
-        transition: 'background 0.2s ease, border-color 0.2s ease',
+        display: 'inline-flex', alignItems: 'center', gap: 11,
+        background: hover ? 'rgba(0,80,255,0.20)' : 'rgba(255,255,255,0.05)',
+        border: `1px solid ${hover ? 'rgba(60,120,255,0.75)' : 'rgba(255,255,255,0.32)'}`,
+        borderRadius: 100,
+        color: '#fff', cursor: 'pointer', padding: '10px 22px 10px 12px',
+        fontSize: 13, fontWeight: 600, letterSpacing: '1.4px', fontFamily: 'inherit',
+        textTransform: 'uppercase',
+        boxShadow: hover ? '0 0 26px rgba(0,80,255,0.35)' : 'none',
+        transition: 'background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease',
         whiteSpace: 'nowrap',
       }}
     >
-      {label}
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+        background: hover ? 'rgb(0,80,255)' : 'rgba(255,255,255,0.14)',
+        transition: 'background 0.25s ease',
+      }}>
+        {playing ? (
+          <svg width="10" height="11" viewBox="0 0 10 11" aria-hidden="true">
+            <rect x="1" y="0" width="3" height="11" fill="#fff" />
+            <rect x="6" y="0" width="3" height="11" fill="#fff" />
+          </svg>
+        ) : (
+          <svg width="11" height="12" viewBox="0 0 11 12" aria-hidden="true" style={{ marginLeft: 2 }}>
+            <path d="M0 0 L11 6 L0 12 Z" fill="#fff" />
+          </svg>
+        )}
+      </span>
+      {playing ? 'Pause' : 'Play Tour'}
     </button>
-  )
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      {btn('start', 'To Start', tour.toStart)}
-      {btn('play', playing ? 'Pause' : 'Play', tour.toggle)}
-      {btn('end', 'To End', tour.toEnd)}
-    </div>
   )
 }
 
@@ -1415,8 +1249,8 @@ function EndBlock({ onNavigate, isMobile }) {
             {/* per-glyph spans: the spray module measures each glyph's box */}
             {'LA 2028'.split('').map((ch, i) => (ch === ' ' ? ' ' : <span key={i}>{ch}</span>))}
           </h1>
-          <p ref={countdownRef} style={{ color: '#fff', fontSize: 18, fontWeight: 400, letterSpacing: '1px', margin: 0 }}>
-            {days} : {String(hrs).padStart(2, '0')} : {String(mins).padStart(2, '0')} : {String(secs).padStart(2, '0')}
+          <p ref={countdownRef} style={{ color: '#fff', fontSize: 18, fontWeight: 400, letterSpacing: '1px', margin: 0, fontVariantNumeric: 'tabular-nums' }}>
+            <CountdownUnits days={days} hrs={hrs} mins={mins} secs={secs} />
           </p>
         </div>
 
@@ -1459,6 +1293,23 @@ function StatSep() {
   return <span style={{ color: 'rgba(255,255,255,0.3)' }}>·</span>
 }
 
+// Self-labeling countdown: digits at full size, unit words as quiet micro-caps.
+function CountdownUnits({ days, hrs, mins, secs }) {
+  const unit = {
+    fontSize: 10, fontWeight: 600, letterSpacing: '1.6px',
+    color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase',
+  }
+  const sep = <span style={{ color: 'rgba(255,255,255,0.3)' }}>{' · '}</span>
+  return (
+    <>
+      {days} <span style={unit}>days</span>{sep}
+      {String(hrs).padStart(2, '0')} <span style={unit}>hrs</span>{sep}
+      {String(mins).padStart(2, '0')} <span style={unit}>min</span>{sep}
+      {String(secs).padStart(2, '0')} <span style={unit}>sec</span>
+    </>
+  )
+}
+
 // "Back to the top" — smooth-scrolls to the top of the tour. Styled like the tour
 // controls (white, bordered) for consistency.
 function BackToTop() {
@@ -1476,7 +1327,7 @@ function BackToTop() {
         transition: 'background 0.2s ease',
       }}
     >
-      ↑ Back to the top
+      ↑ Back to the start
     </button>
   )
 }
@@ -1492,28 +1343,18 @@ function StaticTimeline({ onNavigate }) {
         <h1 style={{ ...entrance.style(1), color: '#fff', fontSize: 'clamp(36px, 6vw, 64px)', fontWeight: 800, letterSpacing: '-2px', margin: 0 }}>
           The Road to LA 2028
         </h1>
-        {/* same tagline as the globe hero, so the fallback doesn't drift */}
-        <p style={{ ...entrance.style(1), color: 'rgba(255,255,255,0.85)', fontStyle: 'italic', fontSize: 'clamp(15px, 2vw, 20px)', fontWeight: 500, margin: '12px 0 0' }}>
-          And every stop in between
-        </p>
       </div>
 
       <div style={{ ...entrance.style(2), maxWidth: 720, margin: '0 auto', padding: '0 24px 50px' }}>
         {CHAPTERS.map((ch, ci) => (
           <div key={ch.id}>
-            {/* chapter header — the same half-year story the globe tour tells */}
+            {/* leg header — the counter + the months it covers */}
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', padding: '26px 0 14px' }}>
-              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600, letterSpacing: '1.6px', textTransform: 'uppercase', margin: '0 0 8px' }}>
-                Chapter {ci + 1} · {ch.label}
-              </p>
-              <h2
-                className={ch.chrome ? 'chrome-text' : undefined}
-                style={{ color: ch.chrome ? undefined : '#fff', fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px', margin: '0 0 6px' }}
-              >
-                {ch.title}
+              <h2 style={{ color: '#fff', fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px', margin: '0 0 4px' }}>
+                Leg {ci + 1} / {CHAPTERS.length}
               </h2>
-              <p style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', fontSize: 13, fontWeight: 500, margin: 0 }}>
-                {ch.subtitle}
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', margin: 0 }}>
+                {ch.label}
               </p>
             </div>
             {ch.stopIndices.map((i) => {
@@ -1533,14 +1374,11 @@ function StaticTimeline({ onNavigate }) {
                           objectPosition: s.photo.position, filter: 'brightness(0.75)', display: 'block',
                         }}
                       />
-                      <p style={{ color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', fontSize: 11.5, margin: '8px 0 0' }}>
-                        {s.photo.pastNote}
-                        {s.photo.credit && (
-                          <span style={{ color: 'rgba(255,255,255,0.3)', fontStyle: 'normal', fontSize: 10, letterSpacing: '1px', textTransform: 'uppercase' }}>
-                            {' '}· photo {s.photo.credit}
-                          </span>
-                        )}
-                      </p>
+                      {s.photo.credit && (
+                        <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase', margin: '8px 0 0' }}>
+                          Photo · {s.photo.credit}
+                        </p>
+                      )}
                     </div>
                   )}
                   <div
@@ -1553,14 +1391,15 @@ function StaticTimeline({ onNavigate }) {
                     }}
                   >
                     <div>
-                      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 500, letterSpacing: '1px', margin: '0 0 5px' }}>
-                        {ordinal(i + 1)} of {STOPS.length} Stops
+                      <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: 600, letterSpacing: '1px', fontVariantNumeric: 'tabular-nums', margin: '0 0 5px' }}>
+                        {String(i + 1).padStart(2, '0')} / {STOPS.length}
                       </p>
                       <p style={{ color: '#fff', fontSize: 15, fontWeight: 600, margin: '0 0 2px' }}>{s.region}</p>
                       <p style={{ color: s.tier === 'key' ? 'rgb(0,180,255)' : 'rgba(255,255,255,0.55)', fontSize: 13, fontWeight: 500, margin: '0 0 4px' }}>{s.event}</p>
-                      <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: 400, margin: 0 }}>{s.venues}</p>
+                      <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: 400, margin: 0 }}>{formatVenues(s.venues)}</p>
+                      {s.record && <RecordChip record={s.record} marginTop={10} />}
                     </div>
-                    <span style={{ color: 'rgba(255,255,255,0.92)', fontSize: 15, fontWeight: 400, flexShrink: 0 }}>{s.dates}</span>
+                    <span style={{ color: 'rgba(255,255,255,0.92)', fontSize: 15, fontWeight: 400, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{s.dates}</span>
                   </div>
                 </div>
               )
@@ -1580,8 +1419,8 @@ function StaticTimeline({ onNavigate }) {
         <h2 className="chrome-text" style={{ fontSize: 'clamp(40px, 7vw, 72px)', fontWeight: 800, letterSpacing: '-3px', margin: '0 0 8px' }}>
           LA 2028
         </h2>
-        <p style={{ color: '#fff', fontSize: 16, fontWeight: 400, letterSpacing: '1px', margin: 0 }}>
-          {days} : {String(hrs).padStart(2, '0')} : {String(mins).padStart(2, '0')} : {String(secs).padStart(2, '0')}
+        <p style={{ color: '#fff', fontSize: 16, fontWeight: 400, letterSpacing: '1px', margin: 0, fontVariantNumeric: 'tabular-nums' }}>
+          <CountdownUnits days={days} hrs={hrs} mins={mins} secs={secs} />
         </p>
       </div>
 
