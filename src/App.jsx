@@ -388,13 +388,22 @@ export default function App() {
     }
 
     updateTriggerColor()
-    window.addEventListener('scroll', updateTriggerColor, { passive: true })
+    // Coalesce scroll sampling to one measurement per frame — updateTriggerColor
+    // does an elementFromPoint + getComputedStyle walk (a forced layout flush),
+    // so running it on every raw scroll event thrashes layout on touch scroll.
+    let rafId = null
+    const onScroll = () => {
+      if (rafId != null) return
+      rafId = requestAnimationFrame(() => { rafId = null; updateTriggerColor() })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('resize', updateTriggerColor)
     const interval = setInterval(updateTriggerColor, 400)
     return () => {
-      window.removeEventListener('scroll', updateTriggerColor)
+      window.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', updateTriggerColor)
       clearInterval(interval)
+      if (rafId != null) cancelAnimationFrame(rafId)
     }
   }, [navOverflowing, isHomeRoute, location.pathname])
 

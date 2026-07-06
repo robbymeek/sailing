@@ -148,7 +148,7 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
     return () => window.removeEventListener('resize', h)
   }, [])
 
-  const nextEvent = useCountdown(new Date('2026-07-20T00:00:00'))
+  const nextEvent = useCountdown(new Date('2026-07-20T00:00:00'), !preload)
 
   // RESULTS sea-spray dissolve — replaces the old sticky banner. The headline
   // scrolls naturally; as its letters cross the top edge of the viewport they
