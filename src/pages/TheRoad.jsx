@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import STOPS from '../data/campaignStops'
 import CHAPTERS, { formatVenues, TOUR_STATS } from '../data/tourChapters'
 import createGlobeScene from '../lib/globeScene'
@@ -19,6 +19,19 @@ const BASE = import.meta.env.BASE_URL
 // band (top:50vh) below the globe's top-half zone.
 const LANE = { left: '50vw', right: '7vw', maxWidth: 520 }
 const MOBILE_LANE_TOP = '50vh'
+
+// Fixed content frame — the same model on every screen size. The leg title sits
+// at a CONSTANT distance from the top; the Play + NM controls at a constant
+// distance from the bottom; the stop list lives in the CLIPPED box between them.
+// On a tall screen the whole list fits and it looks like a static itinerary; on
+// a short screen (or a long leg) the list scrolls INSIDE the box so the active
+// stop stays framed — rows dissolve under the title (top) and behind the
+// controls (bottom) and never overlap either. So the layout is uniform and
+// self-adapting: title always in the same spot, controls always in the same
+// spot, and nothing can spill past them.
+const TITLE_TOP = 'max(76px, 23vh)' // desktop: title's fixed offset from the top (a touch higher than the old 29vh)
+const CTRL_BOTTOM = 40 // desktop: controls' fixed offset from the bottom
+const MOBILE_CTRL_BOTTOM = 'calc(24px + env(safe-area-inset-bottom))'
 
 // Scroll choreography in viewport-height units. A "stop" is a card; a stop can
 // span several waypoints (e.g. Australia hopping Adelaide → Perth → Sydney),
@@ -726,16 +739,6 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
   const outOpacity = 1 - smoothstep(0, 0.3, card.chT)
   // the readout + Play follow the leg page (hidden during the recap/finale climax)
   const reelVisible = legVisible
-  // Header is TOP-ANCHORED (fixed paddingTop), not centred, so "Leg N / 5" lands
-  // in the SAME spot for every leg — a shorter leg is just a shorter list.
-  const legLaneStyle = {
-    position: 'fixed', left: LANE.left, right: LANE.right, top: 0, bottom: 0,
-    maxWidth: LANE.maxWidth, zIndex: 1,
-    display: 'flex', flexDirection: 'column', justifyContent: 'flex-start',
-    paddingTop: '29vh',
-    pointerEvents: 'none',
-  }
-
   return (
     <div style={{ background: 'rgb(0,0,0)' }}>
       {/* venue-photo backdrops sit UNDER the alpha-true globe canvas (same
@@ -774,55 +777,59 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
           out at the finale so the LA 2028 headline arrives on a clean top edge. */}
       {fromBiography && <BackButton onNavigate={onNavigate} docked={docked} finaleT={finaleT} />}
 
-      {/* leg pages — the spine of the tour. The page (Leg N / 5 + its stop list)
-          persists across the whole leg; a see-through banner slides down the list
-          to the active stop as you scroll, the globe flying alongside. At the next
-          leg the pages cross-fade during the interstitial beat. */}
+      {/* DESKTOP content frame — title pinned at TITLE_TOP, controls pinned at
+          CTRL_BOTTOM, the leg's stop list clipped in the flexing box between them.
+          The leg page (Leg N / 5 + its list) persists across the whole leg while a
+          see-through banner slides down the list to the active stop, the globe
+          flying alongside; at the next leg the pages cross-fade during the
+          interstitial. The list can never overflow onto the controls — a long leg
+          just scrolls inside its box (see LegPage). */}
       {legVisible && !isMobile && (
-        <>
-          {outLeg >= 0 && (
-            <div style={{ ...legLaneStyle, opacity: outOpacity }}>
-              <LegPage chapterIdx={outLeg} enter={1} stopInLeg={stopInLeg(outLeg)} isMobile={false} />
-            </div>
-          )}
-          <div style={{ ...legLaneStyle, opacity: legEnter }}>
-            <LegPage chapterIdx={card.chapterIdx} enter={legEnter} stopInLeg={stopInLeg(card.chapterIdx)} isMobile={false} />
-          </div>
-        </>
-      )}
-
-      {/* desktop: passage readout + Play, bottom-right in the lane (fades in with
-          the leg page so the two arrive together at a leg's start) */}
-      {!isMobile && (
         <div style={{
-          position: 'fixed', left: LANE.left, right: LANE.right, bottom: 40, maxWidth: LANE.maxWidth, zIndex: 4,
-          opacity: legVisible ? legEnter : 0, transition: 'opacity 0.35s ease',
-          pointerEvents: reelVisible ? 'auto' : 'none',
+          position: 'fixed', top: TITLE_TOP, bottom: CTRL_BOTTOM,
+          left: LANE.left, right: LANE.right, maxWidth: LANE.maxWidth, zIndex: 1,
+          display: 'flex', flexDirection: 'column', pointerEvents: 'none',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+          {/* cross-fading leg pages fill everything above the controls */}
+          <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+            {outLeg >= 0 && (
+              <div style={{ position: 'absolute', inset: 0, opacity: outOpacity }}>
+                <LegPage chapterIdx={outLeg} enter={1} stopInLeg={stopInLeg(outLeg)} isMobile={false} />
+              </div>
+            )}
+            <div style={{ position: 'absolute', inset: 0, opacity: legEnter }}>
+              <LegPage chapterIdx={card.chapterIdx} enter={legEnter} stopInLeg={stopInLeg(card.chapterIdx)} isMobile={false} />
+            </div>
+          </div>
+          {/* passage readout + Play — pinned to the bottom, fade in with the leg */}
+          <div style={{
+            flexShrink: 0, marginTop: 16, display: 'flex', alignItems: 'center', gap: 18,
+            opacity: legEnter, pointerEvents: reelVisible ? 'auto' : 'none',
+          }}>
             <TourControls tour={tourRef.current} playing={playing} />
             <NmToLa prog={card.prog} />
           </div>
         </div>
       )}
 
-      {/* mobile: leg page pinned to the TOP of the bottom band (header always in
-          the same spot), readout + Play pinned to the bottom */}
+      {/* MOBILE content frame — same model: leg header pinned to the top of the
+          bottom band (so the globe always fits above it), stop list clipped in the
+          flexing box, readout + Play pinned to the bottom. */}
       {isMobile && (
         <div style={{
           position: 'fixed', left: 20, right: 20,
-          top: MOBILE_LANE_TOP,
-          bottom: 'calc(24px + env(safe-area-inset-bottom))',
-          zIndex: 3,
-          display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-          pointerEvents: 'none',
+          top: MOBILE_LANE_TOP, bottom: MOBILE_CTRL_BOTTOM,
+          zIndex: 3, display: 'flex', flexDirection: 'column', pointerEvents: 'none',
         }}>
-          {legVisible ? (
-            <div style={{ opacity: legEnter }}>
-              <LegPage chapterIdx={card.chapterIdx} enter={legEnter} stopInLeg={stopInLeg(card.chapterIdx)} isMobile />
-            </div>
-          ) : <div />}
+          <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+            {legVisible && (
+              <div style={{ position: 'absolute', inset: 0, opacity: legEnter }}>
+                <LegPage chapterIdx={card.chapterIdx} enter={legEnter} stopInLeg={stopInLeg(card.chapterIdx)} isMobile />
+              </div>
+            )}
+          </div>
           <div style={{
+            flexShrink: 0, marginTop: 14,
             opacity: legVisible ? legEnter : 0, transition: 'opacity 0.35s ease',
             pointerEvents: reelVisible ? 'auto' : 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16,
@@ -873,10 +880,14 @@ function RecordChip({ record, marginTop = 20 }) {
 
 // Half-year timeline tracker beside the leg counter — one box per leg (the five
 // half-years to 2028), the current leg lit blue. Gives at-a-glance context of
-// where you are in the campaign. Same abbreviation as the old rail ticks.
+// where you are in the campaign. Each leg is labelled by its half of the year:
+// "H2 2026", "H1 2027", ... "H2 2028" (the Olympics) — H1 = a Jan-start leg,
+// H2 = a Jul-start leg.
 const legAbbr = (label) => {
-  const m = label.match(/^([A-Za-z]{3}).*(\d{2})$/)
-  return m ? `${m[1]} ’${m[2]}` : label
+  const m = label.match(/^([A-Za-z]{3}).*?(\d{4})$/)
+  if (!m) return label
+  const firstHalf = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN'].includes(m[1].toUpperCase())
+  return `${firstHalf ? 'H1' : 'H2'} ${m[2]}`
 }
 function LegTimeline({ current, isMobile }) {
   return (
@@ -911,55 +922,103 @@ function LegTimeline({ current, isMobile }) {
 // (stopInLeg is fractional → the banner glides between rows), and the globe
 // flies to that stop alongside. Content-only + everything a pure function of
 // scroll (stopInLeg / enter), so reverse-scrub reassembles it exactly.
+// Horizontal bleed of the active-stop banner past the list's text column (the
+// blue border pokes left, the highlight softens off to the right). The clipped
+// box is widened by exactly this so the bleed is never cut by overflow:hidden.
+const BANNER_BLEED_L = 16
+const BANNER_BLEED_R = 8
 function LegPage({ chapterIdx, enter, stopInLeg, isMobile }) {
   const ch = CHAPTERS[chapterIdx]
-  if (!ch) return null
-  const n = ch.stopIndices.length
+  const n = ch ? ch.stopIndices.length : 0
   const itemH = isMobile ? 34 : 42
-  const pos = clamp(stopInLeg, 0, n - 1)
+  const pos = clamp(stopInLeg, 0, Math.max(0, n - 1))
   const active = Math.round(pos)
+
+  // The list lives in a fixed-height CLIPPED box (flex:1, between the leg header
+  // and the controls). When the whole list fits, it sits top-aligned and looks
+  // like a static itinerary. When it's taller than the box (a long leg or a
+  // short screen) it translates so the active stop stays centred in the box —
+  // rows above dissolve up under the title, rows below appear from behind the
+  // controls. It's a pure function of stopInLeg + the measured box height, so a
+  // reverse scrub reassembles it exactly.
+  const boxRef = useRef(null)
+  const [boxH, setBoxH] = useState(0)
+  useLayoutEffect(() => {
+    const el = boxRef.current
+    if (!el) return undefined
+    setBoxH(el.clientHeight)
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const ro = new ResizeObserver(() => setBoxH(el.clientHeight))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const listH = n * itemH
+  const maxScroll = Math.max(0, listH - boxH)
+  const scrollOffset = boxH > 0 ? clamp(pos * itemH + itemH / 2 - boxH / 2, 0, maxScroll) : 0
+  // fade rows out where they cross the box edges (only when there's hidden
+  // content on that side) so they dissolve rather than clip flatly
+  const FADE = isMobile ? 20 : 26
+  const maskTop = scrollOffset > 0.5 ? FADE : 0
+  const maskBot = scrollOffset < maxScroll - 0.5 ? FADE : 0
+  const mask =
+    `linear-gradient(to bottom, transparent 0, #000 ${maskTop}px, #000 calc(100% - ${maskBot}px), transparent 100%)`
+  const masked = maskTop > 0 || maskBot > 0
+  if (!ch) return null
+
   return (
-    <div style={{ opacity: enter, transform: `translateY(${(1 - enter) * 18}px)`, textAlign: 'left' }}>
+    <div style={{ opacity: enter, transform: `translateY(${(1 - enter) * 18}px)`, textAlign: 'left', height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       {/* leg counter + the half-year timeline tracker (current leg lit blue) */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', margin: '0 0 22px' }}>
+      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', margin: '0 0 22px' }}>
         <h2 style={{ color: '#fff', fontSize: isMobile ? 30 : 'clamp(34px, 5vw, 60px)', fontWeight: 800, letterSpacing: '-2px', lineHeight: 1, margin: 0 }}>
           Leg {chapterIdx + 1} / {CHAPTERS.length}
         </h2>
         <LegTimeline current={chapterIdx} isMobile={isMobile} />
       </div>
-      <ul style={{ position: 'relative', listStyle: 'none', margin: 0, padding: 0 }}>
-        {/* the see-through banner — glides to the active stop */}
-        <div
-          aria-hidden="true"
-          style={{
-            position: 'absolute', left: -16, right: -8, top: pos * itemH, height: itemH,
-            background: 'linear-gradient(90deg, rgba(0,80,255,0.16), rgba(0,80,255,0.02))',
-            borderLeft: '2px solid rgb(0,80,255)',
-          }}
-        />
-        {ch.stopIndices.map((si, i) => {
-          const s = STOPS[si]
-          const worlds = s.short === 'Worlds'
-          const on = i === active
-          return (
-            <li key={s.id} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10, height: itemH, fontSize: isMobile ? 14 : 17 }}>
-              <span style={{ color: on ? 'rgb(0,120,255)' : 'rgba(255,255,255,0.3)', fontSize: 9 }}>●</span>
-              <span style={{ color: on ? '#fff' : 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{s.region}</span>
-              {s.short && (
-                <span
-                  className={worlds ? 'chrome-text' : undefined}
-                  style={worlds ? { fontWeight: 700 } : { color: on ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.4)', fontWeight: 400 }}
-                >
-                  {s.short}
+      {/* clipped list box — widened by the banner bleed so the highlight isn't
+          cut, then internally scrolled to keep the active stop framed */}
+      <div
+        ref={boxRef}
+        style={{
+          position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden',
+          marginLeft: -BANNER_BLEED_L, marginRight: -BANNER_BLEED_R,
+          WebkitMaskImage: masked ? mask : undefined,
+          maskImage: masked ? mask : undefined,
+        }}
+      >
+        <ul style={{ position: 'absolute', left: 0, right: 0, top: 0, listStyle: 'none', margin: 0, padding: `0 ${BANNER_BLEED_R}px 0 ${BANNER_BLEED_L}px`, transform: `translateY(${-scrollOffset}px)` }}>
+          {/* the see-through banner — glides to the active stop */}
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute', left: 0, right: 0, top: pos * itemH, height: itemH,
+              background: 'linear-gradient(90deg, rgba(0,80,255,0.16), rgba(0,80,255,0.02))',
+              borderLeft: '2px solid rgb(0,80,255)',
+            }}
+          />
+          {ch.stopIndices.map((si, i) => {
+            const s = STOPS[si]
+            const worlds = s.short === 'Worlds'
+            const on = i === active
+            return (
+              <li key={s.id} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10, height: itemH, fontSize: isMobile ? 14 : 17 }}>
+                <span style={{ color: on ? 'rgb(0,120,255)' : 'rgba(255,255,255,0.3)', fontSize: 9 }}>●</span>
+                <span style={{ color: on ? '#fff' : 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{s.region}</span>
+                {s.short && (
+                  <span
+                    className={worlds ? 'chrome-text' : undefined}
+                    style={worlds ? { fontWeight: 700 } : { color: on ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.4)', fontWeight: 400 }}
+                  >
+                    {s.short}
+                  </span>
+                )}
+                <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.42)', fontSize: isMobile ? 11 : 12.5, fontWeight: 600, letterSpacing: '0.5px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                  {s.dates}
                 </span>
-              )}
-              <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.42)', fontSize: isMobile ? 11 : 12.5, fontWeight: 600, letterSpacing: '0.5px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                {s.dates}
-              </span>
-            </li>
-          )
-        })}
-      </ul>
+              </li>
+            )
+          })}
+        </ul>
+      </div>
     </div>
   )
 }
@@ -1082,8 +1141,12 @@ function Hero({ visible, seamless, isMobile }) {
   const entrance = usePageEntrance(2, { staggerMs: 150, initialDelayMs: seamless ? 1450 : 200 })
   // Same lane as the rest of the content — right column (desktop) / bottom band
   // (mobile), left-aligned — so the title never overlaps the globe.
+  // Mobile: TOP-align the title to the band top (MOBILE_LANE_TOP) so it lands in
+  // the exact spot the leg headers use — no dead gap between the globe and the
+  // title, and the hero→leg hand-off keeps the title still. Desktop stays centred
+  // in the lane against the vertically-centred globe.
   const laneBox = isMobile
-    ? { position: 'fixed', left: 20, right: 20, top: MOBILE_LANE_TOP, bottom: 'calc(24px + env(safe-area-inset-bottom))', justifyContent: 'center' }
+    ? { position: 'fixed', left: 20, right: 20, top: MOBILE_LANE_TOP, bottom: MOBILE_CTRL_BOTTOM, justifyContent: 'flex-start' }
     : { position: 'fixed', left: LANE.left, right: LANE.right, top: 0, bottom: 0, maxWidth: LANE.maxWidth, justifyContent: 'center' }
   return (
     <div
