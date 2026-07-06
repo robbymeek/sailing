@@ -9,9 +9,7 @@ const COMPACT_PAGES = ['Home', 'Biography', 'The Team', 'The Road', 'Contact', '
 import MainView from './pages/MainView'
 import HomeFilmBridge from './components/HomeFilmBridge'
 import Biography from './pages/Biography'
-import Team from './pages/Team'
 import Contact from './pages/Contact'
-import Support from './pages/Support'
 import ErrorBoundary from './components/ErrorBoundary'
 
 // Retry a dynamic import once (after a short beat) before giving up — smooths
@@ -32,6 +30,12 @@ const lazyWithRetry = (factory) =>
 // bundle. Do NOT add it to the offscreen preload div below; that would boot
 // a hidden WebGL context permanently.
 const TheRoad = lazyWithRetry(() => import('./pages/TheRoad'))
+// Team + Support never render on Home and carry their own weight — split them
+// out of the entry bundle too. The Suspense fallbacks below match each page's
+// background so a cold navigation can't flash a different colour. (Do NOT lazy
+// Biography — the always-on offscreen preload would re-fetch its chunk anyway.)
+const Team = lazyWithRetry(() => import('./pages/Team'))
+const Support = lazyWithRetry(() => import('./pages/Support'))
 
 // Old URLs → new homes. Resolved BEFORE the route-transition machine ever
 // sees them (see the displayLocation initializer + redirect effect below), so
@@ -547,9 +551,17 @@ export default function App() {
             )
           } />
           <Route path="/biography" element={<Biography onNavigate={go} />} />
-          <Route path="/team" element={<Team onNavigate={go} />} />
+          <Route path="/team" element={
+            <Suspense fallback={<div style={{ height: '100dvh', background: 'rgb(12,14,18)' }} />}>
+              <Team onNavigate={go} />
+            </Suspense>
+          } />
           <Route path="/contact" element={<Contact onNavigate={go} />} />
-          <Route path="/support" element={<Support onNavigate={go} />} />
+          <Route path="/support" element={
+            <Suspense fallback={<div style={{ height: '100dvh', background: 'rgb(240,240,240)' }} />}>
+              <Support onNavigate={go} />
+            </Suspense>
+          } />
           <Route path="/the-road" element={
             <Suspense fallback={<div style={{ height: '100dvh', background: 'rgb(0,0,0)' }} />}>
               <TheRoad
