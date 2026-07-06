@@ -12,11 +12,26 @@ import Biography from './pages/Biography'
 import Team from './pages/Team'
 import Contact from './pages/Contact'
 import Support from './pages/Support'
+import ErrorBoundary from './components/ErrorBoundary'
+
+// Retry a dynamic import once (after a short beat) before giving up — smooths
+// over a transient network blip; a persistent failure (a stale chunk hash
+// after a redeploy) then bubbles to the top-level ErrorBoundary, which reloads
+// once to pick up the fresh index.html + current hashes.
+const lazyWithRetry = (factory) =>
+  lazy(() =>
+    factory().catch(
+      (err) =>
+        new Promise((resolve, reject) =>
+          setTimeout(() => factory().then(resolve, () => reject(err)), 400),
+        ),
+    ),
+  )
 
 // Lazy: The Road carries three.js (~150KB gz) — keep it out of the main
 // bundle. Do NOT add it to the offscreen preload div below; that would boot
 // a hidden WebGL context permanently.
-const TheRoad = lazy(() => import('./pages/TheRoad'))
+const TheRoad = lazyWithRetry(() => import('./pages/TheRoad'))
 
 // Old URLs → new homes. Resolved BEFORE the route-transition machine ever
 // sees them (see the displayLocation initializer + redirect effect below), so
@@ -546,7 +561,11 @@ export default function App() {
         visibility: 'hidden', pointerEvents: 'none', overflow: 'hidden',
         zIndex: -1,
       }}>
-        {displayLocation.pathname !== '/biography' && <Biography onNavigate={() => {}} preload />}
+        {displayLocation.pathname !== '/biography' && (
+          <ErrorBoundary silent>
+            <Biography onNavigate={() => {}} preload />
+          </ErrorBoundary>
+        )}
       </div>
     </div>
   )
