@@ -13,6 +13,13 @@ import { EXIT_CARDS } from '../components/exitCards'
 
 const BASE = import.meta.env.BASE_URL
 
+// Content lane (desktop): all text lives in the RIGHT column, its inner edge
+// hard-pinned at 50vw so it can never overlap the globe (confined to the left
+// half by globeScene's restOffset). Mobile content lives in a strict bottom
+// band (top:50vh) below the globe's top-half zone.
+const LANE = { left: '50vw', right: '7vw', maxWidth: 520 }
+const MOBILE_LANE_TOP = '50vh'
+
 // Scroll choreography in viewport-height units. A "stop" is a card; a stop can
 // span several waypoints (e.g. Australia hopping Adelaide → Perth → Sydney),
 // each of which is a "frame" the globe rotates to. Stops group into half-year
@@ -739,7 +746,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
       {/* scroll runway — all visible content is fixed-position above it */}
       <div style={{ height: `${TOTAL_VH}vh` }} />
 
-      <Hero visible={!heroDone} seamless={seamless} />
+      <Hero visible={!heroDone} seamless={seamless} isMobile={isMobile} />
 
       {/* half-year chapter interstitial — every element a pure function of
           scroll (chT), so scrubbing back plays the entrance in reverse */}
@@ -758,10 +765,11 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
           data-testid="stop-panel"
           style={{
             position: 'fixed',
-            right: '7vw',
+            left: LANE.left,
+            right: LANE.right,
             top: '50%',
             transform: 'translateY(-50%)',
-            width: NARROW_DESKTOP ? 'min(400px, 38vw)' : 'min(480px, 42vw)',
+            maxWidth: LANE.maxWidth,
             zIndex: 1,
             opacity: reelVisible ? 1 : 0,
             transition: 'opacity 0.45s ease',
@@ -784,7 +792,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
           to the stop panel's column (the left side is nothing but the globe now) */}
       {!isMobile && (
         <div style={{
-          position: 'fixed', right: '7vw', bottom: 40, width: NARROW_DESKTOP ? 'min(400px, 38vw)' : 'min(480px, 42vw)', zIndex: 4,
+          position: 'fixed', left: LANE.left, right: LANE.right, bottom: 40, maxWidth: LANE.maxWidth, zIndex: 4,
           opacity: reelVisible ? 1 : 0, transition: 'opacity 0.45s ease',
           pointerEvents: reelVisible ? 'auto' : 'none',
         }}>
@@ -798,8 +806,13 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
       {isMobile && (
         <div style={{
           position: 'fixed', left: 20, right: 20,
+          // strict bottom half — the globe owns the top (top:50vh keeps a tall
+          // card from ever creeping up under it)
+          top: MOBILE_LANE_TOP,
           bottom: 'calc(24px + env(safe-area-inset-bottom))',
           zIndex: 3,
+          display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+          pointerEvents: 'none',
         }}>
           <div
             data-testid="stop-card"
@@ -1016,18 +1029,21 @@ function ChapterCard({ chapterIdx, t, isMobile }) {
     const e = smoothstep(a, b, t)
     return { opacity: e * (1 - gone), transform: `translateY(${(1 - e) * 22 - gone * 16}px)` }
   }
+  // Lives in the SAME lane as the stop cards (right column desktop / bottom band
+  // mobile), left-aligned — so the leg title/months/stops sit clear of the globe
+  // (which constellates the leg's pins on the left) instead of overlapping it.
+  const laneBox = isMobile
+    ? { position: 'fixed', left: 20, right: 20, top: MOBILE_LANE_TOP, bottom: 'calc(24px + env(safe-area-inset-bottom))', justifyContent: 'center' }
+    : { position: 'fixed', left: LANE.left, right: LANE.right, top: 0, bottom: 0, maxWidth: LANE.maxWidth, justifyContent: 'center' }
   return (
     <div
       style={{
-        position: 'fixed',
-        inset: 0,
+        ...laneBox,
         zIndex: 1,
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
-        padding: '0 24px',
+        alignItems: 'flex-start',
+        textAlign: 'left',
         pointerEvents: 'none',
       }}
     >
@@ -1200,32 +1216,34 @@ function BackButton({ onNavigate, docked, finaleT }) {
   )
 }
 
-function Hero({ visible, seamless }) {
+function Hero({ visible, seamless, isMobile }) {
   // After a seamless morph, hold the hero text back so it fades in LAST — after
-  // the overlay has dissolved to the globe and the pins have faded in.
+  // the overlay has dissolved to the globe and it has settled small + left.
   const entrance = usePageEntrance(2, { staggerMs: 150, initialDelayMs: seamless ? 1450 : 200 })
+  // Same lane as the rest of the content — right column (desktop) / bottom band
+  // (mobile), left-aligned — so the title never overlaps the globe.
+  const laneBox = isMobile
+    ? { position: 'fixed', left: 20, right: 20, top: MOBILE_LANE_TOP, bottom: 'calc(24px + env(safe-area-inset-bottom))', justifyContent: 'center' }
+    : { position: 'fixed', left: LANE.left, right: LANE.right, top: 0, bottom: 0, maxWidth: LANE.maxWidth, justifyContent: 'center' }
   return (
     <div
       style={{
-        position: 'fixed',
-        inset: 0,
+        ...laneBox,
         zIndex: 1,
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
+        alignItems: 'flex-start',
+        textAlign: 'left',
         opacity: visible ? 1 : 0,
         transition: 'opacity 0.6s ease',
         pointerEvents: 'none',
-        padding: '0 20px',
       }}
     >
-      <h1 style={{ ...entrance.style(0), color: '#fff', fontSize: 'clamp(40px, 7vw, 88px)', fontWeight: 800, letterSpacing: '-3px', margin: 0 }}>
+      <h1 style={{ ...entrance.style(0), color: '#fff', fontSize: 'clamp(34px, 4vw, 62px)', fontWeight: 800, letterSpacing: '-2px', lineHeight: 1.02, margin: 0 }}>
         The Road to LA 2028
       </h1>
       {/* scroll cue — micro-caps kicker, the lone title carries the moment */}
-      <div style={{ ...entrance.style(1), marginTop: 34 }}>
+      <div style={{ ...entrance.style(1), marginTop: 28 }}>
         <div style={{
           color: '#fff', fontSize: 12, fontWeight: 600, letterSpacing: '2.2px',
           textTransform: 'uppercase',
