@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import STOPS from '../data/campaignStops'
-import CHAPTERS, { rollCall, formatVenues, TOUR_STATS } from '../data/tourChapters'
+import CHAPTERS, { formatVenues, TOUR_STATS } from '../data/tourChapters'
 import createGlobeScene from '../lib/globeScene'
 import { hasWebGL2 } from '../lib/webglSupport'
 import Footer from '../components/Footer'
@@ -1031,41 +1031,45 @@ function ChapterCard({ chapterIdx, t, isMobile }) {
         pointerEvents: 'none',
       }}
     >
-      <p style={{ ...el(0.1, 0.26), color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600, letterSpacing: '1.6px', textTransform: 'uppercase', margin: '0 0 16px' }}>
-        Leg {chapterIdx + 1} · {ch.label}
-      </p>
+      {/* big leg counter (was the leg's name) + the months it covers */}
       <h2
-        className={ch.chrome ? 'chrome-text' : undefined}
         style={{
-          ...el(0.14, 0.3),
-          color: ch.chrome ? undefined : '#fff',
+          ...el(0.12, 0.28),
+          color: '#fff',
           fontSize: 'clamp(34px, 5.5vw, 64px)',
           fontWeight: 800,
           letterSpacing: '-2px',
           lineHeight: 1.02,
-          margin: '0 0 12px',
+          margin: '0 0 10px',
         }}
       >
-        {ch.title}
+        Leg {chapterIdx + 1} / {CHAPTERS.length}
       </h2>
-      <p style={{ ...el(0.18, 0.34), color: 'rgba(255,255,255,0.75)', fontSize: 'clamp(15px, 1.8vw, 19px)', fontWeight: 500, letterSpacing: '-0.2px', margin: '0 0 22px', maxWidth: 560 }}>
-        {ch.subtitle}
+      <p style={{ ...el(0.16, 0.32), color: 'rgba(255,255,255,0.55)', fontSize: 'clamp(13px, 1.5vw, 16px)', fontWeight: 600, letterSpacing: '2.4px', textTransform: 'uppercase', margin: '0 0 26px' }}>
+        {ch.label}
       </p>
-      {/* roll-call: name-checked regattas as name + dim place, camps counted —
-          typography does the joining (no dashes anywhere) */}
-      {rollCall(ch).length > 0 && (
-        <p style={{ ...el(0.22, 0.38), fontSize: isMobile ? 13 : 13.5, lineHeight: 1.7, letterSpacing: '0.2px', maxWidth: 640, margin: 0 }}>
-          {rollCall(ch).map((seg, i) => (
-            <span key={i}>
-              {i > 0 && <span style={{ color: 'rgba(255,255,255,0.35)' }}>{' · '}</span>}
-              <span style={{ color: seg.em ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: seg.em ? 600 : 400 }}>{seg.name}</span>
-              {seg.place && (
-                <span style={{ color: 'rgba(255,255,255,0.5)', fontWeight: 400 }}> {seg.place}</span>
+      {/* the leg's stops, top to bottom — a vertical itinerary; the Worlds
+          (the pinnacle events) render in chrome */}
+      <ul style={{ ...el(0.2, 0.36), listStyle: 'none', margin: 0, padding: 0, textAlign: 'left', fontSize: isMobile ? 15 : 17, lineHeight: 1.9 }}>
+        {ch.stopIndices.map((si) => {
+          const s = STOPS[si]
+          const worlds = s.short === 'Worlds'
+          return (
+            <li key={s.id} style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+              <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9 }}>●</span>
+              <span style={{ color: '#fff', fontWeight: 600 }}>{s.region}</span>
+              {s.short && (
+                <span
+                  className={worlds ? 'chrome-text' : undefined}
+                  style={worlds ? { fontWeight: 700 } : { color: 'rgba(255,255,255,0.45)', fontWeight: 400 }}
+                >
+                  {s.short}
+                </span>
               )}
-            </span>
-          ))}
-        </p>
-      )}
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }
@@ -1435,19 +1439,13 @@ function StaticTimeline({ onNavigate }) {
       <div style={{ ...entrance.style(2), maxWidth: 720, margin: '0 auto', padding: '0 24px 50px' }}>
         {CHAPTERS.map((ch, ci) => (
           <div key={ch.id}>
-            {/* leg header — the same half-year story the globe tour tells */}
+            {/* leg header — the counter + the months it covers */}
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', padding: '26px 0 14px' }}>
-              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600, letterSpacing: '1.6px', textTransform: 'uppercase', margin: '0 0 8px' }}>
-                Leg {ci + 1} · {ch.label}
-              </p>
-              <h2
-                className={ch.chrome ? 'chrome-text' : undefined}
-                style={{ color: ch.chrome ? undefined : '#fff', fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px', margin: '0 0 6px' }}
-              >
-                {ch.title}
+              <h2 style={{ color: '#fff', fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px', margin: '0 0 4px' }}>
+                Leg {ci + 1} / {CHAPTERS.length}
               </h2>
-              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 500, margin: 0 }}>
-                {ch.subtitle}
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', margin: 0 }}>
+                {ch.label}
               </p>
             </div>
             {ch.stopIndices.map((i) => {

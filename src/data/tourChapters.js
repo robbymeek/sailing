@@ -1,62 +1,22 @@
 // Half-year legs of the 2026 → 2028 campaign tour. The Road page scrolls
-// through these five legs — each opens with a full-screen interstitial
-// (kicker "LEG N · JUL–DEC 2026" / title / subtitle / roll-call) while the
-// globe pulls back and constellates that leg's pins. Copy lives here; the
-// stop data (and each stop's `chapter` index) lives in ./campaignStops.js.
+// through these five legs — each opens with a full-screen interstitial that
+// shows the leg counter ("Leg 1 / 5"), the months it covers, and a vertical
+// itinerary of that leg's stops (rendered from stopIndices in TheRoad.jsx —
+// the Worlds render in chrome). Only the months (`label`) live here now; the
+// stops (and each stop's `chapter` index) live in ./campaignStops.js.
 //
-// Copy voice: race program, not brochure — titles are a parallel "The ___"
-// system of campaign nouns; subtitles are short facts, never mood. No em
-// dashes / spaced en dashes (asserted in dev below).
+// No em dashes / spaced en dashes (asserted in dev below).
 //
 // No three.js in this file — it is imported by the StaticTimeline fallback too.
 
 import STOPS from './campaignStops'
 
 const CHAPTERS = [
-  {
-    id: 'h2-2026',
-    label: 'JUL–DEC 2026',
-    title: 'The Start',
-    subtitle: 'First race on the 2028 Olympic course.',
-  },
-  {
-    id: 'h1-2027',
-    label: 'JAN–JUN 2027',
-    title: 'The Circuit',
-    subtitle: 'Worlds in Brazil. Then the European majors.',
-  },
-  {
-    id: 'h2-2027',
-    label: 'JUL–DEC 2027',
-    title: 'The Venue',
-    subtitle: 'Three months at Long Beach. Then the southern summer.',
-    rollCallOverride: [
-      { name: 'Long Beach', em: true },
-      { name: 'Fremantle' },
-      { name: 'Sydney' },
-      { name: 'Auckland' },
-    ],
-  },
-  {
-    id: 'h1-2028',
-    label: 'JAN–JUN 2028',
-    title: 'The Last Worlds',
-    subtitle: 'Auckland in January. Then everything points to July.',
-    rollCallOverride: [
-      { name: 'Worlds', place: 'Auckland', em: true },
-      { name: 'Palma' },
-      { name: 'Hyères' },
-      { name: 'Miami' },
-    ],
-  },
-  {
-    id: 'h2-2028',
-    label: 'JUL 2028',
-    title: 'The Games',
-    chrome: true, // the only chrome-text leg title — chrome stays LA-2028-flavored
-    subtitle: 'San Pedro, California.',
-    rollCallOverride: [], // kicker + chrome title + three words. That's the point.
-  },
+  { id: 'h2-2026', label: 'JUL–DEC 2026' },
+  { id: 'h1-2027', label: 'JAN–JUN 2027' },
+  { id: 'h2-2027', label: 'JUL–DEC 2027' },
+  { id: 'h1-2028', label: 'JAN–JUN 2028' },
+  { id: 'h2-2028', label: 'JUL 2028' },
 ]
 
 // Derived: which stop indices belong to each chapter (STOPS is the source of
@@ -64,26 +24,6 @@ const CHAPTERS = [
 CHAPTERS.forEach((ch, ci) => {
   ch.stopIndices = STOPS.reduce((acc, s, i) => (s.chapter === ci ? [...acc, i] : acc), [])
 })
-
-// stopIndex → chapterIdx
-export const CHAPTER_OF_STOP = STOPS.map((s) => s.chapter)
-
-// Roll-call line for a leg's interstitial: { name, place?, em } entries —
-// name-checked regattas as name + dim place ("Worlds Dublin"), then one bare
-// "N camps" tail. Typography does the joining (no dashes). A chapter can
-// override the whole line when the derived one reads clumsily.
-export function rollCall(ch) {
-  if (ch.rollCallOverride) return ch.rollCallOverride
-  const items = []
-  let camps = 0
-  for (const i of ch.stopIndices) {
-    const s = STOPS[i]
-    if (s.short) items.push({ name: s.short, place: s.region, em: s.tier === 'key' })
-    else camps += 1
-  }
-  if (camps > 0) items.push({ name: `${camps} camp${camps === 1 ? '' : 's'}` })
-  return items
-}
 
 // Venue line for a stop's card: consecutive same-NOC cities group with the
 // code once at the end, middot joins — "Adelaide · Fremantle · Sydney, AUS",
