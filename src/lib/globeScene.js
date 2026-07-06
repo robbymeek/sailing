@@ -112,7 +112,7 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
   const anchor = new THREE.Group()
   const ENTRY_OFFSET = isMobile ? new THREE.Vector3(0, 0.4, 0) : new THREE.Vector3(-0.55, 0, 0)
   const restOffset = isMobile ? new THREE.Vector3(0, 1.05, 0) : new THREE.Vector3(-0.95, 0, 0)
-  const REST_SCALE = isMobile ? 0.6 : 0.56
+  let REST_SCALE = isMobile ? 0.6 : 0.56
   // Where a zoomed-in key-stop pin should sit on screen (NDC, −1..1). Centre-left
   // on desktop / upper-mid on mobile — pulled in from the far edge so the spot is
   // readable, but not so far that the zoomed globe's limb crosses into the content
@@ -122,6 +122,32 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
   const TAN_HALF_V = Math.tan((FOV / 2) * (Math.PI / 180))
   anchor.position.copy(ENTRY_OFFSET)
   scene.add(anchor)
+
+  // Adapt the confined DESKTOP rest pose to the viewport so the globe's glowing
+  // limb is never clipped on a narrow window and never crosses into the content
+  // lane. Two bounds on the globe's world-x centre (radius-1 earth, radius-1.18
+  // glow; the lane starts at world-x 0 = screen centre): keep the left limb in
+  // frame, and keep the right edge left of the lane. Pick the most-left x in that
+  // range (falling back toward the ideal -0.95); if the window is too narrow to
+  // fit at full size, shrink the globe until a feasible x exists. It only tightens
+  // below aspect ~1.6 — wider screens keep the byte-identical -0.95 / 0.56 pose,
+  // and the seamless-entry ENTRY_OFFSET is untouched. Mobile keeps its high pose.
+  const CONFINE = { idealX: -0.95, baseScale: 0.56, rEarth: 1, rGlow: 1.18, ndcLeft: -0.9, laneGap: 0.08, minScale: 0.34 }
+  function applyConfined() {
+    if (isMobile) return
+    const HX = baseZ * TAN_HALF_V * camera.aspect // world half-width at the globe plane
+    let scale = CONFINE.baseScale
+    let lower = CONFINE.ndcLeft * HX + CONFINE.rGlow * scale // x >= lower → left limb visible
+    let upper = -CONFINE.rEarth * scale - CONFINE.laneGap // x <= upper → right edge clears the lane
+    if (lower > upper) {
+      scale = Math.max(CONFINE.minScale, (-CONFINE.laneGap - CONFINE.ndcLeft * HX) / (CONFINE.rGlow + CONFINE.rEarth))
+      lower = CONFINE.ndcLeft * HX + CONFINE.rGlow * scale
+      upper = -CONFINE.rEarth * scale - CONFINE.laneGap
+    }
+    restOffset.x = Math.min(upper, Math.max(lower, CONFINE.idealX))
+    REST_SCALE = scale
+  }
+  applyConfined()
 
   const globe = new THREE.Group()
   anchor.add(globe)
@@ -617,6 +643,7 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
     const h = Math.max(1, canvas.clientHeight)
     camera.aspect = w / h
     baseZ = fitCameraZ(camera.aspect)
+    applyConfined() // re-fit the confined pose to the new aspect (globe never clipped)
     camera.updateProjectionMatrix()
     renderer.setSize(w, h, false)
     arcMaterial.resolution.set(w, h)
