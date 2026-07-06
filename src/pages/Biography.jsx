@@ -61,7 +61,10 @@ function RoadCard({ isMid, isMobile, onNavigate, img }) {
   return (
     <div
       className="bio-regatta-card"
+      role="button"
+      tabIndex={0}
       onClick={() => onNavigate('The Road', { from: 'Biography' })}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigate('The Road', { from: 'Biography' }) } }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
@@ -335,7 +338,7 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
               return <RoadCard key={i} isMid={isMid} isMobile={isMobile} onNavigate={onNavigate} img={ctaBg} />
             }
             return (
-            <div key={i} className="bio-regatta-card" onClick={() => eventsRef.current?.scrollIntoView({ behavior: 'smooth' })} style={{
+            <div key={i} className="bio-regatta-card" role="button" tabIndex={0} onClick={() => eventsRef.current?.scrollIntoView({ behavior: 'smooth' })} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); eventsRef.current?.scrollIntoView({ behavior: 'smooth' }) } }} style={{
               cursor: 'pointer',
               background: (r.current || r.blue) ? 'rgb(18,0,120)' : 'rgb(50,55,65)',
               padding: '0',

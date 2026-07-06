@@ -883,7 +883,7 @@ function EraChapter({ era, side, isMobile, isNow }) {
       {era.logo && (
         <img
           src={`${BASE}${era.logo}`}
-          alt=""
+          alt={era.backer || ''}
           style={{
             maxHeight: isMobile ? 56 : 84,
             maxWidth: 'min(60vw, 260px)',
@@ -1341,7 +1341,7 @@ export default function Team({ onNavigate }) {
           <div style={{ flex: '0 0 auto', width: 'clamp(200px, 25vw, 280px)' }}>
             <img
               src={`${BASE}IMG_5958.JPG`}
-              alt=""
+              alt="Robby Meek"
               style={{ width: '100%', objectFit: 'cover', display: 'block' }}
             />
             <div style={{ height: 2, background: TEAM_ACCENT }} />
