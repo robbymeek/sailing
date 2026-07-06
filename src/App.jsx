@@ -11,6 +11,7 @@ import HomeFilmBridge from './components/HomeFilmBridge'
 import Biography from './pages/Biography'
 import Contact from './pages/Contact'
 import ErrorBoundary from './components/ErrorBoundary'
+import { applyRouteMeta } from './lib/seo'
 
 // Retry a dynamic import once (after a short beat) before giving up — smooths
 // over a transient network blip; a persistent failure (a stale chunk hash
@@ -172,6 +173,12 @@ export default function App() {
     navigate(redirectTo, { replace: true, state: location.state })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [redirectTo])
+
+  // Per-route <title>/description/canonical (the SPA ships one index.html).
+  // Keyed on the displayed route so the tab title tracks the visible page.
+  useEffect(() => {
+    applyRouteMeta(displayLocation.pathname)
+  }, [displayLocation.pathname])
 
   // fromOrb: the home orb→globe morph is mid-handoff. The body-level orb overlay
   // is showing the finished globe; swap routes SYNCHRONOUSLY with NO fade-to-black
