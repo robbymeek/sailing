@@ -51,6 +51,8 @@ function ExitCard({ label, page, img, light, onNavigate, index, count }) {
           src={img}
           alt=""
           aria-hidden="true"
+          loading="lazy"
+          decoding="async"
           style={{
             position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
             transform: hover ? 'scale(1.08)' : 'scale(1)',
@@ -105,7 +107,7 @@ function ExitCardSimple({ label, page, img, light, onNavigate, index }) {
       }}
     >
       {img && (
-        <img src={img} alt="" aria-hidden="true" style={{
+        <img src={img} alt="" aria-hidden="true" loading="lazy" decoding="async" style={{
           position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.58)',
         }} />
       )}

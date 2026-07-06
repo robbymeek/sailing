@@ -210,6 +210,8 @@ function SponsorCard({ sponsor, hovered, locked, onHover, onLeave, onClick }) {
       <img
         src={`${BASE}${sponsor.photo}`}
         alt={sponsor.name}
+        loading="lazy"
+        decoding="async"
         style={{
           width: '100%', height: '100%',
           objectFit: 'cover',
@@ -263,6 +265,8 @@ function SponsorCard({ sponsor, hovered, locked, onHover, onLeave, onClick }) {
           <img
             src={`${BASE}${sponsor.logo}`}
             alt=""
+            loading="lazy"
+            decoding="async"
             style={{
               maxWidth: 180, maxHeight: 72, objectFit: 'contain',
               marginBottom: 22,
@@ -884,6 +888,8 @@ function EraChapter({ era, side, isMobile, isNow }) {
         <img
           src={`${BASE}${era.logo}`}
           alt={era.backer || ''}
+          loading="lazy"
+          decoding="async"
           style={{
             maxHeight: isMobile ? 56 : 84,
             maxWidth: 'min(60vw, 260px)',
@@ -1179,6 +1185,8 @@ export default function Team({ onNavigate }) {
           <img
             src={`${BASE}IMG_5957 2.JPG`}
             alt=""
+            loading="lazy"
+            decoding="async"
             style={{
               width: '100%', height: '100%',
               objectFit: 'cover',
@@ -1342,6 +1350,8 @@ export default function Team({ onNavigate }) {
             <img
               src={`${BASE}IMG_5958.JPG`}
               alt="Robby Meek"
+              loading="lazy"
+              decoding="async"
               style={{ width: '100%', objectFit: 'cover', display: 'block' }}
             />
             <div style={{ height: 2, background: TEAM_ACCENT }} />
