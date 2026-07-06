@@ -280,8 +280,6 @@ function nmToLA(prog) {
   return Math.max(0, TOTAL_NM - (STOP_NM[lo] + (STOP_NM[hi] - STOP_NM[lo]) * (p - lo)))
 }
 const fmtNM = (nm) => Math.round(nm).toLocaleString('en-US')
-// computed once at module load — no ticking; the finale countdown owns live time
-const DAYS_TO_GAMES = Math.max(0, Math.ceil((new Date('2028-07-14T00:00:00') - Date.now()) / 864e5))
 
 // dotT past which the globe is "arriving" at the next waypoint: the card for
 // the destination pops up here — just before the dot reaches the pin. Key
@@ -801,8 +799,10 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
           opacity: legVisible ? legEnter : 0, transition: 'opacity 0.35s ease',
           pointerEvents: reelVisible ? 'auto' : 'none',
         }}>
-          <Readout prog={card.prog} />
-          <TourControls tour={tourRef.current} playing={playing} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+            <TourControls tour={tourRef.current} playing={playing} />
+            <NmToLa prog={card.prog} />
+          </div>
         </div>
       )}
 
@@ -825,13 +825,10 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
           <div style={{
             opacity: legVisible ? legEnter : 0, transition: 'opacity 0.35s ease',
             pointerEvents: reelVisible ? 'auto' : 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16,
           }}>
-            <div style={{ maxWidth: 220, margin: '0 auto 12px' }}>
-              <Readout prog={card.prog} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <TourControls tour={tourRef.current} playing={playing} />
-            </div>
+            <TourControls tour={tourRef.current} playing={playing} />
+            <NmToLa prog={card.prog} />
           </div>
         </div>
       )}
@@ -1035,33 +1032,19 @@ function TourBackdrops({ mode, stopIndex, opacity, prog, isMobile }) {
 
 // ---------- passage readout ----------
 
-// readout row: label left, numeral right
-function ReadoutRow({ label, value, cyan }) {
+// Distance made good — the one stat that stays, sat beside the Play button:
+// "NM to LA" + the live great-circle miles (flips cyan on the final leg).
+function NmToLa({ prog }) {
+  const nearLA = prog > STOPS.length - 2
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 6 }}>
+    <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8, whiteSpace: 'nowrap' }}>
       <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9, fontWeight: 600, letterSpacing: '1.6px', textTransform: 'uppercase' }}>
-        {label}
+        NM to LA
       </span>
-      <span style={{ color: cyan ? 'rgb(0,180,255)' : '#fff', fontSize: 11, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-        {value}
+      <span style={{ color: nearLA ? 'rgb(0,180,255)' : '#fff', fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+        {fmtNM(nmToLA(prog))}
       </span>
-    </div>
-  )
-}
-
-// Passage readout — where you are, how far to LA, days to the Games. Sits above
-// the Start/Play/Finish controls (the sailboat course line it used to ride is
-// gone; the globe owns the left side now). Pure function of scroll progress.
-function Readout({ prog }) {
-  const N = STOPS.length
-  const stop = clamp(Math.round(prog), 0, N - 1)
-  const nearLA = prog > N - 2
-  return (
-    <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 8, marginBottom: 14 }}>
-      <ReadoutRow label="Stop" value={`${String(stop + 1).padStart(2, '0')} / ${N}`} />
-      <ReadoutRow label="NM to LA" value={fmtNM(nmToLA(prog))} cyan={nearLA} />
-      <ReadoutRow label="Days" value={String(DAYS_TO_GAMES)} />
-    </div>
+    </span>
   )
 }
 
