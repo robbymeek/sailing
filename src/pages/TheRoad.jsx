@@ -312,6 +312,7 @@ const P = {
   arcT: 0, // eased progress along that hop
   frontier: -1, // continuous visited frontier: pin i is VISITED ⇔ i ≤ frontier
   zoom: 1, // camera distance multiplier (composes with the finale dolly)
+  focus: 0, // 0 → globe rests at its screen offset, 1 → key-stop dolly is full in
   center: 0, // 0 → globe at its screen offset, 1 → recentred
   recapT: 0,
   spinT: 0, // extra full-turn yaw during the recap
@@ -349,6 +350,11 @@ function computeScroll() {
   P.finaleT = seg.type === 'finale' ? segT : 0
   P.isFinaleFrame = seg.type === 'finale'
   P.zoom = seg.zoomFrom + (seg.zoomTo - seg.zoomFrom) * zoomEase(seg.zEase, segT)
+  // How far the key-stop dolly is engaged (0 rest → 1 full KEY_ZOOM). The globe
+  // scene uses this to slide the zoomed-in pin toward centre-of-screen instead of
+  // letting the dolly shove the left-offset globe off the edge. Only key arrivals
+  // dip zoom below 1, so this is 0 everywhere else (recap pull-back is >1 → clamped).
+  P.focus = clamp((1 - P.zoom) / (1 - KEY_ZOOM), 0, 1)
   P.center = seg.centerFrom + (seg.centerTo - seg.centerFrom) * smoothstep(0, 0.3, segT)
   P.recapT = recap ? segT : 0
   P.spinT = recap ? easeInOut(clamp((segT - 0.15) / 0.7, 0, 1)) : 0
@@ -1256,36 +1262,50 @@ function Hero({ visible, seamless, isMobile }) {
   )
 }
 
-// Positionless control row ("to the start • play • to the end"). Placement +
-// visibility are handled by the wrapper — under the rail on desktop, under the
-// stop card on mobile.
+// A single Play / Pause pill — the tour's one control (auto-plays through the
+// stops; scrolling still works manually). Placement + visibility are handled by
+// the wrapper. Blue-accented icon chip + label, glows on hover.
 function TourControls({ tour, playing }) {
-  const [hover, setHover] = useState(null)
+  const [hover, setHover] = useState(false)
   if (!tour) return null
-  const btn = (id, label, onClick) => (
+  return (
     <button
-      onClick={onClick}
-      onMouseEnter={() => setHover(id)}
-      onMouseLeave={() => setHover(null)}
+      onClick={tour.toggle}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      aria-label={playing ? 'Pause the tour' : 'Play the tour'}
       style={{
-        background: hover === id ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.05)',
-        border: '1px solid rgba(255,255,255,0.4)',
-        borderRadius: 3,
-        color: '#fff', cursor: 'pointer', padding: '9px 16px',
-        fontSize: 15, fontWeight: 600, letterSpacing: '0.3px', fontFamily: 'inherit',
-        transition: 'background 0.2s ease, border-color 0.2s ease',
+        display: 'inline-flex', alignItems: 'center', gap: 11,
+        background: hover ? 'rgba(0,80,255,0.20)' : 'rgba(255,255,255,0.05)',
+        border: `1px solid ${hover ? 'rgba(60,120,255,0.75)' : 'rgba(255,255,255,0.32)'}`,
+        borderRadius: 100,
+        color: '#fff', cursor: 'pointer', padding: '10px 22px 10px 12px',
+        fontSize: 13, fontWeight: 600, letterSpacing: '1.4px', fontFamily: 'inherit',
+        textTransform: 'uppercase',
+        boxShadow: hover ? '0 0 26px rgba(0,80,255,0.35)' : 'none',
+        transition: 'background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease',
         whiteSpace: 'nowrap',
       }}
     >
-      {label}
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+        background: hover ? 'rgb(0,80,255)' : 'rgba(255,255,255,0.14)',
+        transition: 'background 0.25s ease',
+      }}>
+        {playing ? (
+          <svg width="10" height="11" viewBox="0 0 10 11" aria-hidden="true">
+            <rect x="1" y="0" width="3" height="11" fill="#fff" />
+            <rect x="6" y="0" width="3" height="11" fill="#fff" />
+          </svg>
+        ) : (
+          <svg width="11" height="12" viewBox="0 0 11 12" aria-hidden="true" style={{ marginLeft: 2 }}>
+            <path d="M0 0 L11 6 L0 12 Z" fill="#fff" />
+          </svg>
+        )}
+      </span>
+      {playing ? 'Pause' : 'Play Tour'}
     </button>
-  )
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      {btn('start', 'Start', tour.toStart)}
-      {btn('play', playing ? 'Pause' : 'Play', tour.toggle)}
-      {btn('end', 'Finish', tour.toEnd)}
-    </div>
   )
 }
 
