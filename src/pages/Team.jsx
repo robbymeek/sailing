@@ -1383,7 +1383,7 @@ export default function Team({ onNavigate }) {
       {/* Where to next — Support stays LAST in the stack (house rule). */}
       <div style={{ padding: isMobile ? '20px 0 52px' : '32px 0 84px' }}>
         <ExitNav
-          links={[EXIT_CARDS.home, EXIT_CARDS.biography, EXIT_CARDS.support]}
+          links={[EXIT_CARDS.home, EXIT_CARDS.road, EXIT_CARDS.biography, EXIT_CARDS.support]}
           onNavigate={onNavigate}
           isMobile={isMobile}
         />
