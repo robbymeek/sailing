@@ -799,13 +799,21 @@ function StatementChapter({ beat, isMobile, onMeetTeam }) {
       overflowY: isMobile ? 'auto' : 'visible',
     }}>
       <div>
-        <h1 style={{ ...lineStyle, color: beat === 1 ? 'rgba(255,255,255,0.4)' : '#fff' }}>
-          The singlehanded class.
-        </h1>
-        {beat === 1 && (
-          <h1 style={{ ...lineStyle, color: '#fff', marginTop: 8 }}>
-            Never sailed alone.
+        {/* One <h1> per page: the opening (beat 0) statement is it; the beat-1
+            repeat + second line are the same argument restated → <h2>. */}
+        {beat === 1 ? (
+          <h2 style={{ ...lineStyle, color: 'rgba(255,255,255,0.4)' }}>
+            The singlehanded class.
+          </h2>
+        ) : (
+          <h1 style={{ ...lineStyle, color: '#fff' }}>
+            The singlehanded class.
           </h1>
+        )}
+        {beat === 1 && (
+          <h2 style={{ ...lineStyle, color: '#fff', marginTop: 8 }}>
+            Never sailed alone.
+          </h2>
         )}
         {beat === 0 && (
           <div style={{
@@ -1213,7 +1221,7 @@ export default function Team({ onNavigate }) {
           margin: '0 auto',
           textAlign: 'center',
         }}>
-          <h1
+          <h2
             className="chrome-text"
             style={{
               fontFamily: '"Didot", "Bodoni 72", "Bodoni MT", "Playfair Display", Georgia, serif',
@@ -1226,7 +1234,7 @@ export default function Team({ onNavigate }) {
             }}
           >
             The Team
-          </h1>
+          </h2>
 
           <p style={{
             color: 'rgba(255,255,255,0.88)',
