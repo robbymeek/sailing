@@ -208,12 +208,12 @@ export default function App() {
     // the page's exit fade so it doesn't stay at full opacity and "pop" while
     // everything else fades. The orb→globe morph (fromOrb, above) is exempt —
     // it holds the overlay across the swap.
-    if (displayLocation.pathname === '/' && !orbOverlay.holding) orbOverlay.fadeOut(300)
+    if (displayLocation.pathname === '/' && !orbOverlay.holding) orbOverlay.fadeOut(110)
     const t = setTimeout(() => {
       setDisplayLocation(location)
       setTransitionStage('entered')
       window.scrollTo(0, 0)
-    }, 350)
+    }, 130)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location])
@@ -554,7 +554,7 @@ export default function App() {
       <div
         style={{
           opacity: isExiting ? 0 : 1,
-          transition: 'opacity 0.3s ease',
+          transition: 'opacity 0.11s ease',
         }}
         onTransitionEnd={handleExitComplete}
       >
