@@ -75,15 +75,18 @@ const TUNE = {
   nearStrength: 0.03, // refraction strength at closest approach: flattens the lens so
   //                     the interior (and the in-orb HUD) resolve clearly on approach
   hudAlpha: 1.0, // peak HUD strength at full hover — 1.0 = the most contrasted (pure b/w)
-  hudLabelFloor: 0.3, // prox where LA 2028 OLYMPICS begins to appear (before the boat lifts)
-  boatRiseAt: 0.62, // prox where the boat begins to rise AND the timer begins to appear
+  hudLabelFloor: 0.3, // prox where LA 2028 OLYMPICS begins to emerge (faint, small, below the boat)
+  hudGrowEnd: 0.7, // prox by which the headline has grown to full size + strength
+  boatRiseAt: 0.45, // prox where the boat + headline begin to LIFT together (shared curve, one motion)
+  timerFloor: 0.62, // prox where the timer begins to appear (once the lift has opened room)
   hudSize: 0.062, // LA 2028 OLYMPICS type size at FULL development, as a fraction of orb diameter
   hudStartScale: 0.62, // headline size when it first appears, relative to full (grows → 1)
   hudTimerRatio: 0.74, // timer size relative to the headline (< 1 → headline reads larger)
   hudDrop: 0.34, // headline baseline below orb centre at full development (fraction of orb radius)
-  hudDropStart: 0.48, // headline baseline when it first appears (lower; rises to hudDrop)
+  hudDropStart: 0.48, // headline baseline when it first appears (lower; rises to hudDrop WITH the boat)
   hudLineGap: 0.24, // gap from the headline down to the timer (fraction of orb radius)
   hudTrack: 0.12, // headline letter-spacing as a fraction of its font size
+  hudWarp: 3.0, // extra glass warp on the HUD while it emerges (× the page warp), eases to 1 settled
   boatGrow: 0.7, // boat grows this fraction of the orb's growth (< 1 → boat grows less than orb)
   boatMaxScale: 1.3, // hard cap on the boat's size (× its base), however large the orb gets
   boatRise: 0.38, // boat rises this fraction of orb radius as it reaches full hover
@@ -131,6 +134,7 @@ const ORB_FRAG = /* glsl */ `
   uniform vec3 uLightDir, uFresnelColor;
   uniform sampler2D uTextMask; // in-orb HUD glyph coverage (in .a), warped with the page
   uniform float uHudStrength;  // 0 (rest/far) → 1 (fully hovered): eases the HUD in
+  uniform float uHudWarp;      // extra refraction on the HUD (× the page's): high while emerging → 1 settled
   varying vec3 vNV;
 
   void main() {
@@ -181,7 +185,7 @@ const ORB_FRAG = /* glsl */ `
     // the MOST-CONTRASTING monochrome of what's behind it: white over dark, black over
     // light (near-binary threshold on the final luminance). uHudStrength eases the
     // whole effect in with proximity — faint far, full contrast when fully hovered.
-    float hudMask = texture2D(uTextMask, screenUV + oG).a;
+    float hudMask = texture2D(uTextMask, screenUV + oG * uHudWarp).a;
     if (hudMask > 0.001 && uHudStrength > 0.001) {
       float lum = dot(clamp(col, 0.0, 1.0), vec3(0.299, 0.587, 0.114));
       vec3 ink = mix(vec3(1.0), vec3(0.0), smoothstep(0.42, 0.58, lum));
@@ -375,31 +379,37 @@ export default function createGlassOrbScene(
   let hudDrawn = false // whether textCv currently holds glyphs (so we clear it once on exit)
   // Draw the HUD glyphs (COVERAGE only, flat white) into textCv at the orb's current
   // on-screen size/position. Colour, contrast and fade are all decided in the shader.
-  // labelReveal / timerReveal (0→1) are baked into the mask's alpha, so the two lines
-  // can fade in on different schedules while the shader keeps ONE on/off strength.
-  function drawHudMask(w, h, labelReveal, timerReveal) {
+  // labelReveal (strength) + labelDev (0→1 size/position development) + timerReveal are
+  // all baked into the mask here, so the headline can grow, strengthen and rise into
+  // place while the shader keeps ONE on/off strength.
+  function drawHudMask(w, h, labelReveal, labelGrow, labelLift, timerReveal) {
     const scale = w / Math.max(1, canvas.clientWidth)
     const cx = orbFracX * w
     const cy = orbFracY * h
     const orbDia = orbDiameterPx * hoverScale * scale
     const orbRad = orbDia / 2
-    const labelSize = TUNE.hudSize * orbDia
-    const timerSize = labelSize * TUNE.hudTimerRatio
-    const labelY = cy + TUNE.hudDrop * orbRad // headline sits below centre, under the risen boat
-    const timerY = labelY + TUNE.hudLineGap * orbRad // timer directly under the headline
+    // Headline develops: grows from hudStartScale → full (labelGrow) and, on a curve it
+    // SHARES with the boat's rise (labelLift), moves from hudDropStart → hudDrop — so it
+    // emerges small just below the boat and lifts into place as one motion with the boat.
+    const labelSize = TUNE.hudSize * orbDia * (TUNE.hudStartScale + (1 - TUNE.hudStartScale) * labelGrow)
+    const dropFrac = TUNE.hudDropStart + (TUNE.hudDrop - TUNE.hudDropStart) * labelLift
+    const labelY = cy + dropFrac * orbRad
+    const timerSize = TUNE.hudSize * orbDia * TUNE.hudTimerRatio
+    const timerY = labelY + TUNE.hudLineGap * orbRad // timer directly under the settled headline
     textCtx.clearRect(0, 0, w, h)
     textCtx.save()
     textCtx.textAlign = 'center'
     textCtx.textBaseline = 'middle'
     textCtx.fillStyle = '#ffffff' // coverage only — the shader picks black/white per pixel
-    // LA 2028 OLYMPICS — the headline, larger; appears FIRST, below the still-centred boat
+    // LA 2028 OLYMPICS — emerges small + faint below the boat, then grows, strengthens
+    // and rises into place (labelReveal = strength, labelDev = size + position).
     if (labelReveal > 0.01) {
       textCtx.globalAlpha = labelReveal
       textCtx.font = `500 ${labelSize}px ${HUD_FONT}`
       if ('letterSpacing' in textCtx) textCtx.letterSpacing = `${TUNE.hudTrack * labelSize}px`
       textCtx.fillText('LA 2028 OLYMPICS', cx, labelY)
     }
-    // the live countdown — a touch smaller; appears as the boat LIFTS, below the headline
+    // the live countdown — becomes visible as the boat LIFTS and opens room below
     if (timerReveal > 0.01 && hudStr) {
       textCtx.globalAlpha = timerReveal
       if ('letterSpacing' in textCtx) textCtx.letterSpacing = '0px'
@@ -420,14 +430,18 @@ export default function createGlassOrbScene(
     }
     if (morphing) { clearIfDrawn(); return }
     const prox = Math.min(1, Math.max(0, (hoverScale - 1) / Math.max(1e-3, TUNE.peakScale - 1)))
-    // Staged reveal: the headline fades in first (hudLabelFloor → boatRiseAt, before the
-    // boat lifts); the timer fades in as the boat rises (boatRiseAt → 1). Both capped by
-    // hudAlpha and baked into the mask's alpha, so the shader keeps one on/off strength.
-    const labelReveal = smooth(TUNE.hudLabelFloor, TUNE.boatRiseAt, prox) * TUNE.hudAlpha
-    const timerReveal = smooth(TUNE.boatRiseAt, 1, prox) * TUNE.hudAlpha
+    // ONE motion: the headline grows + strengthens (labelGrow), then it and the boat
+    // LIFT together on a SHARED curve (labelLift === the boat's rise), and the timer
+    // fades in once the lift opens room. The HUD also warps harder while emerging and
+    // clarifies as it settles (uHudWarp), so it reads as forming inside the glass.
+    const labelGrow = smooth(TUNE.hudLabelFloor, TUNE.hudGrowEnd, prox)
+    const labelReveal = labelGrow * TUNE.hudAlpha
+    const labelLift = smooth(TUNE.boatRiseAt, 1, prox)
+    const timerReveal = smooth(TUNE.timerFloor, 1, prox) * TUNE.hudAlpha
+    orbMat.uniforms.uHudWarp.value = 1 + (TUNE.hudWarp - 1) * (1 - labelGrow)
     if (labelReveal < 0.01 && timerReveal < 0.01) { clearIfDrawn(); return }
     orbMat.uniforms.uHudStrength.value = 1
-    drawHudMask(w, h, labelReveal, timerReveal)
+    drawHudMask(w, h, labelReveal, labelGrow, labelLift, timerReveal)
     textTex.needsUpdate = true
     hudDrawn = true
   }
@@ -453,17 +467,19 @@ export default function createGlassOrbScene(
         // never pops when it takes over from the hover state.
         const gm = smooth(0, 0.22, morphM)
         const startHoverScale = startScale / orbBaseScale
-        const damp0 = (1 + (startHoverScale - 1) * TUNE.boatGrow) / Math.max(1e-3, startHoverScale)
+        const boatScaleAtClick = Math.min(TUNE.boatMaxScale, 1 + (startHoverScale - 1) * TUNE.boatGrow)
+        const damp0 = boatScaleAtClick / Math.max(1e-3, startHoverScale)
         const damp = damp0 + (1 - damp0) * gm
         const bs = orbDiaPx * boatFrac * TUNE.boatZoom * scale * damp
         const rise = TUNE.boatRise * (orbDiaPx / 2) * (1 - gm)
         compCtx.drawImage(src, cx * scale - bs / 2, (cy - rise) * scale - bs / 2, bs, bs)
       } else {
-        // boat grows WITH the orb but less than it (boatGrow) throughout the approach,
-        // and stays centred until the cursor is over the orb, then RISES (boatRiseAt → 1)
-        // to open room for the timer below the headline.
+        // boat grows WITH the orb (boatGrow) but capped at boatMaxScale, and stays
+        // centred until the cursor is over the orb, then RISES (boatRiseAt → 1) to open
+        // room for the timer below the headline.
         const prox = Math.min(1, Math.max(0, (hoverScale - 1) / Math.max(1e-3, TUNE.peakScale - 1)))
-        const bs = boatSize * (1 + (hoverScale - 1) * TUNE.boatGrow) * TUNE.boatZoom * scale
+        const boatScale = Math.min(TUNE.boatMaxScale, 1 + (hoverScale - 1) * TUNE.boatGrow)
+        const bs = boatSize * boatScale * TUNE.boatZoom * scale
         const rise = TUNE.boatRise * ((orbDiameterPx * hoverScale * scale) / 2) * smooth(TUNE.boatRiseAt, 1, prox)
         compCtx.drawImage(src, (w - bs) / 2, (h - bs) / 2 - rise, bs, bs)
       }
@@ -496,6 +512,7 @@ export default function createGlassOrbScene(
       uPage: { value: pageTex },
       uTextMask: { value: textTex },
       uHudStrength: { value: 0 },
+      uHudWarp: { value: 1 },
       uResolution: { value: new THREE.Vector2(1, 1) },
       uAspect: { value: camera.aspect },
       uIor: { value: TUNE.ior },
