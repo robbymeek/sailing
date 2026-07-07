@@ -204,6 +204,11 @@ export default function App() {
       return undefined
     }
     setTransitionStage('exiting')
+    // Leaving home via a normal nav: fade the body-level orb overlay out WITH
+    // the page's exit fade so it doesn't stay at full opacity and "pop" while
+    // everything else fades. The orb→globe morph (fromOrb, above) is exempt —
+    // it holds the overlay across the swap.
+    if (displayLocation.pathname === '/' && !orbOverlay.holding) orbOverlay.fadeOut(300)
     const t = setTimeout(() => {
       setDisplayLocation(location)
       setTransitionStage('entered')
