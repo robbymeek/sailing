@@ -57,13 +57,39 @@ const TUNE = {
   strength: 0.1, // how far behind the page sits → magnification + distortion amount
   boatZoom: 1.0, // boat drawn at the scene's natural scale → distorts like the background
   dispersion: 0.06, // chromatic split of the refraction (the prismatic rim speckle)
-  reveal: 0.9, // how bright the page reads inside the orb (lower = darker orb)
+  reveal: 0.9, // how bright the page reads inside the orb (lower = darker orb) — the
+  //              canonical/rest value used by the morph; the INTERACTIVE reveal below
+  //              overrides this every frame between revealRest and revealPeak.
   parallax: 0.05, // subtle cursor-lean tilt (rad)
   parallaxEase: 0.06,
   shadeMin: 0.42, // shadowed-side darkness (form shading)
   rimDark: 0.22, // limb darkening (lower = darker rim)
   fresnel: 0.4, // cool fresnel rim wash
   glint: 1.3, // specular highlight strength
+  // ---- cursor-proximity growth + reveal (all live-tunable via ?key=) ----
+  reach: 1.0, // full-page influence, as a fraction of the viewport diagonal
+  proxExp: 3.0, // response steepness: higher = tinier far, sharper accel near the orb
+  peakScale: 1.7, // orb size (× rest) when the cursor is right on it
+  revealRest: 0.85, // interior brightness at rest (≈ today; a hair darker)
+  revealPeak: 1.2, // interior brightness at closest approach (brighter → reveals more)
+  nearStrength: 0.03, // refraction strength at closest approach: flattens the lens so
+  //                     the interior (and the in-orb HUD) resolve clearly on approach
+  hudAlpha: 1.0, // peak HUD strength at full hover — 1.0 = the most contrasted (pure b/w)
+  hudLabelFloor: 0.3, // prox where LA 2028 OLYMPICS begins to emerge (faint, small, below the boat)
+  hudGrowEnd: 0.7, // prox by which the headline has grown to full size + strength
+  boatRiseAt: 0.45, // prox where the boat + headline begin to LIFT together (shared curve, one motion)
+  timerFloor: 0.62, // prox where the timer begins to appear (once the lift has opened room)
+  hudSize: 0.062, // LA 2028 OLYMPICS type size at FULL development, as a fraction of orb diameter
+  hudStartScale: 0.62, // headline size when it first appears, relative to full (grows → 1)
+  hudTimerRatio: 0.74, // timer size relative to the headline (< 1 → headline reads larger)
+  hudDrop: 0.34, // headline baseline below orb centre at full development (fraction of orb radius)
+  hudDropStart: 0.48, // headline baseline when it first appears (lower; rises to hudDrop WITH the boat)
+  hudLineGap: 0.24, // gap from the headline down to the timer (fraction of orb radius)
+  hudTrack: 0.12, // headline letter-spacing as a fraction of its font size
+  hudWarp: 3.0, // extra glass warp on the HUD while it emerges (× the page warp), eases to 1 settled
+  boatGrow: 0.7, // boat grows this fraction of the orb's growth (< 1 → boat grows less than orb)
+  boatMaxScale: 1.3, // hard cap on the boat's size (× its base), however large the orb gets
+  boatRise: 0.38, // boat rises this fraction of orb radius as it reaches full hover
 }
 const FRESNEL_COLOR = new THREE.Color(0.62, 0.72, 0.86)
 const LIGHT_DIR = new THREE.Vector3(-0.5, 0.7, 0.6).normalize()
@@ -72,11 +98,14 @@ const CLICK_PX = 6
 const CLICK_MS = 350
 const COMP_MAX_W = 1600 // cap the composite resolution for performance
 
-// ---------- cursor-proximity scale ----------
-// The orb (and the boat inside it) grow as the cursor approaches the orb's screen
-// centre, and ease back to rest size as it moves away. Pure feel — tune freely.
-const HOVER_MAX_SCALE = 1.32 // orb size (× rest) when the cursor is right on it
-const HOVER_INFLUENCE_PX = 360 // cursor distance (px) past which it's back to rest
+// ---------- cursor-proximity scale + reveal ----------
+// The orb (and the boat inside it) grow as the cursor approaches, and ease back to
+// rest as it moves away — but the influence now spans the WHOLE page: a far cursor
+// gives a tiny response, and the growth accelerates the closer it gets (TUNE.reach
+// = reach as a fraction of the viewport diagonal, TUNE.proxExp = steepness,
+// TUNE.peakScale = size at closest approach). The same smoothed proximity also
+// drives the interior reveal (brightness + clarity) and the in-orb HUD — see the
+// render loop. Pure feel — tune live via ?reach=&proxExp=&peakScale=&revealPeak=…
 const HOVER_EASE = 0.12 // per-frame easing toward the target scale (springiness)
 
 // ---------- morph (glass orb → The Road globe) ----------
@@ -103,6 +132,9 @@ const ORB_FRAG = /* glsl */ `
   uniform float uAspect, uIor, uStrength, uDispersion, uReveal, uFadeIn;
   uniform float uShadeMin, uRimDark, uFresnel, uGlint;
   uniform vec3 uLightDir, uFresnelColor;
+  uniform sampler2D uTextMask; // in-orb HUD glyph coverage (in .a), warped with the page
+  uniform float uHudStrength;  // 0 (rest/far) → 1 (fully hovered): eases the HUD in
+  uniform float uHudWarp;      // extra refraction on the HUD (× the page's): high while emerging → 1 settled
   varying vec3 vNV;
 
   void main() {
@@ -148,6 +180,18 @@ const ORB_FRAG = /* glsl */ `
     float spec = pow(max(dot(refl, normalize(uLightDir)), 0.0), 90.0);
     col += vec3(1.0) * spec * uGlint;
 
+    // IN-ORB HUD — sampled along the SAME refracted ray as the page (screenUV + oG),
+    // so the text warps with the glass. Where a glyph covers this pixel, drive it to
+    // the MOST-CONTRASTING monochrome of what's behind it: white over dark, black over
+    // light (near-binary threshold on the final luminance). uHudStrength eases the
+    // whole effect in with proximity — faint far, full contrast when fully hovered.
+    float hudMask = texture2D(uTextMask, screenUV + oG * uHudWarp).a;
+    if (hudMask > 0.001 && uHudStrength > 0.001) {
+      float lum = dot(clamp(col, 0.0, 1.0), vec3(0.299, 0.587, 0.114));
+      vec3 ink = mix(vec3(1.0), vec3(0.0), smoothstep(0.42, 0.58, lum));
+      col = mix(col, ink, hudMask * uHudStrength);
+    }
+
     gl_FragColor = vec4(col, uFadeIn);
   }
 `
@@ -169,6 +213,8 @@ const ORB_FRAG = /* glsl */ `
 //   options.clickHaloPx  extra clickable ring beyond the orb's rest radius
 //   options.onMorph      called every morph frame with progress m∈[0,1]. MainView
 //                        watches this to drive the staged hand-off to The Road.
+//   options.countdownTarget  ms timestamp (Date.parse). Drawn as a live countdown
+//                        inside the orb, revealed as the cursor approaches.
 export default function createGlassOrbScene(
   canvas,
   {
@@ -181,6 +227,7 @@ export default function createGlassOrbScene(
     clickHaloPx = 52, // clickable ring beyond the rest radius (see hitsOrbZone)
     baseUrl = '/',
     prefersReducedMotion = false,
+    countdownTarget = 0, // ms timestamp; the orb draws a live countdown to it in-glass
     onReady,
     onClick,
     onMorph,
@@ -229,6 +276,11 @@ export default function createGlassOrbScene(
   const baseCtx = baseCv.getContext('2d')
   const compCv = document.createElement('canvas')
   const compCtx = compCv.getContext('2d')
+  // Separate canvas for the in-orb HUD text (glyph COVERAGE only). Kept out of the
+  // page composite so the shader can recolour it to max contrast per pixel; sampled
+  // along the same refracted ray as the page so it warps identically with the glass.
+  const textCv = document.createElement('canvas')
+  const textCtx = textCv.getContext('2d')
 
   function sizeComposite() {
     const cssW = canvas.clientWidth
@@ -237,6 +289,8 @@ export default function createGlassOrbScene(
     const h = Math.round((w * cssH) / cssW)
     baseCv.width = compCv.width = w
     baseCv.height = compCv.height = h
+    textCv.width = w
+    textCv.height = h
     drawBase()
   }
 
@@ -302,6 +356,96 @@ export default function createGlassOrbScene(
       .catch(() => { boatDecoding = false })
   }
 
+  // ---------- in-orb HUD (LA 2028 OLYMPICS + live countdown) ----------
+  // Drawn INTO the page composite (so it refracts through the glass), revealed only
+  // as the orb grows toward the cursor. The countdown string is rebuilt at most once
+  // per second; drawHud() early-returns while invisible, and is never called mid-morph.
+  let hudStr = '' // cached "d : hh : mm : ss"
+  let hudSecs = -1 // last whole-second bucket, so the string only rebuilds on change
+  function updateCountdown(nowMs) {
+    if (!countdownTarget) return
+    const totalSecs = Math.max(0, Math.floor((countdownTarget - nowMs) / 1000))
+    if (totalSecs === hudSecs) return
+    hudSecs = totalSecs
+    const days = Math.floor(totalSecs / 86400)
+    const hrs = Math.floor((totalSecs % 86400) / 3600)
+    const mins = Math.floor((totalSecs % 3600) / 60)
+    const secs = totalSecs % 60
+    const p2 = (n) => String(n).padStart(2, '0')
+    hudStr = `${days} : ${p2(hrs)} : ${p2(mins)} : ${p2(secs)}`
+  }
+
+  const HUD_FONT = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
+  let hudDrawn = false // whether textCv currently holds glyphs (so we clear it once on exit)
+  // Draw the HUD glyphs (COVERAGE only, flat white) into textCv at the orb's current
+  // on-screen size/position. Colour, contrast and fade are all decided in the shader.
+  // labelReveal (strength) + labelDev (0→1 size/position development) + timerReveal are
+  // all baked into the mask here, so the headline can grow, strengthen and rise into
+  // place while the shader keeps ONE on/off strength.
+  function drawHudMask(w, h, labelReveal, labelGrow, labelLift, timerReveal) {
+    const scale = w / Math.max(1, canvas.clientWidth)
+    const cx = orbFracX * w
+    const cy = orbFracY * h
+    const orbDia = orbDiameterPx * hoverScale * scale
+    const orbRad = orbDia / 2
+    // Headline develops: grows from hudStartScale → full (labelGrow) and, on a curve it
+    // SHARES with the boat's rise (labelLift), moves from hudDropStart → hudDrop — so it
+    // emerges small just below the boat and lifts into place as one motion with the boat.
+    const labelSize = TUNE.hudSize * orbDia * (TUNE.hudStartScale + (1 - TUNE.hudStartScale) * labelGrow)
+    const dropFrac = TUNE.hudDropStart + (TUNE.hudDrop - TUNE.hudDropStart) * labelLift
+    const labelY = cy + dropFrac * orbRad
+    const timerSize = TUNE.hudSize * orbDia * TUNE.hudTimerRatio
+    const timerY = labelY + TUNE.hudLineGap * orbRad // timer directly under the settled headline
+    textCtx.clearRect(0, 0, w, h)
+    textCtx.save()
+    textCtx.textAlign = 'center'
+    textCtx.textBaseline = 'middle'
+    textCtx.fillStyle = '#ffffff' // coverage only — the shader picks black/white per pixel
+    // LA 2028 OLYMPICS — emerges small + faint below the boat, then grows, strengthens
+    // and rises into place (labelReveal = strength, labelDev = size + position).
+    if (labelReveal > 0.01) {
+      textCtx.globalAlpha = labelReveal
+      textCtx.font = `500 ${labelSize}px ${HUD_FONT}`
+      if ('letterSpacing' in textCtx) textCtx.letterSpacing = `${TUNE.hudTrack * labelSize}px`
+      textCtx.fillText('LA 2028 OLYMPICS', cx, labelY)
+    }
+    // the live countdown — becomes visible as the boat LIFTS and opens room below
+    if (timerReveal > 0.01 && hudStr) {
+      textCtx.globalAlpha = timerReveal
+      if ('letterSpacing' in textCtx) textCtx.letterSpacing = '0px'
+      textCtx.font = `600 ${timerSize}px ${HUD_FONT}`
+      textCtx.fillText(hudStr, cx, timerY)
+    }
+    textCtx.restore()
+  }
+
+  // Per-frame HUD update: stage the two lines off the SMOOTHED growth (headline in
+  // first, timer with the boat's rise), force everything off during the morph so it
+  // never bleeds into the forming globe, and only redraw/upload the mask while it's
+  // actually showing so rest frames pay nothing.
+  function updateHud(w, h) {
+    const clearIfDrawn = () => {
+      orbMat.uniforms.uHudStrength.value = 0
+      if (hudDrawn) { textCtx.clearRect(0, 0, w, h); textTex.needsUpdate = true; hudDrawn = false }
+    }
+    if (morphing) { clearIfDrawn(); return }
+    const prox = Math.min(1, Math.max(0, (hoverScale - 1) / Math.max(1e-3, TUNE.peakScale - 1)))
+    // ONE motion: the headline grows + strengthens (labelGrow), then it and the boat
+    // LIFT together on a SHARED curve (labelLift === the boat's rise), and the timer
+    // fades in once the lift opens room. The HUD also warps harder while emerging and
+    // clarifies as it settles (uHudWarp), so it reads as forming inside the glass.
+    const labelGrow = smooth(TUNE.hudLabelFloor, TUNE.hudGrowEnd, prox)
+    const labelReveal = labelGrow * TUNE.hudAlpha
+    const labelLift = smooth(TUNE.boatRiseAt, 1, prox)
+    const timerReveal = smooth(TUNE.timerFloor, 1, prox) * TUNE.hudAlpha
+    orbMat.uniforms.uHudWarp.value = 1 + (TUNE.hudWarp - 1) * (1 - labelGrow)
+    if (labelReveal < 0.01 && timerReveal < 0.01) { clearIfDrawn(); return }
+    orbMat.uniforms.uHudStrength.value = 1
+    drawHudMask(w, h, labelReveal, labelGrow, labelLift, timerReveal)
+    textTex.needsUpdate = true
+    hudDrawn = true
+  }
+
   function composite() {
     const w = compCv.width
     const h = compCv.height
@@ -318,14 +462,32 @@ export default function createGlassOrbScene(
         const cx = ((anchor.position.x / (baseZ * tanHalfV * aspect)) * 0.5 + 0.5) * canvas.clientWidth
         const cy = (0.5 - 0.5 * (anchor.position.y / (baseZ * tanHalfV))) * canvas.clientHeight
         const orbDiaPx = (orb.scale.x * canvas.clientHeight) / (baseZ * tanHalfV)
-        const bs = orbDiaPx * boatFrac * TUNE.boatZoom * scale
-        compCtx.drawImage(src, cx * scale - bs / 2, cy * scale - bs / 2, bs, bs)
+        // Ease the hover look (boat grown LESS than the orb + risen) back to the
+        // canonical centred, orb-filling boat across the GROW beat, so the morph
+        // never pops when it takes over from the hover state.
+        const gm = smooth(0, 0.22, morphM)
+        const startHoverScale = startScale / orbBaseScale
+        const boatScaleAtClick = Math.min(TUNE.boatMaxScale, 1 + (startHoverScale - 1) * TUNE.boatGrow)
+        const damp0 = boatScaleAtClick / Math.max(1e-3, startHoverScale)
+        const damp = damp0 + (1 - damp0) * gm
+        const bs = orbDiaPx * boatFrac * TUNE.boatZoom * scale * damp
+        const rise = TUNE.boatRise * (orbDiaPx / 2) * (1 - gm)
+        compCtx.drawImage(src, cx * scale - bs / 2, (cy - rise) * scale - bs / 2, bs, bs)
       } else {
-        // boat grows with the orb (hoverScale) so the lens magnifies as one piece
-        const bs = boatSize * hoverScale * TUNE.boatZoom * scale
-        compCtx.drawImage(src, (w - bs) / 2, (h - bs) / 2, bs, bs)
+        // boat grows WITH the orb (boatGrow) but capped at boatMaxScale, and stays
+        // centred until the cursor is over the orb, then RISES (boatRiseAt → 1) to open
+        // room for the timer below the headline.
+        const prox = Math.min(1, Math.max(0, (hoverScale - 1) / Math.max(1e-3, TUNE.peakScale - 1)))
+        const boatScale = Math.min(TUNE.boatMaxScale, 1 + (hoverScale - 1) * TUNE.boatGrow)
+        const bs = boatSize * boatScale * TUNE.boatZoom * scale
+        const rise = TUNE.boatRise * ((orbDiameterPx * hoverScale * scale) / 2) * smooth(TUNE.boatRiseAt, 1, prox)
+        compCtx.drawImage(src, (w - bs) / 2, (h - bs) / 2 - rise, bs, bs)
       }
     }
+    // In-orb HUD — refresh its coverage mask + reveal strength (the shader recolours
+    // it to max contrast and warps it with the glass; updateHud forces strength to 0
+    // during the morph, so nothing bleeds into the forming globe).
+    updateHud(w, h)
     pageTex.needsUpdate = true
   }
 
@@ -335,6 +497,12 @@ export default function createGlassOrbScene(
   pageTex.magFilter = THREE.LinearFilter
   pageTex.generateMipmaps = false
 
+  const textTex = new THREE.CanvasTexture(textCv)
+  textTex.colorSpace = THREE.SRGBColorSpace
+  textTex.minFilter = THREE.LinearFilter
+  textTex.magFilter = THREE.LinearFilter
+  textTex.generateMipmaps = false
+
   // ---------- orb ----------
   const anchor = new THREE.Group() // cursor-lean tilt
   scene.add(anchor)
@@ -342,6 +510,9 @@ export default function createGlassOrbScene(
   const orbMat = new THREE.ShaderMaterial({
     uniforms: {
       uPage: { value: pageTex },
+      uTextMask: { value: textTex },
+      uHudStrength: { value: 0 },
+      uHudWarp: { value: 1 },
       uResolution: { value: new THREE.Vector2(1, 1) },
       uAspect: { value: camera.aspect },
       uIor: { value: TUNE.ior },
@@ -369,7 +540,7 @@ export default function createGlassOrbScene(
   // (so the orb frames the boat instead of filling the viewport). Derived from
   // the perspective projection at the sphere's depth; recomputed on resize.
   // orbBaseScale = the rest size from the perspective fit; hoverScale eases
-  // 1→HOVER_MAX_SCALE with cursor proximity and is applied on top every frame
+  // 1→TUNE.peakScale with cursor proximity and is applied on top every frame
   // (see the render loop). Split so a resize recomputes the base without losing hover.
   let orbBaseScale = 1
   let hoverScale = 1
@@ -457,6 +628,7 @@ export default function createGlassOrbScene(
   let morphing = false
   let morphStart = 0
   let morphFrozen = false
+  let morphM = 0 // latest morph progress 0→1 (updateMorph → composite, for boat easing)
 
   // Begin the one-shot morph (idempotent). Build the globe lazily here too, in
   // case the home-load prebuild was skipped.
@@ -470,11 +642,19 @@ export default function createGlassOrbScene(
     startPos.copy(anchor.position)
     state.tx = 0
     state.ty = 0
+    // The morph never rewrites uReveal/uStrength, and a click only fires at high
+    // proximity — so without this they'd freeze at their near-cursor values (bright
+    // + low-distortion) for the whole morph and diverge from the baked mobile clip.
+    // Reset to the canonical glass look the morph timeline was authored against.
+    orbMat.uniforms.uReveal.value = TUNE.reveal
+    orbMat.uniforms.uStrength.value = TUNE.strength
+    orbMat.uniforms.uHudStrength.value = 0 // HUD off for the whole morph
     start()
   }
 
   function updateMorph(now) {
     const m = clamp01((now - morphStart) / MORPH_MS)
+    morphM = m
     if (onMorph) onMorph(m)
 
     // The timeline is deliberately staged so each beat reads on its own:
@@ -525,7 +705,7 @@ export default function createGlassOrbScene(
   const state = { px: 0, py: 0, tx: 0, ty: 0, cx: -1e6, cy: -1e6, downX: 0, downY: 0, downT: 0, moved: 0, down: false }
   // Clickable zone: a screen-space circle of the orb's REST radius + clickHaloPx.
   // Static on purpose — it always contains the hover-grown sphere (so clickHaloPx
-  // must be ≥ rest radius × (HOVER_MAX_SCALE − 1)) and it exactly matches the
+  // must be ≥ rest radius × (TUNE.peakScale − 1)) and it exactly matches the
   // grab-cursor circle MainView draws over the orb, so the cursor never lies
   // about where a click will land.
   const clickRadiusPx = orbDiameterPx / 2 + clickHaloPx
@@ -578,24 +758,37 @@ export default function createGlassOrbScene(
       state.py += (state.ty - state.py) * TUNE.parallaxEase
       anchor.rotation.set(-state.py * TUNE.parallax, state.px * TUNE.parallax, 0)
       if (!prefersReducedMotion) {
-        // PROXIMITY SCALE: distance from cursor to the orb's screen centre drives a
-        // target size (rest → HOVER_MAX_SCALE), eased per frame so it grows/shrinks
-        // smoothly. The boat tracks hoverScale in composite() so the whole lens
-        // magnifies together rather than the boat appearing to shrink inside it.
+        // PROXIMITY: distance from the cursor to the orb's screen centre, now over
+        // the WHOLE page. `t` ramps 0 (far corner) → 1 (on the orb) across `reach`,
+        // and p = t^proxExp makes the response tiny far away and steepest near the
+        // orb — so it grows FASTER the closer the cursor gets. Eased per frame
+        // (spring) so it never snaps. The boat tracks hoverScale in composite() so
+        // the whole lens magnifies as one piece.
         const ocx = orbFracX * canvas.clientWidth
-        const ocy = orbFracY * Math.max(1, canvas.clientHeight)
+        const cH = Math.max(1, canvas.clientHeight)
+        const ocy = orbFracY * cH
         const d = Math.hypot(state.cx - ocx, state.cy - ocy)
-        const t = THREE.MathUtils.clamp((HOVER_INFLUENCE_PX - d) / HOVER_INFLUENCE_PX, 0, 1)
-        const eased = t * t * (3 - 2 * t)
-        const targetScale = 1 + (HOVER_MAX_SCALE - 1) * eased
+        const reach = Math.max(1, TUNE.reach * Math.hypot(canvas.clientWidth, cH))
+        const t = THREE.MathUtils.clamp((reach - d) / reach, 0, 1)
+        const p = Math.pow(t, TUNE.proxExp)
+        const targetScale = 1 + (TUNE.peakScale - 1) * p
         hoverScale += (targetScale - hoverScale) * HOVER_EASE
         orb.scale.setScalar(orbBaseScale * hoverScale)
+
+        // REVEAL: drive brightness + clarity off the SMOOTHED growth (not raw p) so
+        // the interior resolves in lock-step with the size instead of leading it.
+        // prox = 0 at rest (looks like before) → 1 at closest approach. Shared with
+        // composite() (the in-orb HUD alpha) via the same recovered term.
+        const prox = THREE.MathUtils.clamp((hoverScale - 1) / Math.max(1e-3, TUNE.peakScale - 1), 0, 1)
+        orbMat.uniforms.uReveal.value = TUNE.revealRest + (TUNE.revealPeak - TUNE.revealRest) * prox
+        orbMat.uniforms.uStrength.value = TUNE.strength + (TUNE.nearStrength - TUNE.strength) * prox
 
         const f = THREE.MathUtils.clamp((now - readyAt) / FADE_IN_MS, 0, 1)
         orbMat.uniforms.uFadeIn.value = f * f * (3 - 2 * f)
       }
     }
 
+    updateCountdown(Date.now())
     advanceBoat(now)
     composite()
     renderer.render(scene, camera)
@@ -627,6 +820,7 @@ export default function createGlassOrbScene(
   const onContextLost = (e) => { e.preventDefault(); stop() }
   const onContextRestored = () => {
     pageTex.needsUpdate = true
+    textTex.needsUpdate = true
     drawBase()
     readyAt = performance.now()
     if (started && !disposed && !document.hidden && !morphFrozen) start()
@@ -689,6 +883,7 @@ export default function createGlassOrbScene(
     orb.geometry.dispose()
     orbMat.dispose()
     pageTex.dispose()
+    textTex.dispose()
     if (earthParts) {
       earthParts.earth.geometry.dispose()
       earthParts.atmosphere.geometry.dispose()

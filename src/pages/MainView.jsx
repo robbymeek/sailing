@@ -19,12 +19,12 @@ const BOAT_SIZE = 200
 const ORB_DIAMETER = BOAT_SIZE * 1.3 // 260px — orb ≈ 130% of the sailboat height
 // Clickable halo beyond the orb's rest RADIUS: the orb plus this ring is what
 // navigates to The Road — everything else on the home is dead space (only the
-// labelled controls are interactive). Must be ≥ rest radius × 0.32 (the scene's
-// HOVER_MAX_SCALE growth) so the cursor-grown orb stays clickable edge-to-edge;
-// the remainder is the "little bit around the orb". Passed to glassOrbScene for
-// its hit-test AND sizes the grab-cursor circle below, so the pointer affordance
-// and the actual click zone are the same circle.
-const ORB_CLICK_HALO_PX = 52
+// labelled controls are interactive). Must be ≥ rest radius × 0.7 (the scene's
+// TUNE.peakScale growth to 1.7×) so the cursor-grown orb stays clickable
+// edge-to-edge; the remainder is the "little bit around the orb". Passed to
+// glassOrbScene for its hit-test AND sizes the grab-cursor circle below, so the
+// pointer affordance and the actual click zone are the same circle.
+const ORB_CLICK_HALO_PX = 95
 // The morph's final globe frame (baked). Used as the mobile hand-off bridge so the
 // globe stays on screen while the rest of the home fades to black.
 const GLOBE_POSTER = `${BASE}orb/orb-globe-poster.webp`
@@ -36,6 +36,10 @@ const GLOBE_POSTER = `${BASE}orb/orb-globe-poster.webp`
 // comfortably clears even a ~0.5 Mbps connection loading the 561KB photo.
 const ORB_READY_TIMEOUT_MS = 10000
 
+// The campaign's target: LA 2028 opening ceremony. Passed to the orb so it can draw
+// the live countdown INSIDE the glass — the DOM corner countdown was retired for it.
+const COUNTDOWN_TARGET = Date.parse('2028-07-14T00:00:00')
+
 // Module-level flag: the cinematic intro plays once per JS bundle
 // initialization (hard refresh) and is skipped on SPA navigation back
 // to /. No storage APIs — this lives for the tab's lifetime only.
@@ -43,21 +47,13 @@ let introHasPlayed = false
 
 // WebGL2 capability gate lives in ../lib/webglSupport (shared with TheRoad).
 
-export default function MainView({ onNavigate, hoverNavOpen, skipIntro, embedded }) {
-  const target = new Date('2028-07-14T00:00:00')
-  const { days, hrs, mins, secs } = useCountdown(target)
-
+export default function MainView({ onNavigate, skipIntro, embedded }) {
   return (
     <HomeIntro
       onNavigate={onNavigate}
-      hoverNavOpen={hoverNavOpen}
       skipIntro={skipIntro}
       embedded={embedded}
       boatSrc={`${BASE}[0001-0250].gif`}
-      days={days}
-      hrs={hrs}
-      mins={mins}
-      secs={secs}
     />
   )
 }
@@ -65,25 +61,10 @@ export default function MainView({ onNavigate, hoverNavOpen, skipIntro, embedded
 // ---------- Home intro + rest-state component ----------
 // All cinematic state and timers live here so MainView stays a thin
 // shell. Kept in the same file per the original brief.
-function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, boatSrc, days, hrs, mins, secs }) {
+function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-  const [viewportWidth, setViewportWidth] = useState(
-    typeof window !== 'undefined' ? window.innerWidth : 1024
-  )
-  const [portrait, setPortrait] = useState(
-    typeof window !== 'undefined' ? window.innerHeight > window.innerWidth : false
-  )
-  useEffect(() => {
-    const h = () => {
-      setViewportWidth(window.innerWidth)
-      setPortrait(window.innerHeight > window.innerWidth)
-    }
-    window.addEventListener('resize', h)
-    return () => window.removeEventListener('resize', h)
-  }, [])
 
   // Embedded exit fade — as the home frame scrolls off toward the film bridge,
   // fade the WHOLE frame (photo, orb, text) to pure black, so the cut onto the
@@ -161,6 +142,7 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
         orbDiameterPx: ORB_DIAMETER, // orb ≈ 130% of the sailboat height
         clickHaloPx: ORB_CLICK_HALO_PX, // click zone = orb + halo (see constant above)
         prefersReducedMotion,
+        countdownTarget: COUNTDOWN_TARGET, // drawn as the live countdown inside the orb
         onReady: () => { readyFired = true; clearTimeout(safety); setOrbReady(true) },
         onMorph: (m) => setMorph(m),
         onClick: () => beginMorphRef.current(),
@@ -457,26 +439,6 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
     return { background, transition }
   })()
 
-  // Typographic anchor — countdown corner reuses the value/meta treatment
-  const anchorValue = {
-    color: 'rgb(157,174,194)', fontSize: 20, fontWeight: 400,
-    letterSpacing: '-0.8px', margin: '0 0 8px',
-  }
-  const anchorMeta = {
-    color: 'rgb(153,153,153)', fontSize: 16, fontWeight: 500, margin: 0,
-  }
-  const anchorButton = {
-    background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
-    // Generous hitbox: pad the target, pull it back out with negative margins so
-    // the visual layout doesn't move.
-    padding: '8px 10px', margin: '-8px -10px',
-  }
-  const countdownText = `${days} : ${String(hrs).padStart(2, '0')} : ${String(mins).padStart(2, '0')} : ${String(secs).padStart(2, '0')}`
-
-  // On very narrow viewports the countdown corner would collide with the nav;
-  // drop it there. TODO mobile pass — a future prompt will redesign mobile nav.
-  const showCountdown = viewportWidth >= 400
-
   const activePhoto = playablePhotos.length > 0
     ? photoIndex % playablePhotos.length
     : -1
@@ -489,6 +451,19 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
       position: 'relative',
       overflow: 'hidden',
     }}>
+      {/* Accessible page heading — the home's visual identity is the orb + the
+          in-orb LOS ANGELES render (canvas, not DOM), so carry the document's
+          <h1> here for screen readers and crawlers without changing the withheld
+          look. Skipped in the mobile embed, where Biography supplies the heading. */}
+      {!embedded && (
+        <h1 style={{
+          position: 'absolute', width: 1, height: 1, padding: 0, margin: -1,
+          overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0,
+        }}>
+          Robby Meek — sailing for LA 2028
+        </h1>
+      )}
+
       {/* Rest-state background — hiking shot, sits under everything and only
           shows through the near-black overlay once the intro settles. Toggled
           while hidden behind the fully-black overlay, so no visible pop. On the
@@ -591,6 +566,7 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
               }, 480)
             }}
           />
+          <MobileOrbHud target={COUNTDOWN_TARGET} />
         </div>
       ) : (
         <button
@@ -707,21 +683,6 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
         </p>
       </nav>
 
-      {/* Top-right countdown corner — clickable, fades in with the nav */}
-      {showCountdown && (
-        <CountdownCorner
-          onNavigate={onNavigate}
-          uiVisible={uiVisible}
-          morphOut={textOut}
-          snapOut={bakedMorphOut}
-          hoverNavOpen={hoverNavOpen}
-          embedded={embedded}
-          anchorButton={anchorButton}
-          anchorValue={anchorValue}
-          anchorMeta={anchorMeta}
-          countdownText={countdownText}
-        />
-      )}
 
       {/* Embedded exit veil — topmost layer of the home frame; the scroll-
           linked effect above drives its opacity 0→1 as the frame scrolls off,
@@ -754,6 +715,45 @@ function HomeIntro({ onNavigate, hoverNavOpen, skipIntro: forceSkip, embedded, b
 // read as one continuous image. No porthole: the lit glass is in the clip itself.
 const BAKE_W = 1080
 const BAKE_H = 1920
+const BAKE_ORB_R = 130 // matches BakedOrb: orb radius in the 1080×1920 baked source
+
+// ---------- mobile in-orb-style HUD ----------
+// Mobile uses the baked-VIDEO orb (no live shader), so the LA 2028 OLYMPICS headline
+// + countdown live in the DOM just above the orb. mix-blend-mode: difference gives the
+// same self-adapting contrast as the desktop shader (white over dark areas, dark over
+// light) and it fades in on mount. Non-interactive — only the orb navigates to The Road.
+function MobileOrbHud({ target }) {
+  const { days, hrs, mins, secs } = useCountdown(target)
+  const [vp, setVp] = useState(() => ({
+    w: typeof window !== 'undefined' ? window.innerWidth : 390,
+    h: typeof window !== 'undefined' ? window.innerHeight : 844,
+  }))
+  const [shown, setShown] = useState(false)
+  useEffect(() => {
+    const h = () => setVp({ w: window.innerWidth, h: window.innerHeight })
+    window.addEventListener('resize', h)
+    const t = setTimeout(() => setShown(true), 60)
+    return () => { window.removeEventListener('resize', h); clearTimeout(t) }
+  }, [])
+  const orbR = BAKE_ORB_R * Math.max(vp.w / BAKE_W, vp.h / BAKE_H)
+  const countdown = `${days} : ${String(hrs).padStart(2, '0')} : ${String(mins).padStart(2, '0')} : ${String(secs).padStart(2, '0')}`
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: 'absolute', left: '50%', bottom: `calc(50% + ${Math.round(orbR + 24)}px)`,
+        transform: 'translateX(-50%)', textAlign: 'center',
+        pointerEvents: 'none', zIndex: 5, whiteSpace: 'nowrap',
+        mixBlendMode: 'difference', color: '#fff',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        opacity: shown ? 1 : 0, transition: 'opacity 1s ease',
+      }}
+    >
+      <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: '2.5px' }}>LA 2028 OLYMPICS</div>
+      <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '1px', marginTop: 7, fontVariantNumeric: 'tabular-nums' }}>{countdown}</div>
+    </div>
+  )
+}
 
 function BakedOrbBackdrop({ embedded }) {
   const [vp, setVp] = useState(() => ({
@@ -783,43 +783,6 @@ function BakedOrbBackdrop({ embedded }) {
       </div>
       {/* desktop rest overlay: one flat colour, no vignette */}
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.88)' }} />
-    </div>
-  )
-}
-
-// Top-right countdown corner — LA 2028 hovers royal blue and click-throughs
-// to The Road (the campaign tour). The countdown line below is a
-// non-interactive sibling.
-function CountdownCorner({ onNavigate, uiVisible, morphOut = 0, snapOut = false, hoverNavOpen, embedded, anchorButton, anchorValue, anchorMeta, countdownText }) {
-  const [hover, setHover] = useState(false)
-  return (
-    <div style={{
-      position: embedded ? 'absolute' : 'fixed',
-      top: hoverNavOpen ? 72 : 32,
-      right: 32,
-      textAlign: 'right',
-      opacity: (uiVisible ? 1 : 0) * (1 - morphOut),
-      transform: `translateX(${28 * morphOut}px)`,
-      transition: `opacity 0.6s ease, top 0.3s ease${snapOut ? ', transform 0.6s ease' : ''}`,
-      pointerEvents: uiVisible && morphOut < 0.05 ? 'auto' : 'none',
-      zIndex: 20,
-    }}>
-      <button
-        onClick={() => onNavigate('The Road')}
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-        onFocus={() => setHover(true)}
-        onBlur={() => setHover(false)}
-        style={{ ...anchorButton, textAlign: 'right' }}
-      >
-        <h1 style={{
-          ...anchorValue,
-          marginTop: 0,
-          color: hover ? '#1E40FF' : anchorValue.color,
-          transition: 'color 0.25s ease',
-        }}>LA 2028</h1>
-      </button>
-      <p style={anchorMeta}>{countdownText}</p>
     </div>
   )
 }
