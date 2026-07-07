@@ -3,10 +3,46 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <!-- On-brand paint before the JS bundle mounts, so first load isn't a white
-         flash on the dark pages. React sets the real per-route body background
-         once it runs (App.jsx), so the loaded site is unchanged. -->
-    <style>html, body { background: #13171f; }</style>
+    <!-- App-shell loading state: paint each route's OWN background + an elegant
+         "loading…" before the JS bundle mounts (no white flash, correct colour
+         per route). React clears #root on mount, so the loaded site is unchanged.
+         The <style> is the pre-script / no-JS dark fallback; the inline script
+         overrides the html background per route and derives the splash text
+         shade from the background's luminance. -->
+    <style>
+      html { background: #13171f; }
+      body { background: transparent; }
+      .rm-splash {
+        position: fixed; inset: 0; margin: 0;
+        display: flex; align-items: center; justify-content: center;
+        font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+        font-size: 14px; font-weight: 400; letter-spacing: 0.14em; text-transform: lowercase;
+        color: var(--rm-splash-color, rgba(255,255,255,0.32));
+        opacity: 0; animation: rmSplashIn 0.5s ease 0.35s forwards; pointer-events: none;
+      }
+      @keyframes rmSplashIn { to { opacity: 1; } }
+    </style>
+    <script>
+      // Per-route first-paint colour + splash text shade, applied before paint.
+      // Keep these colours consistent with INNER_BG/getBg in src/App.jsx.
+      (function () {
+        var BG = {
+          '/team': 'rgb(12,14,18)',
+          '/the-road': 'rgb(0,0,0)',
+          '/contact': 'rgb(240,240,240)',
+          '/support': 'rgb(240,240,240)'
+        };
+        var path = location.pathname.toLowerCase().replace(/\/+$/, '') || '/';
+        var bg = BG[path] || 'rgb(19,23,31)'; // home + biography + fallback = dark
+        var m = bg.match(/\d+/g) || [19, 23, 31];
+        var lum = (0.299 * +m[0] + 0.587 * +m[1] + 0.114 * +m[2]) / 255;
+        document.documentElement.style.background = bg;
+        document.documentElement.style.setProperty(
+          '--rm-splash-color',
+          lum > 0.5 ? 'rgba(0,0,0,0.32)' : 'rgba(255,255,255,0.32)'
+        );
+      })();
+    </script>
     <title>Robby Meek | LA2028 Olympic Sailing Campaign</title>
     <meta name="description" content="Official site of Robby Meek — Olympic hopeful and sailing athlete. Bio, partners, updates, and events from his road to LA 2028." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -28,7 +64,7 @@
     <meta name="twitter:image" content="https://robbysailing.com/og-preview.jpg" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="rm-splash">loading…</div></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
