@@ -3,6 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- On-brand paint before the JS bundle mounts, so first load isn't a white
+         flash on the dark pages. React sets the real per-route body background
+         once it runs (App.jsx), so the loaded site is unchanged. -->
+    <style>html, body { background: #13171f; }</style>
     <title>Robby Meek | LA2028 Olympic Sailing Campaign</title>
     <meta name="description" content="Official site of Robby Meek — Olympic hopeful and sailing athlete. Bio, partners, updates, and events from his road to LA 2028." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
