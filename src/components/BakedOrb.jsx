@@ -23,8 +23,8 @@ const BASE = import.meta.env.BASE_URL
 //  is seamless:  rest ──tap──▶ morph ──ends──▶ /the-road.
 //
 //  ─── AFFORDANCES ───
-//  • TOUCH (iPhone): a small, faded "Click here to learn more" caption curves
-//    around the orb's lower rim — the tap target hint. Tapping the orb morphs.
+//  • TOUCH (iPhone): tapping the orb morphs. The LA 2028 OLYMPICS headline +
+//    countdown above the orb live in MainView (MobileOrbHud) and are non-interactive.
 //  • DESKTOP-baked (rare: a desktop without WebGL2): the orb grows as the cursor
 //    nears the screen centre, mirroring the live orb's proximity scale.
 //  Only the orb hotspot (orb + small halo, see the tap-hotspot constants) starts
@@ -49,17 +49,6 @@ const REST = `${BASE}orb/orb-rest` //   .webm + .mp4 (idle loop)
 const MORPH = `${BASE}orb/orb-morph` // .webm + .mp4 (one-shot orb→globe)
 const REST_POSTER = `${BASE}orb/orb-rest-poster.jpg` // first rest frame (instant paint)
 
-// ---------- touch "Click here to learn more" caption ----------
-// Curved along the orb's lower rim (SVG textPath, bottom arc → upright, reads L→R).
-// CAP_R is in viewBox units; the SVG is sized in vw so the ring scales with the
-// phone. CALIBRATE CAP_R / the rendered width to hug the baked orb on a real device.
-// Two-line label under the orb. Measured from the baked clip: the orb is ~260px
-// wide in the 1080×1920 source → ~57px radius on a ~390px phone (cover-fit), centred
-// just below the viewport middle, so its bottom rim sits ~65px below centre.
-const CAPTION_L1 = 'Click here to'
-const CAPTION_L2 = 'learn more'
-const CAP_OFFSET_Y = 64 // px below viewport centre for the label's top → just under the orb (tune to taste)
-
 // Proximity scale for the rare desktop-baked path (mirrors glassOrbScene tunables).
 const HOVER_MAX_SCALE = 1.3
 const HOVER_INFLUENCE_PX = 360
@@ -71,8 +60,8 @@ const HOVER_EASE = 0.12
 // (same cover math as MainView's BakedOrbBackdrop, which keeps the DOM photo
 // pixel-aligned with the clip's baked backdrop).
 // Only the orb + CLICK_HALO_PX around it is tappable (mirrors the desktop live
-// orb's clickHaloPx); on phones the halo also covers the wrapped caption below
-// the orb, so tapping the hint text works too.
+// orb's clickHaloPx); on phones only the orb navigates — the LA 2028 OLYMPICS
+// headline above it (MainView's MobileOrbHud) is non-interactive.
 const BAKE_W = 1080
 const BAKE_H = 1920
 const BAKE_ORB_R = 130
@@ -116,7 +105,7 @@ const BakedOrb = forwardRef(function BakedOrb(
   const morphingRef = useRef(false) // freeze the scale once the morph starts
   const watchdogsRef = useRef([]) // morph stall timers, cleared on unmount
 
-  // Coarse pointer (touch) → show the wrapped caption instead of the cursor scale.
+  // Coarse pointer (touch) → skip the cursor-proximity scale (no cursor on mobile).
   const [touch, setTouch] = useState(false)
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return
@@ -229,8 +218,8 @@ const BakedOrb = forwardRef(function BakedOrb(
   }
 
   // Desktop-baked only: grow the orb as the cursor nears the screen centre. Skipped
-  // on touch (no cursor → caption instead) and for reduced motion. Ref-driven on a
-  // rAF — never React state — so there are no per-mousemove re-renders.
+  // on touch (no cursor) and for reduced motion. Ref-driven on a rAF — never React
+  // state — so there are no per-mousemove re-renders.
   useEffect(() => {
     if (prefersReducedMotion || touch) return undefined
     if (typeof window === 'undefined' || !window.matchMedia) return undefined
@@ -292,7 +281,7 @@ const BakedOrb = forwardRef(function BakedOrb(
   // The tap target: a circle over the orb (+ halo), NOT the full-bleed box — taps
   // on the background around it are dead space. It lives inside the proximity-
   // scaled box, so on desktop-baked it grows with the orb automatically. z3: above
-  // the videos and the caption (which is pointerEvents:none anyway).
+  // the videos.
   const hotspot = (
     <div
       onClick={begin}
@@ -309,29 +298,10 @@ const BakedOrb = forwardRef(function BakedOrb(
     />
   )
 
-  // The faded caption wrapped around the orb (touch only, hidden during the morph).
-  const caption = touch && !morphing ? (
-    <div
-      aria-hidden="true"
-      style={{
-        position: 'absolute', top: '50%', left: '50%',
-        transform: `translate(-50%, ${CAP_OFFSET_Y}px)`,
-        textAlign: 'center', pointerEvents: 'none', zIndex: 2,
-        color: 'rgba(255,255,255,0.5)',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        fontSize: 14, lineHeight: 1.3, letterSpacing: '0.4px', fontWeight: 400,
-        textShadow: '0 1px 4px rgba(0,0,0,0.5)',
-      }}
-    >
-      {CAPTION_L1}<br />{CAPTION_L2}
-    </div>
-  ) : null
-
   if (prefersReducedMotion) {
     return (
       <div ref={boxRef} style={box}>
         <img src={REST_POSTER} alt="" aria-hidden="true" style={layer(restMask)} />
-        {caption}
         {hotspot}
       </div>
     )
@@ -372,7 +342,6 @@ const BakedOrb = forwardRef(function BakedOrb(
         <source src={`${MORPH}.mp4`} type="video/mp4" />
       </video>
 
-      {caption}
       {hotspot}
     </div>
   )

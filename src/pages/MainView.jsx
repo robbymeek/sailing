@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import useCountdown from '../hooks/useCountdown'
 import orbOverlay from '../lib/orbOverlay'
 import { hasWebGL2 } from '../lib/webglSupport'
 import { introPhotos } from '../assets/home-intro'
@@ -565,6 +566,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
               }, 480)
             }}
           />
+          <MobileOrbHud target={COUNTDOWN_TARGET} />
         </div>
       ) : (
         <button
@@ -713,6 +715,45 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
 // read as one continuous image. No porthole: the lit glass is in the clip itself.
 const BAKE_W = 1080
 const BAKE_H = 1920
+const BAKE_ORB_R = 130 // matches BakedOrb: orb radius in the 1080×1920 baked source
+
+// ---------- mobile in-orb-style HUD ----------
+// Mobile uses the baked-VIDEO orb (no live shader), so the LA 2028 OLYMPICS headline
+// + countdown live in the DOM just above the orb. mix-blend-mode: difference gives the
+// same self-adapting contrast as the desktop shader (white over dark areas, dark over
+// light) and it fades in on mount. Non-interactive — only the orb navigates to The Road.
+function MobileOrbHud({ target }) {
+  const { days, hrs, mins, secs } = useCountdown(target)
+  const [vp, setVp] = useState(() => ({
+    w: typeof window !== 'undefined' ? window.innerWidth : 390,
+    h: typeof window !== 'undefined' ? window.innerHeight : 844,
+  }))
+  const [shown, setShown] = useState(false)
+  useEffect(() => {
+    const h = () => setVp({ w: window.innerWidth, h: window.innerHeight })
+    window.addEventListener('resize', h)
+    const t = setTimeout(() => setShown(true), 60)
+    return () => { window.removeEventListener('resize', h); clearTimeout(t) }
+  }, [])
+  const orbR = BAKE_ORB_R * Math.max(vp.w / BAKE_W, vp.h / BAKE_H)
+  const countdown = `${days} : ${String(hrs).padStart(2, '0')} : ${String(mins).padStart(2, '0')} : ${String(secs).padStart(2, '0')}`
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: 'absolute', left: '50%', bottom: `calc(50% + ${Math.round(orbR + 24)}px)`,
+        transform: 'translateX(-50%)', textAlign: 'center',
+        pointerEvents: 'none', zIndex: 5, whiteSpace: 'nowrap',
+        mixBlendMode: 'difference', color: '#fff',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        opacity: shown ? 1 : 0, transition: 'opacity 1s ease',
+      }}
+    >
+      <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: '2.5px' }}>LA 2028 OLYMPICS</div>
+      <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '1px', marginTop: 7, fontVariantNumeric: 'tabular-nums' }}>{countdown}</div>
+    </div>
+  )
+}
 
 function BakedOrbBackdrop({ embedded }) {
   const [vp, setVp] = useState(() => ({
