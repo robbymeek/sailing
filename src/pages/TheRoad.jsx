@@ -535,7 +535,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
   const [ready, setReady] = useState(false)
   const [card, setCard] = useState({
     stopIndex: 0, opacity: 0, prog: 0, showLabel: false, label: '', labelKey: 0,
-    mode: 'hero', chIdx: -1, chapterIdx: -1, chT: 0,
+    mode: 'hero', chIdx: -1, chapterIdx: -1, chT: 0, recapT: 0,
   })
   const [finaleT, setFinaleT] = useState(0)
   const [heroDone, setHeroDone] = useState(false)
@@ -695,7 +695,8 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
           prev.mode === p.mode &&
           prev.chIdx === p.chapterCardIdx &&
           prev.chapterIdx === p.chapterIdx &&
-          prev.chT === p.chapterCardT
+          prev.chT === p.chapterCardT &&
+          prev.recapT === p.recapT
             ? prev
             : {
                 stopIndex: p.bodyStopIndex,
@@ -708,6 +709,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
                 chIdx: p.chapterCardIdx,
                 chapterIdx: p.chapterIdx,
                 chT: p.chapterCardT,
+                recapT: p.recapT,
               }
         )
         setHeroDone(p.heroT > 0.6)
@@ -723,22 +725,41 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
     }
   }, [])
 
-  // Which leg page shows + where its see-through banner sits. The leg page
-  // (Leg N / 5 + its stop list) persists across the WHOLE leg — the banner
-  // slides down the list to the active stop as you scroll and the globe flies
-  // alongside; at the next leg the pages cross-fade during the interstitial.
-  const legVisible =
-    heroDone && finaleT < 0.05 &&
-    card.mode !== 'recap' && card.mode !== 'finale-leg' && card.mode !== 'finale' &&
-    card.chapterIdx >= 0
-  const inIntro = card.mode === 'chapter'
-  const legEnter = inIntro ? smoothstep(0.05, 0.4, card.chT) : 1
+  // The leg frame is the tour's PERSISTENT scaffolding. Once it fades in (on the
+  // first chapter interstitial) it stays on screen — chrome and all — until the
+  // recap/finale takes over. Between legs NOTHING cross-fades wholesale:
+  //   • "Leg N / 5" keeps the word + the "/ 5"; only the NUMBER swaps.
+  //   • the half-year tracker stays put; only which box is lit hands off.
+  //   • Play + NM-to-LA never move or fade between legs.
+  //   • the stop list is the only body that changes: as you reach a leg's last
+  //     stop, its banner rides UP to the top while that leg's rows fade out and
+  //     the next leg's rows fade in beneath it.
+  // Everything is a pure closed form of scroll (chapterIdx / chT / prog / recapT),
+  // so a reverse scrub replays every hand-off exactly.
   const stopInLeg = (c) => clamp(card.prog - CHAPTERS[c].stopIndices[0], 0, CHAPTERS[c].stopIndices.length - 1)
-  // during an interstitial the previous leg cross-fades out under the incoming one
-  const outLeg = inIntro && card.chIdx > 0 ? card.chIdx - 1 : -1
-  const outOpacity = 1 - smoothstep(0, 0.3, card.chT)
-  // the readout + Play follow the leg page (hidden during the recap/finale climax)
-  const reelVisible = legVisible
+  const inIntro = card.mode === 'chapter'
+  // whole-frame opacity: fade in on the first interstitial, hold at 1 across the
+  // legs and their hand-offs, fade out as the recap begins (finale → gone).
+  let frameOpacity = 0
+  if (heroDone && card.chapterIdx >= 0) {
+    if (card.mode === 'recap') frameOpacity = 1 - smoothstep(0, 0.18, card.recapT)
+    else if (card.mode === 'finale-leg' || card.mode === 'finale' || finaleT >= 0.05) frameOpacity = 0
+    else if (inIntro && card.chIdx === 0) frameOpacity = smoothstep(0.05, 0.4, card.chT) // very first appearance
+    else frameOpacity = 1
+  }
+  const frameMounted = frameOpacity > 0.001
+  // the outgoing leg during a mid-tour hand-off (none on the very first appearance)
+  const prevLeg = inIntro && card.chIdx > 0 ? card.chIdx - 1 : -1
+  const curLeg = card.chapterIdx
+  // "Leg N / 5" number swap, the tracker's gliding lit box, the list crossfade
+  const numPrev = prevLeg >= 0 ? prevLeg + 1 : null
+  const numCur = curLeg + 1
+  const numT = inIntro ? card.chT : 1
+  const timelineF = prevLeg >= 0 ? prevLeg + smoothstep(0.3, 0.7, card.chT) : curLeg
+  const listChT = inIntro ? card.chT : 1
+  const progIn = curLeg >= 0 ? stopInLeg(curLeg) : 0
+  const progOut = prevLeg >= 0 ? stopInLeg(prevLeg) : 0
+  const controlsInteractive = frameOpacity > 0.5
   return (
     <div style={{ background: 'rgb(0,0,0)' }}>
       {/* venue-photo backdrops sit UNDER the alpha-true globe canvas (same
@@ -777,34 +798,26 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
           out at the finale so the LA 2028 headline arrives on a clean top edge. */}
       {fromBiography && <BackButton onNavigate={onNavigate} docked={docked} finaleT={finaleT} />}
 
-      {/* DESKTOP content frame — title pinned at TITLE_TOP, controls pinned at
-          CTRL_BOTTOM, the leg's stop list clipped in the flexing box between them.
-          The leg page (Leg N / 5 + its list) persists across the whole leg while a
-          see-through banner slides down the list to the active stop, the globe
-          flying alongside; at the next leg the pages cross-fade during the
-          interstitial. The list can never overflow onto the controls — a long leg
-          just scrolls inside its box (see LegPage). */}
-      {legVisible && !isMobile && (
+      {/* DESKTOP leg frame — the PERSISTENT scaffolding. Title/tracker pinned at
+          TITLE_TOP, Play + NM controls pinned at CTRL_BOTTOM, the stop list
+          clipped in the flexing box between them. The header and controls stay
+          put across the whole leg sequence; only the leg number, the lit tracker
+          box, the banner position, and the list content change from leg to leg.
+          The whole frame fades in on the first interstitial and out into the
+          recap. A long leg still just scrolls inside its box (see LegList). */}
+      {frameMounted && !isMobile && (
         <div style={{
           position: 'fixed', top: TITLE_TOP, bottom: CTRL_BOTTOM,
           left: LANE.left, right: LANE.right, maxWidth: LANE.maxWidth, zIndex: 1,
           display: 'flex', flexDirection: 'column', pointerEvents: 'none',
+          opacity: frameOpacity, transform: `translateY(${(1 - frameOpacity) * 14}px)`,
         }}>
-          {/* cross-fading leg pages fill everything above the controls */}
-          <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
-            {outLeg >= 0 && (
-              <div style={{ position: 'absolute', inset: 0, opacity: outOpacity }}>
-                <LegPage chapterIdx={outLeg} enter={1} stopInLeg={stopInLeg(outLeg)} isMobile={false} />
-              </div>
-            )}
-            <div style={{ position: 'absolute', inset: 0, opacity: legEnter }}>
-              <LegPage chapterIdx={card.chapterIdx} enter={legEnter} stopInLeg={stopInLeg(card.chapterIdx)} isMobile={false} />
-            </div>
-          </div>
-          {/* passage readout + Play — pinned to the bottom, fade in with the leg */}
+          <LegHeader numPrev={numPrev} numCur={numCur} numT={numT} timelineF={timelineF} isMobile={false} />
+          <LegList prevLeg={prevLeg} curLeg={curLeg} chT={listChT} progOut={progOut} progIn={progIn} isMobile={false} />
+          {/* passage readout + Play — persistent (fade only with the whole frame) */}
           <div style={{
             flexShrink: 0, marginTop: 16, display: 'flex', alignItems: 'center', gap: 18,
-            opacity: legEnter, pointerEvents: reelVisible ? 'auto' : 'none',
+            pointerEvents: controlsInteractive ? 'auto' : 'none',
           }}>
             <TourControls tour={tourRef.current} playing={playing} />
             <NmToLa prog={card.prog} />
@@ -812,26 +825,21 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
         </div>
       )}
 
-      {/* MOBILE content frame — same model: leg header pinned to the top of the
-          bottom band (so the globe always fits above it), stop list clipped in the
-          flexing box, readout + Play pinned to the bottom. */}
-      {isMobile && (
+      {/* MOBILE leg frame — same persistent model in the bottom band: header
+          pinned to the top (so the globe always fits above it), stop list clipped
+          in the flexing box, readout + Play pinned to the bottom. */}
+      {frameMounted && isMobile && (
         <div style={{
           position: 'fixed', left: 20, right: 20,
           top: MOBILE_LANE_TOP, bottom: MOBILE_CTRL_BOTTOM,
           zIndex: 3, display: 'flex', flexDirection: 'column', pointerEvents: 'none',
+          opacity: frameOpacity, transform: `translateY(${(1 - frameOpacity) * 12}px)`,
         }}>
-          <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
-            {legVisible && (
-              <div style={{ position: 'absolute', inset: 0, opacity: legEnter }}>
-                <LegPage chapterIdx={card.chapterIdx} enter={legEnter} stopInLeg={stopInLeg(card.chapterIdx)} isMobile />
-              </div>
-            )}
-          </div>
+          <LegHeader numPrev={numPrev} numCur={numCur} numT={numT} timelineF={timelineF} isMobile />
+          <LegList prevLeg={prevLeg} curLeg={curLeg} chT={listChT} progOut={progOut} progIn={progIn} isMobile />
           <div style={{
             flexShrink: 0, marginTop: 14,
-            opacity: legVisible ? legEnter : 0, transition: 'opacity 0.35s ease',
-            pointerEvents: reelVisible ? 'auto' : 'none',
+            pointerEvents: controlsInteractive ? 'auto' : 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16,
           }}>
             <TourControls tour={tourRef.current} playing={playing} />
@@ -879,32 +887,35 @@ function RecordChip({ record, marginTop = 20 }) {
 }
 
 // Half-year timeline tracker beside the leg counter — one box per leg (the five
-// half-years to 2028), the current leg lit blue. Gives at-a-glance context of
-// where you are in the campaign. Each leg is labelled by its half of the year:
-// "H2 2026", "H1 2027", ... "H2 2028" (the Olympics) — H1 = a Jan-start leg,
-// H2 = a Jul-start leg.
+// half-years to 2028). The lit box HANDS OFF from leg to leg: `activeF` is a
+// FLOAT, so during a hand-off the highlight glides from box N to box N+1 (a
+// quick baton pass) instead of a hard cut, matching the number swap beside it.
+// Each leg is labelled by its half of the year: "H2 2026", "H1 2027", ... "H2
+// 2028" (the Olympics) — H1 = a Jan-start leg, H2 = a Jul-start leg.
 const legAbbr = (label) => {
   const m = label.match(/^([A-Za-z]{3}).*?(\d{4})$/)
   if (!m) return label
   const firstHalf = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN'].includes(m[1].toUpperCase())
   return `${firstHalf ? 'H1' : 'H2'} ${m[2]}`
 }
-function LegTimeline({ current, isMobile }) {
+const mix = (a, b, t) => a + (b - a) * t
+function LegTimeline({ activeF, isMobile }) {
   return (
     <div style={{ display: 'flex', gap: isMobile ? 4 : 5, alignItems: 'center' }}>
       {CHAPTERS.map((ch, i) => {
-        const on = i === current
+        // 1 = fully lit, 0 = unlit; fractional for the two boxes mid-handoff
+        const on = clamp(1 - Math.abs(i - activeF), 0, 1)
         return (
           <span
             key={ch.id}
             style={{
               padding: isMobile ? '3px 5px' : '4px 7px',
-              border: `1px solid ${on ? 'rgb(0,80,255)' : 'rgba(255,255,255,0.18)'}`,
-              background: on ? 'rgb(0,80,255)' : 'rgba(255,255,255,0.03)',
-              color: on ? '#fff' : 'rgba(255,255,255,0.4)',
+              border: `1px solid rgba(${mix(255, 0, on)},${mix(255, 80, on)},${mix(255, 255, on)},${mix(0.18, 1, on)})`,
+              background: `rgba(${mix(255, 0, on)},${mix(255, 80, on)},${mix(255, 255, on)},${mix(0.03, 1, on)})`,
+              color: `rgba(255,255,255,${mix(0.4, 1, on)})`,
               fontSize: isMobile ? 8.5 : 9.5, fontWeight: 600, letterSpacing: '0.6px',
               textTransform: 'uppercase', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums',
-              boxShadow: on ? '0 0 14px rgba(0,80,255,0.5)' : 'none',
+              boxShadow: on > 0.01 ? `0 0 ${14 * on}px rgba(0,80,255,${0.5 * on})` : 'none',
             }}
           >
             {legAbbr(ch.label)}
@@ -915,32 +926,58 @@ function LegTimeline({ current, isMobile }) {
   )
 }
 
-// The leg page — the spine of the tour. Shows the leg counter ("Leg N / 5")
-// with the months grey to its right, then the leg's stops as a vertical
-// itinerary (each with its date grey on the right; the Worlds render in chrome).
-// A see-through banner slides down the list to the ACTIVE stop as you scroll
-// (stopInLeg is fractional → the banner glides between rows), and the globe
-// flies to that stop alongside. Content-only + everything a pure function of
-// scroll (stopInLeg / enter), so reverse-scrub reassembles it exactly.
+// The leg counter — "Leg N / 5" where the word + the "/ 5" are fixed and only
+// the NUMBER changes. Two digits share a fixed 1ch slot: the outgoing fades out
+// as the incoming fades in (t = interstitial progress). A hidden copy holds the
+// slot width so the surrounding text never reflows. During a leg prev is null
+// and the current digit is simply solid.
+function LegNumber({ prev, cur, t }) {
+  const digit = (val, opacity) => (
+    <span style={{ position: 'absolute', left: 0, right: 0, top: 0, textAlign: 'center', opacity }}>{val}</span>
+  )
+  return (
+    <span style={{ position: 'relative', display: 'inline-block', width: '1ch', textAlign: 'center', verticalAlign: 'baseline', fontVariantNumeric: 'tabular-nums' }}>
+      <span style={{ visibility: 'hidden' }}>{cur}</span>
+      {/* overlapping curves (like LegTimeline's baton pass) so the brighter
+          digit never drops near zero mid-swap — otherwise the number blinks out */}
+      {prev != null && digit(prev, 1 - smoothstep(0.2, 0.7, t))}
+      {digit(cur, prev != null ? smoothstep(0.3, 0.8, t) : 1)}
+    </span>
+  )
+}
+
+// The PERSISTENT header — "Leg N / 5" (number swaps) + the half-year tracker
+// (lit box hands off). Lives in the frame ABOVE the list and never remounts
+// between legs, so nothing here flickers as the tour moves on.
+function LegHeader({ numPrev, numCur, numT, timelineF, isMobile }) {
+  return (
+    <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', margin: '0 0 22px' }}>
+      <h2 style={{ color: '#fff', fontSize: isMobile ? 30 : 'clamp(34px, 5vw, 60px)', fontWeight: 800, letterSpacing: '-2px', lineHeight: 1, margin: 0 }}>
+        Leg <LegNumber prev={numPrev} cur={numCur} t={numT} /> / {CHAPTERS.length}
+      </h2>
+      <LegTimeline activeF={timelineF} isMobile={isMobile} />
+    </div>
+  )
+}
+
 // Horizontal bleed of the active-stop banner past the list's text column (the
 // blue border pokes left, the highlight softens off to the right). The clipped
 // box is widened by exactly this so the bleed is never cut by overflow:hidden.
 const BANNER_BLEED_L = 16
 const BANNER_BLEED_R = 8
-function LegPage({ chapterIdx, enter, stopInLeg, isMobile }) {
-  const ch = CHAPTERS[chapterIdx]
-  const n = ch ? ch.stopIndices.length : 0
-  const itemH = isMobile ? 34 : 42
-  const pos = clamp(stopInLeg, 0, Math.max(0, n - 1))
-  const active = Math.round(pos)
 
-  // The list lives in a fixed-height CLIPPED box (flex:1, between the leg header
-  // and the controls). When the whole list fits, it sits top-aligned and looks
-  // like a static itinerary. When it's taller than the box (a long leg or a
-  // short screen) it translates so the active stop stays centred in the box —
-  // rows above dissolve up under the title, rows below appear from behind the
-  // controls. It's a pure function of stopInLeg + the measured box height, so a
-  // reverse scrub reassembles it exactly.
+// The stop list — the ONE part of the leg frame that changes per leg. A SINGLE
+// persistent banner (positioned in BOX space, so it survives the leg change)
+// glides to the active stop as you scroll; when you reach a leg's last stop and
+// cross into the interstitial it rides UP to the top while the outgoing leg's
+// rows fade out and the incoming leg's rows fade in beneath it. Each leg's rows
+// scroll INSIDE the clipped box (a long leg on a short screen keeps the active
+// stop framed). Banner position, internal scroll, and the crossfade are all pure
+// functions of scroll (progIn / progOut / chT), so reverse-scrub is exact.
+// During a leg prevLeg is -1 and chT is 1 (no crossfade — just the current leg).
+function LegList({ prevLeg, curLeg, chT, progOut, progIn, isMobile }) {
+  const itemH = isMobile ? 34 : 42
+  const FADE = isMobile ? 20 : 26
   const boxRef = useRef(null)
   const [boxH, setBoxH] = useState(0)
   useLayoutEffect(() => {
@@ -952,74 +989,97 @@ function LegPage({ chapterIdx, enter, stopInLeg, isMobile }) {
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
-  const listH = n * itemH
-  const maxScroll = Math.max(0, listH - boxH)
-  const scrollOffset = boxH > 0 ? clamp(pos * itemH + itemH / 2 - boxH / 2, 0, maxScroll) : 0
-  // fade rows out where they cross the box edges (only when there's hidden
-  // content on that side) so they dissolve rather than clip flatly
-  const FADE = isMobile ? 20 : 26
-  const maskTop = scrollOffset > 0.5 ? FADE : 0
-  const maskBot = scrollOffset < maxScroll - 0.5 ? FADE : 0
-  const mask =
-    `linear-gradient(to bottom, transparent 0, #000 ${maskTop}px, #000 calc(100% - ${maskBot}px), transparent 100%)`
+
+  // per-leg geometry: how far a leg's list is internally scrolled, and where its
+  // active stop sits in BOX space (list-space position minus that scroll).
+  const geo = (legIdx, pos) => {
+    const ch = CHAPTERS[legIdx]
+    if (!ch) return null
+    const n = ch.stopIndices.length
+    const p = clamp(pos, 0, Math.max(0, n - 1))
+    const listH = n * itemH
+    const maxScroll = Math.max(0, listH - boxH)
+    const scrollOffset = boxH > 0 ? clamp(p * itemH + itemH / 2 - boxH / 2, 0, maxScroll) : 0
+    return { ch, n, p, maxScroll, scrollOffset, activeScreenY: p * itemH - scrollOffset, active: Math.round(p) }
+  }
+  const cur = geo(curLeg, progIn)
+  const out = prevLeg >= 0 ? geo(prevLeg, progOut) : null
+  if (!cur) return <div ref={boxRef} style={{ flex: 1, minHeight: 0 }} />
+
+  const transitioning = !!out && chT < 1
+  const outOpacity = transitioning ? 1 - smoothstep(0, 0.55, chT) : 0
+  const inOpacity = transitioning ? smoothstep(0.35, 0.9, chT) : 1
+  // the persistent banner rides from the outgoing active row up to the incoming
+  // one (which sits at the top, since progIn resolves to 0 during a hand-off)
+  const bannerY = transitioning ? mix(out.activeScreenY, cur.activeScreenY, easeInOut(chT)) : cur.activeScreenY
+
+  const outClips = out && outOpacity > 0.01
+  // Feather rows at the box edges from the CURRENTLY-DOMINANT (higher-opacity)
+  // list only — masking the OR of both would feather the outgoing leg's still-
+  // solid active row during a hand-off. Cap the feather at half the box so the
+  // two gradient stops can't cross on a very short box (which would collapse the
+  // opaque middle band and dim the active row).
+  const dom = !out || inOpacity >= outOpacity ? cur : out
+  const f = boxH > 0 ? Math.max(0, Math.min(FADE, boxH / 2 - 1)) : FADE
+  const maskTop = dom.scrollOffset > 0.5 ? f : 0
+  const maskBot = dom.scrollOffset < dom.maxScroll - 0.5 ? f : 0
   const masked = maskTop > 0 || maskBot > 0
-  if (!ch) return null
+  const mask = `linear-gradient(to bottom, transparent 0, #000 ${maskTop}px, #000 calc(100% - ${maskBot}px), transparent 100%)`
 
   return (
-    <div style={{ opacity: enter, transform: `translateY(${(1 - enter) * 18}px)`, textAlign: 'left', height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-      {/* leg counter + the half-year timeline tracker (current leg lit blue) */}
-      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', margin: '0 0 22px' }}>
-        <h2 style={{ color: '#fff', fontSize: isMobile ? 30 : 'clamp(34px, 5vw, 60px)', fontWeight: 800, letterSpacing: '-2px', lineHeight: 1, margin: 0 }}>
-          Leg {chapterIdx + 1} / {CHAPTERS.length}
-        </h2>
-        <LegTimeline current={chapterIdx} isMobile={isMobile} />
-      </div>
-      {/* clipped list box — widened by the banner bleed so the highlight isn't
-          cut, then internally scrolled to keep the active stop framed */}
+    <div
+      ref={boxRef}
+      style={{
+        position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden',
+        marginLeft: -BANNER_BLEED_L, marginRight: -BANNER_BLEED_R,
+        WebkitMaskImage: masked ? mask : undefined, maskImage: masked ? mask : undefined,
+      }}
+    >
+      {/* the ONE persistent see-through banner (box space) — glides between rows
+          within a leg, rides up to the top across a hand-off */}
       <div
-        ref={boxRef}
+        aria-hidden="true"
         style={{
-          position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden',
-          marginLeft: -BANNER_BLEED_L, marginRight: -BANNER_BLEED_R,
-          WebkitMaskImage: masked ? mask : undefined,
-          maskImage: masked ? mask : undefined,
+          position: 'absolute', left: 0, right: 0, top: bannerY, height: itemH,
+          background: 'linear-gradient(90deg, rgba(0,80,255,0.16), rgba(0,80,255,0.02))',
+          borderLeft: '2px solid rgb(0,80,255)',
         }}
-      >
-        <ul style={{ position: 'absolute', left: 0, right: 0, top: 0, listStyle: 'none', margin: 0, padding: `0 ${BANNER_BLEED_R}px 0 ${BANNER_BLEED_L}px`, transform: `translateY(${-scrollOffset}px)` }}>
-          {/* the see-through banner — glides to the active stop */}
-          <div
-            aria-hidden="true"
-            style={{
-              position: 'absolute', left: 0, right: 0, top: pos * itemH, height: itemH,
-              background: 'linear-gradient(90deg, rgba(0,80,255,0.16), rgba(0,80,255,0.02))',
-              borderLeft: '2px solid rgb(0,80,255)',
-            }}
-          />
-          {ch.stopIndices.map((si, i) => {
-            const s = STOPS[si]
-            const worlds = s.short === 'Worlds'
-            const on = i === active
-            return (
-              <li key={s.id} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10, height: itemH, fontSize: isMobile ? 14 : 17 }}>
-                <span style={{ color: on ? 'rgb(0,120,255)' : 'rgba(255,255,255,0.3)', fontSize: 9 }}>●</span>
-                <span style={{ color: on ? '#fff' : 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{s.region}</span>
-                {s.short && (
-                  <span
-                    className={worlds ? 'chrome-text' : undefined}
-                    style={worlds ? { fontWeight: 700 } : { color: on ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.4)', fontWeight: 400 }}
-                  >
-                    {s.short}
-                  </span>
-                )}
-                <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.42)', fontSize: isMobile ? 11 : 12.5, fontWeight: 600, letterSpacing: '0.5px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                  {s.dates}
-                </span>
-              </li>
-            )
-          })}
-        </ul>
-      </div>
+      />
+      <StopList leg={cur} opacity={inOpacity} itemH={itemH} isMobile={isMobile} />
+      {outClips && <StopList leg={out} opacity={outOpacity} itemH={itemH} isMobile={isMobile} />}
     </div>
+  )
+}
+
+// One leg's rows, translated to keep the active stop framed inside the clipped
+// box. Banner-free (the frame owns the single persistent banner). Presentational
+// only — its `leg` geometry + opacity are computed by LegList from scroll.
+function StopList({ leg, opacity, itemH, isMobile }) {
+  return (
+    <ul style={{ position: 'absolute', left: 0, right: 0, top: 0, listStyle: 'none', margin: 0, padding: `0 ${BANNER_BLEED_R}px 0 ${BANNER_BLEED_L}px`, transform: `translateY(${-leg.scrollOffset}px)`, opacity }}>
+      {leg.ch.stopIndices.map((si, i) => {
+        const s = STOPS[si]
+        const worlds = s.short === 'Worlds'
+        const on = i === leg.active
+        return (
+          <li key={s.id} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10, height: itemH, fontSize: isMobile ? 14 : 17 }}>
+            <span style={{ color: on ? 'rgb(0,120,255)' : 'rgba(255,255,255,0.3)', fontSize: 9 }}>●</span>
+            <span style={{ color: on ? '#fff' : 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{s.region}</span>
+            {s.short && (
+              <span
+                className={worlds ? 'chrome-text' : undefined}
+                style={worlds ? { fontWeight: 700 } : { color: on ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.4)', fontWeight: 400 }}
+              >
+                {s.short}
+              </span>
+            )}
+            <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.42)', fontSize: isMobile ? 11 : 12.5, fontWeight: 600, letterSpacing: '0.5px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+              {s.dates}
+            </span>
+          </li>
+        )
+      })}
+    </ul>
   )
 }
 
