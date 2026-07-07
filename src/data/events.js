@@ -3,8 +3,14 @@
 // ============================================================================
 //  Mirrors the sailing résumé (public/resume/Robby-Meek-Sailing-Resume.pdf,
 //  regenerated from ~/Desktop/Sailing Resume Docs/): every row of the résumé's
-//  Results table, grouped the same way (ILCA 7 → ILCA 6 → College → High
-//  School). When the résumé changes, update this file to match.
+//  Results table, grouped by era (ILCA 7 → ILCA 6 → College → High School).
+//  When the résumé changes, update this file to match.
+//
+//  A curated HIGHLIGHTS group leads the list — the athlete's best-of reel and
+//  the one group that starts EXPANDED (Biography's openGroups). Its rows are
+//  intentional DUPLICATES of the strongest rows from the era groups below (so
+//  they render + open modals identically); keep each copy in sync with its
+//  source row. It is not a résumé section — it exists only for this page.
 //
 //  Deliberate deviations from the résumé's wording (display polish only —
 //  places, fleets, years are exact):
@@ -45,6 +51,62 @@ export const OLYMPIC_BRIDGE = {
 }
 
 const RESULT_GROUPS = [
+  {
+    // Curated best-of reel — starts expanded, sits above every era group.
+    // Ordered most-recent → oldest (owner request). Every row is a verbatim
+    // duplicate of a row in the era groups below.
+    title: 'HIGHLIGHTS',
+    years: 'Career Best',
+    results: [
+      // ↓ ILCA 7 · 1 of 41 North American Championship 2025
+      {
+        place: 1, fleet: 41, event: 'North American Championship', year: 2025,
+        tag: 'Top American',
+        summary:
+          'The ILCA 7 North American Championship hosted by Alamitos Bay Yacht Club. Won the title in the 41-boat ILCA 7 fleet.',
+        url: 'https://ilcanasailing.org/major-regattas',
+      },
+      // ↓ ILCA 7 · 1 of 18 College Single-handed National Championship 2025
+      {
+        place: 1, fleet: 18, event: 'College Single-handed National Championship', year: 2025,
+        tag: 'Top American',
+        summary:
+          'The ICSA College Singlehanded National Championship hosted by Old Dominion University. Won the Open National Championship title representing Harvard.',
+        url: 'https://collegesailing.org/championships/national-championships',
+      },
+      // ↓ ILCA 7 · 1 of 37 Long Beach Olympic Classes Regatta 2023 (LA 2028 venue)
+      {
+        place: 1, fleet: 37, event: 'Long Beach Olympic Classes Regatta', year: 2023,
+        tag: 'Top American',
+        summary:
+          'Olympic classes regatta in Long Beach, California — the waters that will host sailing at LA 2028. Won the 37-boat ILCA 7 fleet.',
+      },
+      // ↓ ILCA 6 · 5 of 225 World Championship 2022
+      {
+        place: 5, fleet: 225, event: 'World Championship', year: 2022,
+        tag: 'Top American',
+        summary:
+          'The 2022 ILCA 6 World Championship — fifth of 225 boats and top American. My final season in the ILCA 6 before moving into the ILCA 7.',
+      },
+      // ↓ ILCA 6 · 1 of 75 North American Championship 2022
+      {
+        place: 1, fleet: 75, event: 'North American Championship', year: 2022,
+        tag: 'Top American',
+      },
+      // ↓ ILCA 6 · 1 of 120 Lauderdale Olympic Classes Regatta 2022
+      {
+        place: 1, fleet: 120, event: 'Lauderdale Olympic Classes Regatta', year: 2022,
+        tag: 'Top American', fleetNote: 'Fleet included Douglas, Riley, and Rose.',
+      },
+      // ↓ ILCA 6 · 9 of 374 World Championship 2021
+      {
+        place: 9, fleet: 374, event: 'World Championship', year: 2021,
+        tag: 'Second American',
+        summary:
+          'The 2021 ILCA 6 World Championship — ninth of 374 boats, and second American overall.',
+      },
+    ],
+  },
   {
     title: 'ILCA 7',
     years: '2022 – Present',

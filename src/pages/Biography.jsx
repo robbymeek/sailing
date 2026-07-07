@@ -121,10 +121,11 @@ function RoadCard({ isMid, isMobile, onNavigate, img }) {
 // that copy must never boot the RESULTS spray effect (see useTextSpray).
 export default function Biography({ onNavigate, scrollOffsetRef, preload = false }) {
   const [selectedEvent, setSelectedEvent] = useState(null)
-  // Which result eras are expanded. ILCA 7 (the current campaign) starts
-  // open; the rest start collapsed. Groups toggle independently — all four
-  // can be open at once, and each only ever changes by its own click.
-  const [openGroups, setOpenGroups] = useState({ 'ILCA 7': true })
+  // Which result eras are expanded. HIGHLIGHTS (the curated best-of reel)
+  // starts open; every era group starts collapsed. Groups toggle
+  // independently — all can be open at once, and each only ever changes by
+  // its own click.
+  const [openGroups, setOpenGroups] = useState({ HIGHLIGHTS: true })
   const rootRef = useRef(null)
   const imageRef = useRef(null)
   const text1Ref = useRef(null)
