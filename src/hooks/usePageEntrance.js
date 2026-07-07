@@ -11,7 +11,10 @@ export default function usePageEntrance(itemCount, { staggerMs = 80, initialDela
       }, initialDelayMs + i * staggerMs))
     }
     return () => timers.forEach(clearTimeout)
-  }, [])
+    // itemCount/stagger/delay are read above; every caller passes constants, so
+    // this still runs once — but declaring them keeps a future dynamic count
+    // correct (new items get scheduled instead of being stuck invisible).
+  }, [itemCount, staggerMs, initialDelayMs])
 
   return {
     isVisible: (index) => visibleItems.has(index),

@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react'
 
-export default function useCountdown(target) {
+export default function useCountdown(target, enabled = true) {
   const [now, setNow] = useState(new Date())
 
   useEffect(() => {
+    // `enabled: false` (e.g. the off-screen <Biography preload> copy) skips the
+    // 1s tick entirely, so a never-seen instance doesn't re-render every second.
+    if (!enabled) return
     const t = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(t)
-  }, [])
+  }, [enabled])
 
   const d = Math.max(0, target - now)
 

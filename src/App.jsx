@@ -9,14 +9,34 @@ const COMPACT_PAGES = ['Home', 'Biography', 'The Team', 'The Road', 'Contact', '
 import MainView from './pages/MainView'
 import HomeFilmBridge from './components/HomeFilmBridge'
 import Biography from './pages/Biography'
-import Team from './pages/Team'
 import Contact from './pages/Contact'
-import Support from './pages/Support'
+import ErrorBoundary from './components/ErrorBoundary'
+import { applyRouteMeta } from './lib/seo'
+
+// Retry a dynamic import once (after a short beat) before giving up — smooths
+// over a transient network blip; a persistent failure (a stale chunk hash
+// after a redeploy) then bubbles to the top-level ErrorBoundary, which reloads
+// once to pick up the fresh index.html + current hashes.
+const lazyWithRetry = (factory) =>
+  lazy(() =>
+    factory().catch(
+      (err) =>
+        new Promise((resolve, reject) =>
+          setTimeout(() => factory().then(resolve, () => reject(err)), 400),
+        ),
+    ),
+  )
 
 // Lazy: The Road carries three.js (~150KB gz) — keep it out of the main
 // bundle. Do NOT add it to the offscreen preload div below; that would boot
 // a hidden WebGL context permanently.
-const TheRoad = lazy(() => import('./pages/TheRoad'))
+const TheRoad = lazyWithRetry(() => import('./pages/TheRoad'))
+// Team + Support never render on Home and carry their own weight — split them
+// out of the entry bundle too. The Suspense fallbacks below match each page's
+// background so a cold navigation can't flash a different colour. (Do NOT lazy
+// Biography — the always-on offscreen preload would re-fetch its chunk anyway.)
+const Team = lazyWithRetry(() => import('./pages/Team'))
+const Support = lazyWithRetry(() => import('./pages/Support'))
 
 // Old URLs → new homes. Resolved BEFORE the route-transition machine ever
 // sees them (see the displayLocation initializer + redirect effect below), so
@@ -154,6 +174,12 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [redirectTo])
 
+  // Per-route <title>/description/canonical (the SPA ships one index.html).
+  // Keyed on the displayed route so the tab title tracks the visible page.
+  useEffect(() => {
+    applyRouteMeta(displayLocation.pathname)
+  }, [displayLocation.pathname])
+
   // fromOrb: the home orb→globe morph is mid-handoff. The body-level orb overlay
   // is showing the finished globe; swap routes SYNCHRONOUSLY with NO fade-to-black
   // (the overlay hides the swap), land at scroll 0 (= the globe's hero pose), and
@@ -178,11 +204,16 @@ export default function App() {
       return undefined
     }
     setTransitionStage('exiting')
+    // Leaving home via a normal nav: fade the body-level orb overlay out WITH
+    // the page's exit fade so it doesn't stay at full opacity and "pop" while
+    // everything else fades. The orb→globe morph (fromOrb, above) is exempt —
+    // it holds the overlay across the swap.
+    if (displayLocation.pathname === '/' && !orbOverlay.holding) orbOverlay.fadeOut(110)
     const t = setTimeout(() => {
       setDisplayLocation(location)
       setTransitionStage('entered')
       window.scrollTo(0, 0)
-    }, 350)
+    }, 130)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location])
@@ -222,6 +253,10 @@ export default function App() {
   // Idle-prefetch the lazy The Road chunk so the 350ms route transition
   // never waits on the network.
   useEffect(() => {
+    // Skip the speculative ~143KB (TheRoad + three.js) pull for data-saver
+    // users — they opt out of background downloads. The orb→Road path stays
+    // warm regardless via warmTheRoad() (MainView) on orb tap.
+    if (navigator.connection?.saveData) return
     const t = setTimeout(() => { import('./pages/TheRoad') }, 2500)
     return () => clearTimeout(t)
   }, [])
@@ -373,13 +408,22 @@ export default function App() {
     }
 
     updateTriggerColor()
-    window.addEventListener('scroll', updateTriggerColor, { passive: true })
+    // Coalesce scroll sampling to one measurement per frame — updateTriggerColor
+    // does an elementFromPoint + getComputedStyle walk (a forced layout flush),
+    // so running it on every raw scroll event thrashes layout on touch scroll.
+    let rafId = null
+    const onScroll = () => {
+      if (rafId != null) return
+      rafId = requestAnimationFrame(() => { rafId = null; updateTriggerColor() })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('resize', updateTriggerColor)
     const interval = setInterval(updateTriggerColor, 400)
     return () => {
-      window.removeEventListener('scroll', updateTriggerColor)
+      window.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', updateTriggerColor)
       clearInterval(interval)
+      if (rafId != null) cancelAnimationFrame(rafId)
     }
   }, [navOverflowing, isHomeRoute, location.pathname])
 
@@ -510,7 +554,7 @@ export default function App() {
       <div
         style={{
           opacity: isExiting ? 0 : 1,
-          transition: 'opacity 0.3s ease',
+          transition: 'opacity 0.11s ease',
         }}
         onTransitionEnd={handleExitComplete}
       >
@@ -523,9 +567,17 @@ export default function App() {
             )
           } />
           <Route path="/biography" element={<Biography onNavigate={go} />} />
-          <Route path="/team" element={<Team onNavigate={go} />} />
+          <Route path="/team" element={
+            <Suspense fallback={<div style={{ height: '100dvh', background: 'rgb(12,14,18)' }} />}>
+              <Team onNavigate={go} />
+            </Suspense>
+          } />
           <Route path="/contact" element={<Contact onNavigate={go} />} />
-          <Route path="/support" element={<Support onNavigate={go} />} />
+          <Route path="/support" element={
+            <Suspense fallback={<div style={{ height: '100dvh', background: 'rgb(240,240,240)' }} />}>
+              <Support onNavigate={go} />
+            </Suspense>
+          } />
           <Route path="/the-road" element={
             <Suspense fallback={<div style={{ height: '100dvh', background: 'rgb(0,0,0)' }} />}>
               <TheRoad
@@ -546,7 +598,11 @@ export default function App() {
         visibility: 'hidden', pointerEvents: 'none', overflow: 'hidden',
         zIndex: -1,
       }}>
-        {displayLocation.pathname !== '/biography' && <Biography onNavigate={() => {}} preload />}
+        {displayLocation.pathname !== '/biography' && (
+          <ErrorBoundary silent>
+            <Biography onNavigate={() => {}} preload />
+          </ErrorBoundary>
+        )}
       </div>
     </div>
   )

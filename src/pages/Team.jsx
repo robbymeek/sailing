@@ -210,6 +210,8 @@ function SponsorCard({ sponsor, hovered, locked, onHover, onLeave, onClick }) {
       <img
         src={`${BASE}${sponsor.photo}`}
         alt={sponsor.name}
+        loading="lazy"
+        decoding="async"
         style={{
           width: '100%', height: '100%',
           objectFit: 'cover',
@@ -263,6 +265,8 @@ function SponsorCard({ sponsor, hovered, locked, onHover, onLeave, onClick }) {
           <img
             src={`${BASE}${sponsor.logo}`}
             alt=""
+            loading="lazy"
+            decoding="async"
             style={{
               maxWidth: 180, maxHeight: 72, objectFit: 'contain',
               marginBottom: 22,
@@ -795,13 +799,21 @@ function StatementChapter({ beat, isMobile, onMeetTeam }) {
       overflowY: isMobile ? 'auto' : 'visible',
     }}>
       <div>
-        <h1 style={{ ...lineStyle, color: beat === 1 ? 'rgba(255,255,255,0.4)' : '#fff' }}>
-          The singlehanded class.
-        </h1>
-        {beat === 1 && (
-          <h1 style={{ ...lineStyle, color: '#fff', marginTop: 8 }}>
-            Never sailed alone.
+        {/* One <h1> per page: the opening (beat 0) statement is it; the beat-1
+            repeat + second line are the same argument restated → <h2>. */}
+        {beat === 1 ? (
+          <h2 style={{ ...lineStyle, color: 'rgba(255,255,255,0.4)' }}>
+            The singlehanded class.
+          </h2>
+        ) : (
+          <h1 style={{ ...lineStyle, color: '#fff' }}>
+            The singlehanded class.
           </h1>
+        )}
+        {beat === 1 && (
+          <h2 style={{ ...lineStyle, color: '#fff', marginTop: 8 }}>
+            Never sailed alone.
+          </h2>
         )}
         {beat === 0 && (
           <div style={{
@@ -883,7 +895,9 @@ function EraChapter({ era, side, isMobile, isNow }) {
       {era.logo && (
         <img
           src={`${BASE}${era.logo}`}
-          alt=""
+          alt={era.backer || ''}
+          loading="lazy"
+          decoding="async"
           style={{
             maxHeight: isMobile ? 56 : 84,
             maxWidth: 'min(60vw, 260px)',
@@ -1179,6 +1193,8 @@ export default function Team({ onNavigate }) {
           <img
             src={`${BASE}IMG_5957 2.JPG`}
             alt=""
+            loading="lazy"
+            decoding="async"
             style={{
               width: '100%', height: '100%',
               objectFit: 'cover',
@@ -1205,7 +1221,7 @@ export default function Team({ onNavigate }) {
           margin: '0 auto',
           textAlign: 'center',
         }}>
-          <h1
+          <h2
             className="chrome-text"
             style={{
               fontFamily: '"Didot", "Bodoni 72", "Bodoni MT", "Playfair Display", Georgia, serif',
@@ -1218,7 +1234,7 @@ export default function Team({ onNavigate }) {
             }}
           >
             The Team
-          </h1>
+          </h2>
 
           <p style={{
             color: 'rgba(255,255,255,0.88)',
@@ -1341,7 +1357,9 @@ export default function Team({ onNavigate }) {
           <div style={{ flex: '0 0 auto', width: 'clamp(200px, 25vw, 280px)' }}>
             <img
               src={`${BASE}IMG_5958.JPG`}
-              alt=""
+              alt="Robby Meek"
+              loading="lazy"
+              decoding="async"
               style={{ width: '100%', objectFit: 'cover', display: 'block' }}
             />
             <div style={{ height: 2, background: TEAM_ACCENT }} />

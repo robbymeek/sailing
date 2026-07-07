@@ -117,6 +117,16 @@ function setVisible(v) {
   }
 }
 
+// Fade the overlay out fast so it leaves WITH the page's exit fade instead of
+// staying at full opacity and "popping" while everything else fades. Used when
+// leaving home via a normal nav; the orb→globe morph path never calls this
+// (it holds the overlay). Teardown is left to MainView's unmount a beat later.
+function fadeOut(ms = 300) {
+  if (!canvasEl) return
+  canvasEl.style.transition = `opacity ${ms}ms ease`
+  requestAnimationFrame(() => { if (canvasEl) canvasEl.style.opacity = '0' })
+}
+
 function startMorph() {
   if (scene && scene.startMorph) scene.startMorph()
 }
@@ -153,6 +163,7 @@ function detach() {
 export default {
   attach,
   setVisible,
+  fadeOut,
   startMorph,
   resize,
   crossfadeOut,
