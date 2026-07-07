@@ -248,6 +248,10 @@ export default function App() {
   // Idle-prefetch the lazy The Road chunk so the 350ms route transition
   // never waits on the network.
   useEffect(() => {
+    // Skip the speculative ~143KB (TheRoad + three.js) pull for data-saver
+    // users — they opt out of background downloads. The orb→Road path stays
+    // warm regardless via warmTheRoad() (MainView) on orb tap.
+    if (navigator.connection?.saveData) return
     const t = setTimeout(() => { import('./pages/TheRoad') }, 2500)
     return () => clearTimeout(t)
   }, [])
