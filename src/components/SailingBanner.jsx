@@ -157,6 +157,63 @@ export default function SailingBanner({ isMobile = false, hero = false, inert = 
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [inert, lite])
 
+  // Hero fade-off (owner-tuned): the film stays solid until about a third of it
+  // has scrolled off the top, then washes out on a stepped ramp that deepens as
+  // it leaves, capping at a 60% fade (opacity floor 0.40). Read as "how much of
+  // the video is still on screen": 65% left → fade begins, 50% left → ~30%,
+  // 25% left → ~40%, none left → 60%. Pure closed form of the section's scroll
+  // position, so scrolling back up reverses it exactly. Only the standalone video
+  // hero fades; the inert preload copy and the lite / reduced-motion posters are
+  // left untouched. Tweak the effect by editing FADE_STOPS.
+  useEffect(() => {
+    if (!hero || inert || lite) return undefined
+    const el = containerRef.current
+    if (!el || typeof window === 'undefined') return undefined
+    // [fraction of the hero scrolled off the top edge, fade amount] control
+    // points; fade is linearly interpolated between them.
+    const FADE_STOPS = [
+      [0.35, 0.00], // 65% still showing — fade begins
+      [0.50, 0.30], // 50% still showing — ~30% faded
+      [0.75, 0.40], // 25% still showing — ~40% faded
+      [1.00, 0.60], // fully gone        — 60% faded (the cap)
+    ]
+    const LAST = FADE_STOPS.length - 1
+    let queued = false
+    const apply = () => {
+      queued = false
+      const r = el.getBoundingClientRect()
+      // fraction of the hero scrolled above the viewport's top edge (0 → 1)
+      const hidden = r.height > 0 ? Math.min(1, Math.max(0, -r.top / r.height)) : 0
+      let fade = FADE_STOPS[0][1] // below the first stop: no fade
+      if (hidden >= FADE_STOPS[LAST][0]) {
+        fade = FADE_STOPS[LAST][1]
+      } else {
+        for (let i = 0; i < LAST; i++) {
+          const [h0, f0] = FADE_STOPS[i]
+          const [h1, f1] = FADE_STOPS[i + 1]
+          if (hidden >= h0 && hidden <= h1) {
+            fade = f0 + (f1 - f0) * ((hidden - h0) / (h1 - h0))
+            break
+          }
+        }
+      }
+      el.style.opacity = String(1 - fade)
+    }
+    const onScroll = () => {
+      if (queued) return
+      queued = true
+      requestAnimationFrame(apply)
+    }
+    apply()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+      el.style.opacity = ''
+    }
+  }, [hero, inert, lite])
+
   const container = {
     position: 'relative',
     width: '100%',

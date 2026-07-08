@@ -257,7 +257,7 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
         }}>
           <div ref={text1Ref} style={{ willChange: 'transform' }}>
             <div style={{
-              background: 'rgba(255,255,255,0.85)',
+              background: '#fff',
               padding: '12px 40px 12px 40px',
               marginBottom: 12,
               display: 'inline-block',
