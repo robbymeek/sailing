@@ -46,10 +46,24 @@ const COUNTDOWN_TARGET = Date.parse('2028-07-14T00:00:00')
 // arrow's head lands at 85% of the viewport width. Same layout on every view.
 const HOME_NAV = {
   support: { label: 'Support', route: 'Support' },
+  hoverColor: '#1E40FF', // campaign accent — hover/focus on any home link
+  // DESKTOP footer: the four sections (quiet, dot-separated, left) + Support pushed
+  // right, on one thin baseline so the orb owns the field. Cool grey harmonized with
+  // the orb's FRESNEL_COLOR rim (≈rgb 158,184,219, lightened) — recessive, not white.
+  links: [
+    { label: 'Biography', route: 'Biography' },
+    { label: 'The Road', route: 'The Road' },
+    { label: 'The Team', route: 'The Team' },
+    { label: 'Contact', route: 'Contact' },
+  ],
+  footerClamp: 'clamp(13px, 1vw, 15px)',
+  footerColor: 'rgba(198,212,235,0.6)',
+  footerDot: 'rgba(198,212,235,0.3)',
+  footerSupportColor: 'rgba(214,224,242,0.82)',
+  // MOBILE (embedded) keeps the SupportArrow (long arrow) + blurb below the orb:
   supportClamp: '22px', // held at the mobile/narrow size — the value at the arrow's cap point (~775px vw); no desktop growth
   supportWeight: 600,
   supportColor: 'rgba(255,255,255,0.95)',
-  hoverColor: '#1E40FF',
   blurbClamp: 'clamp(12px, 1.05vw, 15.5px)',
   blurbColor: 'rgba(255,255,255,0.72)',
 }
@@ -651,34 +665,68 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
         />
       )}
 
-      {/* Home CTA — the only on-page menu: a large left-aligned Support button whose
-          arrow runs to 85% of the viewport, with the blurb beneath it. Identical on
-          mobile and every desktop width (only fixed↔absolute differs for the embedded
-          scroll). Fade/slide (uiVisible * (1-textOut)) is preserved. */}
-      <nav
-        aria-label="Primary"
-        style={{
-          position: embedded ? 'absolute' : 'fixed',
-          left: 'clamp(20px, 5vw, 64px)', // padded from the left
-          right: '15%', // arrow head lands at 85% of the viewport on small/mobile screens…
-          maxWidth: 620, // …but the block stops growing past this on large screens (arrow + text cap)
-          bottom: 'clamp(28px, 5vh, 48px)',
-          display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
-          gap: 'clamp(12px, 1.6vh, 20px)',
-          opacity: (uiVisible ? 1 : 0) * (1 - textOut),
-          transform: `translateX(${-28 * textOut}px)`,
-          transition: `opacity 0.6s ease${bakedMorphOut ? ', transform 0.6s ease' : ''}`,
-          pointerEvents: uiVisible && textOut < 0.05 ? 'auto' : 'none',
-          zIndex: 20,
-        }}
-      >
-        <SupportArrow onClick={() => onNavigate(HOME_NAV.support.route)} />
-        <p style={{
-          color: HOME_NAV.blurbColor, fontSize: HOME_NAV.blurbClamp,
-          lineHeight: 1.55, margin: 0, fontWeight: 400, letterSpacing: 0,
-          maxWidth: 'min(100%, 560px)', textAlign: 'left',
-        }}>{HOME_BLURB}</p>
-      </nav>
+      {/* Home menu. MOBILE (embedded): the Support CTA (long arrow) + blurb, absolute
+          at the bottom so it scrolls off with the frame — UNCHANGED. DESKTOP: a quiet
+          baseline footer — the four sections (dot-separated, left) + Support pushed
+          right, one thin line so the orb owns the field. Fade (uiVisible*(1-textOut))
+          is preserved in both. */}
+      {embedded ? (
+        <nav
+          aria-label="Primary"
+          style={{
+            position: 'absolute',
+            left: 'clamp(20px, 5vw, 64px)', // padded from the left
+            right: '15%', // arrow head lands at 85% of the viewport on small/mobile screens…
+            maxWidth: 620, // …but the block stops growing past this on large screens (arrow + text cap)
+            bottom: 'clamp(28px, 5vh, 48px)',
+            display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+            gap: 'clamp(12px, 1.6vh, 20px)',
+            opacity: (uiVisible ? 1 : 0) * (1 - textOut),
+            transform: `translateX(${-28 * textOut}px)`,
+            transition: `opacity 0.6s ease${bakedMorphOut ? ', transform 0.6s ease' : ''}`,
+            pointerEvents: uiVisible && textOut < 0.05 ? 'auto' : 'none',
+            zIndex: 20,
+          }}
+        >
+          <SupportArrow onClick={() => onNavigate(HOME_NAV.support.route)} />
+          <p style={{
+            color: HOME_NAV.blurbColor, fontSize: HOME_NAV.blurbClamp,
+            lineHeight: 1.55, margin: 0, fontWeight: 400, letterSpacing: 0,
+            maxWidth: 'min(100%, 560px)', textAlign: 'left',
+          }}>{HOME_BLURB}</p>
+        </nav>
+      ) : (
+        <nav
+          aria-label="Primary"
+          style={{
+            position: 'fixed',
+            left: 'clamp(24px, 4vw, 56px)', right: 'clamp(24px, 4vw, 56px)',
+            bottom: 'clamp(20px, 3vh, 34px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 24, flexWrap: 'wrap',
+            opacity: (uiVisible ? 1 : 0) * (1 - textOut),
+            transform: `translateY(${8 * textOut}px)`,
+            transition: `opacity 0.6s ease${bakedMorphOut ? ', transform 0.6s ease' : ''}`,
+            pointerEvents: uiVisible && textOut < 0.05 ? 'auto' : 'none',
+            zIndex: 20,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+            {HOME_NAV.links.map((l, i, arr) => (
+              <span key={l.route} style={{ display: 'inline-flex', alignItems: 'center' }}>
+                <FooterLink label={l.label} onClick={() => onNavigate(l.route)} />
+                {i < arr.length - 1 && (
+                  <span aria-hidden="true" style={{
+                    color: HOME_NAV.footerDot, fontSize: HOME_NAV.footerClamp,
+                    margin: '0 clamp(6px, 0.7vw, 12px)', userSelect: 'none',
+                  }}>·</span>
+                )}
+              </span>
+            ))}
+          </div>
+          <FooterLink support label="Support →" onClick={() => onNavigate(HOME_NAV.support.route)} />
+        </nav>
+      )}
 
 
       {/* Embedded exit veil — topmost layer of the home frame; the scroll-
@@ -785,8 +833,37 @@ function BakedOrbBackdrop({ embedded }) {
   )
 }
 
-// Home Support CTA: the word "Support" (large, left) + a long arrow whose head
-// lands at the nav's right edge (85% of the viewport). Scales with the window;
+// Desktop footer link: small + quiet, cool-grey (harmonized with the orb's rim);
+// hover/focus → the campaign accent. `support` reads a hair brighter as the action.
+function FooterLink({ label, onClick, support }) {
+  const [hover, setHover] = useState(false)
+  return (
+    <button
+      className="home-nav-link"
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onFocus={() => setHover(true)}
+      onBlur={() => setHover(false)}
+      style={{
+        background: 'none', border: 'none', cursor: 'pointer',
+        padding: '8px 6px', margin: '-8px -6px', // padded hitbox, pulled back out
+        color: hover ? HOME_NAV.hoverColor : (support ? HOME_NAV.footerSupportColor : HOME_NAV.footerColor),
+        fontSize: HOME_NAV.footerClamp,
+        fontWeight: support ? 600 : 500,
+        letterSpacing: '0.3px',
+        fontFamily: 'inherit',
+        whiteSpace: 'nowrap',
+        transition: 'color 0.25s ease',
+      }}
+    >
+      {label}
+    </button>
+  )
+}
+
+// Home Support CTA (MOBILE): the word "Support" (large, left) + a long arrow whose
+// head lands at the nav's right edge (85% of the viewport). Scales with the window;
 // hover/focus → royal blue. A real <button> for keyboard + screen readers.
 function SupportArrow({ onClick }) {
   const [hover, setHover] = useState(false)
