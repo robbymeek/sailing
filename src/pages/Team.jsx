@@ -97,13 +97,10 @@ const CHAPTERS = [
     now: true, // the climax chapter — the boat glows here
     era: {
       years: 'NOW',
-      kicker: 'FLAGSHIP PARTNER',
-      backer: 'AA ENT',
-      logo: 'AAENT-Logo.png', // the ONLY logo on the timeline — everyone else is typeset
-      lines: [
-        'Full-time Olympic training.',
-        'Every start from here points at Los Angeles.',
-      ],
+      kicker: 'FLAGSHIP PARTNERS',
+      backer: 'AA ENT · US Sailing Team', // shown like a history backer (middot-separated)
+      note: 'and backed by: Annapolis Yacht Club', // plain line, no bullet
+      tagline: 'Every start from here points at Los Angeles.',
     },
   },
 ]
@@ -642,32 +639,24 @@ function SponsorRollCall() {
 
 // ---------- Roll-call engraved plate (desktop) ----------
 
-const clamp01 = (v) => Math.min(1, Math.max(0, v))
-const sstep = (a, b, x) => {
-  const t = clamp01((x - a) / (b - a))
-  return t * t * (3 - 2 * t)
-}
-
-// One fixed engraved plaque in the timeline's sticky layer. Scroll choreography
-// is a pure closed form of scrollY (no one-shot state — reverse scrub replays):
-// the plaque sits on the opening statement page (visible at rest), then fades
-// out before the first era chapter climbs into the shared right column. Pure
-// CSS (no WebGL), so it always renders; reduced motion stills the sheen.
+// One engraved plaque in the timeline's sticky layer, centered on the opening
+// statement page. It rides the page UP and off the top as you scroll (clipped
+// by the sticky layer) — the same "scroll away" behavior as the mobile inline
+// roll call, rather than fading in place. Pure closed form of scrollY (reverse
+// scroll replays exactly); pure CSS, reduced motion stills the sheen.
 function RollCallOverlay() {
   const wrapRef = useRef(null)
 
   useEffect(() => {
     let raf = 0
-    // The plaque is present/formed on the statement page (opacity 1 at
-    // scrollY≈0) and fades out over 0.6→0.95vh — gone before the 2017–2018 era
-    // chapter reaches centre on the same +40 column.
+    // Scroll the plaque up 1:1 with the page so it rides the statement up and
+    // off the top of the sticky layer (clipped there), like the mobile inline
+    // roll call — no in-place fade.
     const update = () => {
       raf = 0
       const wrap = wrapRef.current
       if (!wrap) return
-      const vh = window.innerHeight || 1
-      const y = window.scrollY / vh
-      wrap.style.opacity = String(1 - sstep(0.6, 0.95, y))
+      wrap.style.transform = `translateY(${-window.scrollY}px)`
     }
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(update) }
     update()
@@ -698,7 +687,7 @@ function RollCallOverlay() {
       minWidth: 260,
       pointerEvents: 'none',
     }}>
-      <div ref={wrapRef} style={{ position: 'relative', opacity: 0 }}>
+      <div ref={wrapRef} style={{ position: 'relative' }}>
         {/* The brushed-steel plate + its sheen, painted behind the names */}
         <div aria-hidden="true" style={{
           position: 'absolute',
@@ -797,15 +786,53 @@ function StatementChapter({ isMobile, onMeetTeam }) {
   )
 }
 
-// Era chapter: the journey as evidence of what backing produces. Years big,
-// the backer credited above the achievement lines. Desktop alternates sides
-// around the spine; mobile stacks left of the 24px spine.
+// ---------- Era-card background: transparent white, blurred backdrop ----------
+// A translucent white wash + backdrop-blur so the photo reads THROUGH the card,
+// softly blurred, with black text on top — see-through, not a solid/frosted card,
+// and no spine bar. Mobile uses a higher white alpha (blur kept) so the black
+// text stays legible on small screens. NOW is distinguished by STRUCTURE (a
+// black-bold kicker + partners as the backer line + a plain note + a tagline),
+// not by color.
+const GLASS_HISTORY = {
+  background: 'rgba(255,255,255,0.35)',
+  backdropFilter: 'blur(20px)',
+  WebkitBackdropFilter: 'blur(20px)',
+}
+const GLASS_HISTORY_MOBILE = {
+  background: 'rgba(255,255,255,0.62)',
+  backdropFilter: 'blur(14px)',
+  WebkitBackdropFilter: 'blur(14px)',
+}
+const GLASS_NOW = {
+  background: 'rgba(255,255,255,0.46)',
+  backdropFilter: 'blur(20px)',
+  WebkitBackdropFilter: 'blur(20px)',
+}
+const GLASS_NOW_MOBILE = {
+  background: 'rgba(255,255,255,0.72)',
+  backdropFilter: 'blur(14px)',
+  WebkitBackdropFilter: 'blur(14px)',
+}
+const GLASS_HAIRLINE = 'rgba(255,255,255,0.5)' // subtle bright rim; no spine bar
+const INK = 'rgb(16,18,26)'                    // near-black text
+
+// Era chapter: the journey as evidence of what backing produces. Years big, the
+// backer(s) over the achievement bullets, all on a transparent white panel that
+// blurs the photo behind it (black text on top; no spine bar). The NOW card is
+// special by STRUCTURE — a black-bold kicker, its flagship partners as the backer
+// line ("AA ENT · US Sailing Team"), a plain "and backed by" note, and a closing
+// tagline. Desktop alternates sides around the spine.
 function EraChapter({ era, side, isMobile, isNow }) {
   const positioning = isMobile
     ? { left: 56, right: 28, textAlign: 'left' }
     : side === 'left'
       ? { right: 'calc(50% + 40px)', left: 'clamp(40px, 5vw, 100px)', textAlign: 'right' }
       : { left: 'calc(50% + 40px)', right: 'clamp(40px, 5vw, 100px)', textAlign: 'left' }
+  const rightAligned = !isMobile && side === 'left'
+
+  const panel = isNow
+    ? (isMobile ? GLASS_NOW_MOBILE : GLASS_NOW)
+    : (isMobile ? GLASS_HISTORY_MOBILE : GLASS_HISTORY)
 
   return (
     <div style={{
@@ -815,78 +842,66 @@ function EraChapter({ era, side, isMobile, isNow }) {
       ...positioning,
     }}>
       <div style={{
-        fontSize: isMobile ? 'clamp(30px, 8vw, 48px)' : 'clamp(40px, 5vw, 72px)',
-        fontWeight: 700,
-        lineHeight: 1,
-        letterSpacing: '-2px',
-        color: '#fff',
-        textShadow: isNow ? '0 0 30px rgba(10,85,235,0.35)' : 'none',
-        marginBottom: 18,
+        width: 'fit-content',
+        maxWidth: isMobile ? '100%' : 480,
+        boxSizing: 'border-box',
+        marginLeft: rightAligned ? 'auto' : 0,
+        padding: isMobile ? '22px 24px 24px' : '28px 34px 30px',
+        borderRadius: 2,
+        border: `1px solid ${GLASS_HAIRLINE}`,
+        ...panel,
       }}>
-        {era.years}
-      </div>
-      <div style={{ ...LABEL, color: 'rgba(255,255,255,0.45)', marginBottom: 8 }}>
-        {era.kicker}
-      </div>
-      {era.logo && (
-        <img
-          src={`${BASE}${era.logo}`}
-          alt={era.backer || ''}
-          loading="lazy"
-          decoding="async"
-          style={{
-            maxHeight: isMobile ? 56 : 84,
-            maxWidth: 'min(60vw, 260px)',
-            objectFit: 'contain',
-            filter: 'brightness(0) invert(1) drop-shadow(0 2px 10px rgba(0,0,0,0.55))',
-            display: 'inline-block',
-            marginBottom: 10,
-          }}
-        />
-      )}
-      <div style={{
-        fontSize: isMobile ? 'clamp(17px, 4.5vw, 22px)' : 'clamp(20px, 2vw, 28px)',
-        fontWeight: 600,
-        letterSpacing: '-0.5px',
-        color: '#fff',
-        lineHeight: 1.25,
-        marginBottom: 14,
-        textShadow: '0 1px 10px rgba(0,0,0,0.5)',
-      }}>
-        {era.backer}
-      </div>
-      {isNow ? (
-        // The flagship NOW slide keeps its paragraph blurb.
-        era.lines.map((t, i) => (
-          <div key={i} style={{
-            fontSize: isMobile ? 13 : 'clamp(14px, 1.15vw, 17px)',
-            fontWeight: 400,
-            color: 'rgba(255,255,255,0.75)',
-            lineHeight: 1.55,
-            marginTop: i === 0 ? 0 : 4,
-            maxWidth: 440,
-            marginLeft: !isMobile && side === 'left' ? 'auto' : 0,
-          }}>
-            {t}
-          </div>
-        ))
-      ) : (
-        // The three "Backed by" eras: achievements as a bulleted list. On the
-        // left-of-spine (right-aligned) chapters the row reverses so the marker
-        // stays on the spine side and the text reads hard against it.
-        <ul style={{
-          listStyle: 'none',
-          margin: 0,
-          padding: 0,
-          maxWidth: 440,
-          marginLeft: !isMobile && side === 'left' ? 'auto' : 0,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: isMobile ? 7 : 9,
+        {/* Years */}
+        <div style={{
+          fontSize: isMobile ? 'clamp(30px, 8vw, 48px)' : 'clamp(40px, 5vw, 72px)',
+          fontWeight: 700,
+          lineHeight: 1,
+          letterSpacing: '-2px',
+          color: INK,
+          marginBottom: isNow ? 14 : 18,
         }}>
-          {era.lines.map((t, i) => {
-            const rightAligned = !isMobile && side === 'left'
-            return (
+          {era.years}
+        </div>
+
+        {/* Kicker — NOW's is accent-colored, bigger and bolder (more visible) */}
+        <div style={{
+          ...LABEL,
+          color: isNow ? INK : 'rgba(16,18,26,0.5)',
+          fontSize: isNow ? 13 : 12,
+          fontWeight: isNow ? 700 : 500,
+          marginBottom: isNow ? 12 : 8,
+        }}>
+          {era.kicker}
+        </div>
+
+        {/* Backer line — history org, or NOW's flagship partners ("A · B") */}
+        {era.backer && (
+          <div style={{
+            fontSize: isMobile ? 'clamp(17px, 4.5vw, 22px)' : 'clamp(20px, 2vw, 28px)',
+            fontWeight: 600,
+            letterSpacing: '-0.5px',
+            color: INK,
+            lineHeight: 1.25,
+            marginBottom: 14,
+          }}>
+            {era.backer}
+          </div>
+        )}
+
+        {/* Achievement bullets (history only) — black square markers. Row
+            reverses on left-of-spine cards so the marker stays spine-side. */}
+        {era.lines && era.lines.length > 0 && (
+          <ul style={{
+            listStyle: 'none',
+            margin: 0,
+            padding: 0,
+            maxWidth: 440,
+            marginLeft: rightAligned ? 'auto' : 0,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: isMobile ? 7 : 9,
+          }}>
+            {era.lines.map((line, i) => (
               <li key={i} style={{
                 display: 'flex',
                 flexDirection: rightAligned ? 'row-reverse' : 'row',
@@ -894,7 +909,7 @@ function EraChapter({ era, side, isMobile, isNow }) {
                 gap: 10,
                 fontSize: isMobile ? 13 : 'clamp(14px, 1.15vw, 17px)',
                 fontWeight: 400,
-                color: 'rgba(255,255,255,0.75)',
+                color: 'rgba(16,18,26,0.82)',
                 lineHeight: 1.5,
                 textAlign: rightAligned ? 'right' : 'left',
               }}>
@@ -904,15 +919,44 @@ function EraChapter({ era, side, isMobile, isNow }) {
                   height: 5,
                   marginTop: '0.55em',
                   borderRadius: 1,
-                  background: 'rgba(0,140,255,0.9)',
-                  boxShadow: '0 0 6px rgba(0,140,255,0.35)',
+                  background: INK,
                 }} />
-                <span>{t}</span>
+                <span>{line}</span>
               </li>
-            )
-          })}
-        </ul>
-      )}
+            ))}
+          </ul>
+        )}
+
+        {/* NOW secondary note — a plain line, NO bullet */}
+        {era.note && (
+          <div style={{
+            maxWidth: 440,
+            marginLeft: rightAligned ? 'auto' : 0,
+            fontSize: isMobile ? 13 : 'clamp(14px, 1.15vw, 17px)',
+            fontWeight: 400,
+            color: 'rgba(16,18,26,0.72)',
+            lineHeight: 1.5,
+            textAlign: rightAligned ? 'right' : 'left',
+          }}>
+            {era.note}
+          </div>
+        )}
+
+        {/* NOW-only closing tagline — the culmination; only this card gets it */}
+        {isNow && era.tagline && (
+          <div style={{
+            marginTop: isMobile ? 14 : 18,
+            maxWidth: 440,
+            marginLeft: rightAligned ? 'auto' : 0,
+            fontSize: isMobile ? 13 : 'clamp(14px, 1.1vw, 16px)',
+            fontStyle: 'italic',
+            color: 'rgba(20,26,40,0.78)',
+            lineHeight: 1.4,
+          }}>
+            {era.tagline}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
