@@ -71,14 +71,14 @@ const TUNE = {
   //             so t=0 when the cursor is in a far corner and t=1 when it's on the orb
   proxExp: 1.3, // growth curve t^k: ~10% closer from a corner → ~5% of the growth, and the
   //              rate keeps accelerating toward the orb (faster the closer the cursor gets)
-  restScale: 0.875, // orb size (× base) at rest / cursor in a far corner (smallest)
-  peakScale: 1.33, // orb size (× base) when the cursor is right on it (largest)
+  restScale: 0.82, // orb size (× base) at rest / cursor in a far corner (smallest)
+  peakScale: 1.23, // orb size (× base) when the cursor is right on it (largest)
   revealRest: 0.85, // interior brightness at rest (≈ today; a hair darker)
   revealPeak: 1.2, // interior brightness at closest approach (brighter → reveals more)
   nearStrength: 0.03, // refraction strength at closest approach: flattens the lens so
   //                     the interior (and the in-orb HUD) resolve clearly on approach
   hudAlpha: 1.0, // peak HUD strength at full hover — 1.0 = the most contrasted (pure b/w)
-  hudRevealStart: 1.0, // orb scale (hoverScale) where the whole HUD BEGINS to fade in
+  hudRevealStart: 0.9, // orb scale (hoverScale) where the whole HUD BEGINS to fade in
   hudRevealFull: 0.95, // HUD reaches full clarity at this fraction of peakScale (0.95 × max)
   hudSize: 0.075, // title (LA 2028 / OLYMPICS) type size, as a fraction of orb diameter
   hudTimerRatio: 0.7, // countdown size relative to the title (< 1 → title reads larger)
@@ -87,7 +87,7 @@ const TUNE = {
   hudTrack: 0.12, // title letter-spacing as a fraction of its font size
   hudWarp: 3.0, // extra glass warp on the HUD while it emerges (× the page warp), eases to 1 settled
   boatGrow: 1.0, // boat grows 1:1 with the orb (stays proportionally orb-filling)
-  boatMaxScale: 1.33, // hard cap on the boat's size (× its base) — matches peakScale
+  boatMaxScale: 1.23, // hard cap on the boat's size (× its base) — matches peakScale
   // ---- idle breathing pulse (ambient life at rest; mirrored on the mobile baked
   //      orb in BakedOrb.jsx so the phone and desktop breathe on the same rhythm) ----
   pulseScale: 0.015, // peak swell of the idle breath (× rest) — near-subliminal
