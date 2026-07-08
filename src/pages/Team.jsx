@@ -50,8 +50,8 @@ const CHAPTERS = [
       kicker: 'BACKED BY',
       backer: 'Annapolis Yacht Club',
       lines: [
-        'Annapolis, Maryland. Racing on the Chesapeake at nine years old.',
-        'First Youth Championships two seasons later.',
+        'Racing on the Chesapeake in Annapolis at nine years old',
+        'First Youth Championships two seasons later',
       ],
     },
   },
@@ -65,8 +65,10 @@ const CHAPTERS = [
       kicker: 'BACKED BY',
       backer: 'Severn Sailing Association',
       lines: [
-        'Two High School National Championships. Orange Bowl Champion.',
-        'Fifth in the world at the Youth Worlds. A first ILCA 7 North American title.',
+        'Two High School National Championships',
+        'Orange Bowl Champion',
+        'Fifth in the world at the Youth Worlds',
+        'First ILCA 7 North American title',
       ],
     },
   },
@@ -80,8 +82,10 @@ const CHAPTERS = [
       kicker: 'BACKED BY',
       backer: 'Harvard Sailing · US Sailing Team',
       lines: [
-        'Team captain at Harvard — Team Race and Singlehanded National Champion.',
-        'Three-time ILCA 7 North American Champion, racing for the United States.',
+        'Team captain at Harvard',
+        'Team Race and Singlehanded National Champion',
+        'Three-time ILCA 7 North American Champion',
+        'Racing for the United States',
       ],
     },
   },
@@ -851,19 +855,64 @@ function EraChapter({ era, side, isMobile, isNow }) {
       }}>
         {era.backer}
       </div>
-      {era.lines.map((t, i) => (
-        <div key={i} style={{
-          fontSize: isMobile ? 13 : 'clamp(14px, 1.15vw, 17px)',
-          fontWeight: 400,
-          color: 'rgba(255,255,255,0.75)',
-          lineHeight: 1.55,
-          marginTop: i === 0 ? 0 : 4,
+      {isNow ? (
+        // The flagship NOW slide keeps its paragraph blurb.
+        era.lines.map((t, i) => (
+          <div key={i} style={{
+            fontSize: isMobile ? 13 : 'clamp(14px, 1.15vw, 17px)',
+            fontWeight: 400,
+            color: 'rgba(255,255,255,0.75)',
+            lineHeight: 1.55,
+            marginTop: i === 0 ? 0 : 4,
+            maxWidth: 440,
+            marginLeft: !isMobile && side === 'left' ? 'auto' : 0,
+          }}>
+            {t}
+          </div>
+        ))
+      ) : (
+        // The three "Backed by" eras: achievements as a bulleted list. On the
+        // left-of-spine (right-aligned) chapters the row reverses so the marker
+        // stays on the spine side and the text reads hard against it.
+        <ul style={{
+          listStyle: 'none',
+          margin: 0,
+          padding: 0,
           maxWidth: 440,
           marginLeft: !isMobile && side === 'left' ? 'auto' : 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: isMobile ? 7 : 9,
         }}>
-          {t}
-        </div>
-      ))}
+          {era.lines.map((t, i) => {
+            const rightAligned = !isMobile && side === 'left'
+            return (
+              <li key={i} style={{
+                display: 'flex',
+                flexDirection: rightAligned ? 'row-reverse' : 'row',
+                alignItems: 'flex-start',
+                gap: 10,
+                fontSize: isMobile ? 13 : 'clamp(14px, 1.15vw, 17px)',
+                fontWeight: 400,
+                color: 'rgba(255,255,255,0.75)',
+                lineHeight: 1.5,
+                textAlign: rightAligned ? 'right' : 'left',
+              }}>
+                <span aria-hidden="true" style={{
+                  flex: 'none',
+                  width: 5,
+                  height: 5,
+                  marginTop: '0.55em',
+                  borderRadius: 1,
+                  background: 'rgba(0,140,255,0.9)',
+                  boxShadow: '0 0 6px rgba(0,140,255,0.35)',
+                }} />
+                <span>{t}</span>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }
