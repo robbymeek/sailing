@@ -127,6 +127,7 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
   // its own click.
   const [openGroups, setOpenGroups] = useState({ HIGHLIGHTS: true })
   const rootRef = useRef(null)
+  const heroRef = useRef(null)
   const imageRef = useRef(null)
   const text1Ref = useRef(null)
   const text2Ref = useRef(null)
@@ -167,18 +168,22 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
   })
 
   // Parallax: text moves faster than image, image moves faster than page.
-  // Based on the PAGE ROOT's top edge (owner request): the effect starts the
-  // second you scroll — while the video banner is still on screen — not only
-  // once the white hero reaches the viewport top. One formula for both modes
-  // (standalone: root top == -scrollY; embedded in MobileHome: root top is
-  // the biography section's own offset).
+  // Held at rest until the video banner is 50% scrolled off the top, then
+  // driven from there (owner request — was: start the second you scroll, from
+  // the very top of the page). bannerH = the gap from the page root to the
+  // intro hero = the banner's rendered height, so the 50% threshold tracks the
+  // banner at any viewport size. One formula for both modes (standalone: root
+  // top == -scrollY; embedded in MobileHome: root top is the section offset).
   useEffect(() => {
     if (preload) return undefined // hidden preload copy: no rAF churn
     let rafId
     const update = () => {
       let y = 0
       if (rootRef.current) {
-        y = Math.max(0, -rootRef.current.getBoundingClientRect().top)
+        const rootTop = rootRef.current.getBoundingClientRect().top
+        const heroTop = heroRef.current ? heroRef.current.getBoundingClientRect().top : rootTop
+        const bannerH = heroTop - rootTop
+        y = Math.max(0, -rootTop - 0.5 * bannerH)
       }
       if (imageRef.current) {
         imageRef.current.style.transform = `translateY(-${y * 0.3}px)`
@@ -217,7 +222,7 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
            rise OVER the film strip as you scroll instead of clipping at the
            hero's top edge. Downward photo bleed is covered by the blue bio
            section (z5). */}
-      <div style={{
+      <div ref={heroRef} style={{
         position: 'relative',
         minHeight: '100vh',
         overflow: 'visible',
