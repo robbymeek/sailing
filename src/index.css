@@ -48,6 +48,19 @@ button {
   animation: chromeShimmer 6s ease infinite;
 }
 
+/* The Team roll-call plate: one slow chrome glint sweeping the brushed steel.
+   Long off-screen rest between passes so it reads as an occasional catch of
+   light, not a constant shimmer. Sits inside the plate, under the names. */
+@keyframes plateSheen {
+  0%   { background-position: 140% 0; }
+  60%  { background-position: -60% 0; }
+  100% { background-position: -60% 0; }
+}
+.plate-sheen {
+  animation: plateSheen 9s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+  will-change: background-position;
+}
+
 
 /* Bio hero — medium screens: cards move below image */
 @media (max-width: 900px) {
@@ -170,14 +183,12 @@ button {
   animation: sailBob 3s ease-in-out infinite;
 }
 
-/* The Team page: gentle chapter snapping on the root scroller, desktop only.
-   `proximity` (never mandatory) so the partners/roster/letter sections below
-   the timeline scroll completely freely. */
-@media (min-width: 700px) {
-  .team-snap-root { scroll-snap-type: y proximity; }
-}
+/* The Team page: chapter snapping is handled in JS (Team.jsx forward-snap
+   effect) so it only ever settles INTO the next stop in the scroll direction
+   and never snaps backward. No CSS scroll-snap — it can't constrain direction. */
 @media (prefers-reduced-motion: reduce) {
   .sail-bob { animation: none; }
+  .plate-sheen { animation: none; opacity: 0; }
 }
 
 /* Support form focus */

@@ -4,8 +4,7 @@ import Footer from '../components/Footer'
 import SailboatIcon from '../components/SailboatIcon'
 import ExitNav from '../components/ExitNav'
 import { EXIT_CARDS } from '../components/exitCards'
-import { hasWebGL2 } from '../lib/webglSupport'
-// Hero second beat + era photos that live in src/assets (the rest come from public/)
+// Opening statement + era photos that live in src/assets (the rest come from public/)
 import teamPhoto from '../assets/exit-cards/exit-path.jpg'
 import usstPhoto from '../assets/home-intro/p1177244.jpeg'
 import nowPhoto from '../assets/home-intro/img-5957-alt.jpg'
@@ -29,20 +28,14 @@ const BASE = import.meta.env.BASE_URL
 
 // ---------- Chapter data ----------
 
-// Six full-viewport scroll-snap chapters. The two statement chapters make the
-// hero argument with imagery (alone on open water → the team), per the
-// owner's non-cheesy spec: flat declarative type, the crossfade does the
-// arguing. Era chapters credit the backers of each stretch of the journey —
-// achievements stay to one or two lines; RESULTS owns race-by-race.
+// Five full-viewport scroll-snap chapters. The opening statement chapter makes
+// the hero argument with imagery (the team — "Never sailed alone."), per the
+// owner's non-cheesy spec: flat declarative type. Era chapters credit the
+// backers of each stretch of the journey — achievements stay to one or two
+// lines; RESULTS owns race-by-race.
 const CHAPTERS = [
   {
-    type: 'statement-1',
-    photo: `${BASE}sailing-photos/P1233011 (1).JPG`,
-    dark: 0.5,
-    label: 'The singlehanded class',
-  },
-  {
-    type: 'statement-2',
+    type: 'statement',
     photo: teamPhoto,
     dark: 0.45,
     label: 'Never sailed alone',
@@ -558,42 +551,92 @@ function YourNameInput({ onNavigate, showBoat = false }) {
 
 // ---------- Chapter content ----------
 
-// The roll call — the roster's names, present on BOTH statement beats. On
-// "The singlehanded class." they sit quiet in white italic (the crew is
-// there even when the water looks empty); on "Never sailed alone." the same
-// list comes alive in the site's chrome shimmer. Mobile flows the list below
-// the statement per beat; desktop mounts ONE fixed copy in the sticky layer
-// (RollCallOverlay below) so the names hold their ground while the scroll
-// sprays them apart and reforms them as chrome.
-function SponsorRollCall({ colored, isMobile }) {
+// ---------- The engraved roll-call plate (shared desktop + mobile) ----------
+
+// The supporters' names pressed into a brushed steel plaque — a boat builder's
+// plate / donor honor-wall. This is a deliberate, one-spot exception to the
+// "names on the photo" rule: the sponsors get called out on their own object.
+// Steel tones sit between the /team root rgb(12,14,18) and cool-steel
+// rgb(201,208,220); names are incised (light lower lip + dark upper groove =
+// lit from above), kept bright for legibility. Shared by the desktop
+// RollCallOverlay (sticky, brushed + a slow sheen) and the mobile
+// SponsorRollCall (a simpler static panel).
+
+// Plate padding around the name block. Left < the container's 40px spine offset
+// so the plate's left edge lands ~8px right of the 50% spine (clears it).
+const PLATE_PAD_L = 32
+const PLATE_PAD_R = 44
+const PLATE_PAD_Y = 30
+
+// Brushed dark steel, lit from the top edge.
+const STEEL_GRADIENT =
+  'linear-gradient(180deg, rgb(54,59,68) 0%, rgb(40,44,52) 38%, rgb(30,33,40) 72%, rgb(24,27,33) 100%)'
+// Fine horizontal brushing (3px period, low alpha → HiDPI-safe). Desktop only.
+const STEEL_BRUSH =
+  'repeating-linear-gradient(0deg, rgba(255,255,255,0.028) 0px, rgba(255,255,255,0.028) 1px, rgba(0,0,0,0.05) 1px, rgba(0,0,0,0.05) 3px)'
+// Raised-plaque bevel: bright top lip, dark bottom, inner depth, drop shadow.
+const PLATE_BEVEL =
+  'inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -1px 0 rgba(0,0,0,0.60), inset 0 0 22px rgba(0,0,0,0.35), 0 14px 34px rgba(0,0,0,0.50), 0 2px 6px rgba(0,0,0,0.45)'
+// One slow chrome glint sweeping the steel — animated by .plate-sheen, and sits
+// inside the plate under the names, so it never costs legibility.
+const SHEEN_STYLE = {
+  position: 'absolute',
+  inset: 0,
+  backgroundImage:
+    'linear-gradient(115deg, transparent 38%, rgba(200,220,255,0.12) 47%, rgba(255,255,255,0.22) 50%, rgba(0,180,255,0.10) 53%, transparent 62%)',
+  backgroundSize: '260% 100%',
+  backgroundRepeat: 'no-repeat',
+  pointerEvents: 'none',
+}
+
+// A name incised into the steel. Bright fill + two-tone shadow = pressed in.
+const engravedRow = {
+  fontStyle: 'italic',
+  fontSize: 'clamp(16px, 1.4vw, 22px)',
+  fontWeight: 500,
+  letterSpacing: '-0.2px',
+  lineHeight: 1.5,
+  margin: '0 0 12px',
+  color: 'rgb(207,214,225)',
+  textShadow: '0 1px 1px rgba(240,246,255,0.16), 0 -1px 1px rgba(0,0,0,0.62)',
+}
+
+// The small tracked label titling the plaque, over an incised divider rule.
+const eyebrowStyle = {
+  fontSize: 11,
+  fontWeight: 600,
+  letterSpacing: '2.5px',
+  textTransform: 'uppercase',
+  color: 'rgba(150,161,178,0.92)',
+  textShadow: '0 1px 0 rgba(235,242,252,0.10), 0 -1px 1px rgba(0,0,0,0.60)',
+  paddingBottom: 12,
+  marginBottom: 16,
+  borderBottom: '1px solid rgba(0,0,0,0.35)',
+  boxShadow: '0 1px 0 rgba(255,255,255,0.05)',
+}
+
+// Mobile: the same plaque, simpler — a static steel panel (no brush striations,
+// so no HiDPI shimmer on phones; no sheen). Names incised at 16px on both beats.
+function SponsorRollCall() {
   const names = SUPPORTERS.map((s) => s.name)
-  // Left-aligned to the content column (owner-directed) — a little larger than
-  // before. Mobile keeps the CSS chrome shimmer on beat 2 (the liquid-metal
-  // panel is a desktop enhancement; see RollCallOverlay).
   return (
-    <div style={{ marginTop: 30, textAlign: 'left' }}>
+    <div style={{
+      marginTop: 30,
+      padding: '22px 20px 12px',
+      borderRadius: 4,
+      backgroundImage: 'linear-gradient(180deg, rgb(52,57,66) 0%, rgb(38,42,50) 55%, rgb(28,31,38) 100%)',
+      border: '1px solid rgba(0,0,0,0.5)',
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -1px 0 rgba(0,0,0,0.55), 0 8px 22px rgba(0,0,0,0.45)',
+    }}>
+      <div style={{ ...eyebrowStyle, fontSize: 10 }}>Behind the Campaign</div>
       {names.map((n) => (
-        <p
-          key={n}
-          className={colored ? 'chrome-text' : undefined}
-          style={{
-            color: colored ? undefined : 'rgba(255,255,255,0.92)',
-            fontStyle: 'italic',
-            fontSize: isMobile ? 16 : 'clamp(16px, 1.4vw, 22px)',
-            fontWeight: 500,
-            letterSpacing: '-0.2px',
-            lineHeight: 1.5,
-            margin: '0 0 10px',
-          }}
-        >
-          {n}
-        </p>
+        <p key={n} style={{ ...engravedRow, fontSize: 16, margin: '0 0 10px' }}>{n}</p>
       ))}
     </div>
   )
 }
 
-// ---------- Roll-call liquid metal (desktop) ----------
+// ---------- Roll-call engraved plate (desktop) ----------
 
 const clamp01 = (v) => Math.min(1, Math.max(0, v))
 const sstep = (a, b, x) => {
@@ -601,184 +644,88 @@ const sstep = (a, b, x) => {
   return t * t * (3 - 2 * t)
 }
 
-// One fixed roll call in the timeline's sticky layer. Scroll choreography is a
-// pure closed form of scrollY (no one-shot state — reverse scrub reassembles):
-// beat 0 shows the white italic list; scrolling toward beat 1 crossfades the
-// white names into a living liquid-metal render of the SAME names (the letters
-// become flowing, refracting chrome), fully formed exactly at the beat-2 snap;
-// the whole panel fades out as the era chapters arrive. Reduced motion / no
-// WebGL2 / data-saver fall back to the CSS .chrome-text crossfade — the static
-// form of the same look (the DOM lists stay mounted as that fallback and as the
-// metal raster's source geometry).
+// One fixed engraved plaque in the timeline's sticky layer. Scroll choreography
+// is a pure closed form of scrollY (no one-shot state — reverse scrub replays):
+// the plaque sits on the opening statement page (visible at rest), then fades
+// out before the first era chapter climbs into the shared right column. Pure
+// CSS (no WebGL), so it always renders; reduced motion stills the sheen.
 function RollCallOverlay() {
   const wrapRef = useRef(null)
-  const whiteRef = useRef(null)
-  const chromeRef = useRef(null)
-  const canvasRef = useRef(null)
-  const sceneRef = useRef(null)
 
   useEffect(() => {
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const saveData = !!(navigator.connection && navigator.connection.saveData)
-    let useMetal = hasWebGL2() && !reduced && !saveData
-    let built = false
-    let metal = null    // lazily-imported { createLiquidMetal, buildMetalField }
-    let canceled = false
-    const PAD = 44
-
-    // Rasterize the live white list into a beveled depth field and size the
-    // WebGL canvas to the padded name block so the metal glyphs land exactly
-    // where the white DOM glyphs are (same getBoundingClientRect + computed
-    // font the crossfade registers against). Rebuilt on resize / fonts.ready.
-    const buildField = () => {
-      const wrap = wrapRef.current
-      const white = whiteRef.current
-      const canvas = canvasRef.current
-      const scene = sceneRef.current
-      if (!metal || !wrap || !white || !canvas || !scene) return
-      const wrapRect = wrap.getBoundingClientRect()
-      if (wrapRect.width === 0) return
-      const dpr = Math.min(2, window.devicePixelRatio || 1)
-      const field = metal.buildMetalField({ nameEls: white.children, wrapRect, pad: PAD, dpr })
-      canvas.style.left = `${-PAD}px`
-      canvas.style.top = `${-PAD}px`
-      canvas.style.width = `${wrapRect.width + PAD * 2}px`
-      canvas.style.height = `${wrapRect.height + PAD * 2}px`
-      scene.resize()
-      scene.setField(field)
-      built = true
-    }
-
-    // Scroll choreography windows, in viewport-heights of scrollY:
-    //   0.12 → 1.00  white → liquid metal. The metal is fully formed exactly at
-    //                the beat-2 snap (owner-directed: only once the boat is fully
-    //                at the next stop).
-    //   1.45 → 1.92  whole roll call fades out as the first era arrives.
     let raf = 0
+    // The plaque is present/formed on the statement page (opacity 1 at
+    // scrollY≈0) and fades out over 0.6→0.95vh — gone before the 2017–2018 era
+    // chapter reaches centre on the same +40 column.
     const update = () => {
       raf = 0
       const wrap = wrapRef.current
-      const white = whiteRef.current
-      const chrome = chromeRef.current
-      const canvas = canvasRef.current
-      if (!wrap || !white || !chrome || !canvas) return
+      if (!wrap) return
       const vh = window.innerHeight || 1
       const y = window.scrollY / vh
-      const t = sstep(0.12, 1, y)
-      const vis = 1 - sstep(1.45, 1.92, y)
-      wrap.style.opacity = String(vis)
-
-      if (!useMetal || !built) {
-        // Fallback: the CSS white → .chrome-text crossfade (static form of the
-        // same look), used for reduced motion / no WebGL2 / data-saver and for
-        // the brief window before the metal field is built.
-        white.style.opacity = String(1 - t)
-        chrome.style.opacity = String(t)
-        canvas.style.opacity = '0'
-        if (sceneRef.current) sceneRef.current.setRunning(false)
-        return
-      }
-      // Metal path: white fades early, the metal fades in and lands fully formed
-      // at the beat-2 snap (t ≈ 0.98). The chrome DOM stays hidden.
-      chrome.style.opacity = '0'
-      white.style.opacity = String(1 - sstep(0.02, 0.22, t))
-      canvas.style.opacity = String(sstep(0.16, 0.98, t))
-      sceneRef.current.setRunning(t > 0.02 && y < 1.95)
+      wrap.style.opacity = String(1 - sstep(0.6, 0.95, y))
     }
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(update) }
-    const rebuild = () => { if (useMetal) buildField(); onScroll() }
-
-    // Lazy-load the metal module (gated to desktop + capable clients) so it
-    // stays out of the main bundle and never loads on the fallback paths or
-    // off-route. Create the scene, then build the field once fonts settle so
-    // the glyph metrics match the DOM raster.
-    if (useMetal) {
-      import('../lib/liquidMetal').then((mod) => {
-        if (canceled) return
-        metal = mod
-        try {
-          sceneRef.current = mod.createLiquidMetal(canvasRef.current, { isMobile: false })
-        } catch (err) {
-          console.warn('Liquid-metal roll call unavailable, using chrome fallback', err)
-          useMetal = false
-          update()
-          return
-        }
-        const boot = () => { if (!canceled) { buildField(); onScroll() } }
-        if (document.fonts?.ready) document.fonts.ready.then(boot)
-        else boot()
-      }).catch((err) => {
-        console.warn('Liquid-metal roll call failed to load, using chrome fallback', err)
-        useMetal = false
-        update()
-      })
-    }
     update()
     window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', rebuild)
+    window.addEventListener('resize', onScroll)
     return () => {
-      canceled = true
       if (raf) cancelAnimationFrame(raf)
       window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', rebuild)
-      if (sceneRef.current) { sceneRef.current.dispose(); sceneRef.current = null }
+      window.removeEventListener('resize', onScroll)
     }
   }, [])
 
   const names = SUPPORTERS.map((s) => s.name)
-  const listStyle = (colored) => ({
-    position: colored ? 'absolute' : 'relative',
-    inset: colored ? 0 : undefined,
-    textAlign: 'left', // left-aligned, reading rightward off the center spine
-    opacity: colored ? 0 : 1,
-  })
-  const rowStyle = {
-    fontStyle: 'italic',
-    fontSize: 'clamp(16px, 1.4vw, 22px)',
-    fontWeight: 500, // identical metrics on both lists — one raster serves both
-    letterSpacing: '-0.2px',
-    lineHeight: 1.5,
-    margin: '0 0 12px',
-  }
 
-  // A padded box just right of the center spine — left-aligned, so the roll
-  // call reads off the spine the way the era chapters do. NO scrim/shader
-  // behind the text (owner style rule: the names sit directly on the photo).
+  // A raised steel plaque just right of the center spine, reading off it the way
+  // the era chapters do. The names are engraved into the metal so the sponsors
+  // are called out and stay easy to read.
   return (
     <div style={{
       position: 'absolute',
-      left: 'calc(50% + 40px)', // same offset off the spine as the era chapters
+      // Plate LEFT EDGE lands at 50%+40px — the era-chapter column — after it
+      // extends left by PLATE_PAD_L(32): 72 − 32 = 40. Names indent inside.
+      left: 'calc(50% + 72px)',
       top: '50%',
       transform: 'translateY(-50%)',
       zIndex: 3,
       padding: '36px 0',
       minWidth: 260,
+      pointerEvents: 'none',
     }}>
-      <div ref={wrapRef} style={{ position: 'relative' }}>
-        <div ref={whiteRef} style={listStyle(false)}>
+      <div ref={wrapRef} style={{ position: 'relative', opacity: 0 }}>
+        {/* The brushed-steel plate + its sheen, painted behind the names */}
+        <div aria-hidden="true" style={{
+          position: 'absolute',
+          top: -PLATE_PAD_Y,
+          bottom: -PLATE_PAD_Y,
+          left: -PLATE_PAD_L,
+          right: -PLATE_PAD_R,
+          borderRadius: 4,
+          backgroundImage: `${STEEL_BRUSH}, ${STEEL_GRADIENT}`,
+          border: '1px solid rgba(0,0,0,0.5)',
+          boxShadow: PLATE_BEVEL,
+          overflow: 'hidden',
+        }}>
+          <div className="plate-sheen" style={SHEEN_STYLE} />
+        </div>
+        {/* The engraved content, above the plate */}
+        <div style={{ position: 'relative', textAlign: 'left' }}>
+          <div style={eyebrowStyle}>Behind the Campaign</div>
           {names.map((n) => (
-            <p key={n} style={{ ...rowStyle, color: 'rgba(255,255,255,0.92)' }}>{n}</p>
+            <p key={n} style={engravedRow}>{n}</p>
           ))}
         </div>
-        <div ref={chromeRef} style={listStyle(true)} aria-hidden="true">
-          {names.map((n) => (
-            <p key={n} className="chrome-text" style={rowStyle}>{n}</p>
-          ))}
-        </div>
-        <canvas
-          ref={canvasRef}
-          aria-hidden="true"
-          style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
-        />
       </div>
     </div>
   )
 }
 
-// Statement chapters: the hero argument, two beats. Flat declarative type —
-// no italics, no exclamation, no nautical kitsch. The photos argue: chapter 0
-// is one boat on open water; the scroll to chapter 1 crossfades to the team.
-function StatementChapter({ beat, isMobile, onMeetTeam }) {
+// The opening statement: the hero argument in flat declarative type — no
+// italics, no exclamation, no nautical kitsch. The team photo argues; the copy
+// just names it. One page (the old solo "singlehanded class" page was cut).
+function StatementChapter({ isMobile, onMeetTeam }) {
   const lineStyle = {
     fontSize: isMobile ? 'clamp(30px, 8.5vw, 52px)' : 'clamp(38px, 5vw, 72px)',
     fontWeight: 700,
@@ -799,64 +746,49 @@ function StatementChapter({ beat, isMobile, onMeetTeam }) {
       overflowY: isMobile ? 'auto' : 'visible',
     }}>
       <div>
-        {/* One <h1> per page: the opening (beat 0) statement is it; the beat-1
-            repeat + second line are the same argument restated → <h2>. */}
-        {beat === 1 ? (
-          <h2 style={{ ...lineStyle, color: 'rgba(255,255,255,0.4)' }}>
-            The singlehanded class.
-          </h2>
-        ) : (
-          <h1 style={{ ...lineStyle, color: '#fff' }}>
-            The singlehanded class.
-          </h1>
-        )}
-        {beat === 1 && (
-          <h2 style={{ ...lineStyle, color: '#fff', marginTop: 8 }}>
-            Never sailed alone.
-          </h2>
-        )}
-        {beat === 0 && (
-          <div style={{
-            marginTop: 32,
-            ...LABEL,
-            letterSpacing: '1.5px',
+        {/* The page's single <h1> — two lines: the setup greyed, the thesis white. */}
+        <h1 style={lineStyle}>
+          <span style={{ display: 'block', color: 'rgba(255,255,255,0.4)' }}>The singlehanded class.</span>
+          <span style={{ display: 'block', color: '#fff', marginTop: 8 }}>Never sailed alone.</span>
+        </h1>
+        <button
+          onClick={onMeetTeam}
+          style={{
+            background: 'none',
+            border: 'none',
             color: 'rgba(255,255,255,0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-          }}>
-            Scroll
-            <span style={{ display: 'inline-block', animation: 'scrollHint 2s ease-in-out infinite' }}>↓</span>
-          </div>
-        )}
-        {beat === 1 && (
-          <button
-            onClick={onMeetTeam}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'rgba(255,255,255,0.6)',
-              fontSize: isMobile ? 11 : 13,
-              fontWeight: 400,
-              letterSpacing: '-0.2px',
-              textDecoration: 'underline',
-              textUnderlineOffset: 3,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              padding: 0,
-              marginTop: 26,
-              pointerEvents: 'auto',
-            }}
-          >
-            Meet the full team ↓
-          </button>
-        )}
-        {/* Mobile: the roll call flows below the statement */}
-        {isMobile && <SponsorRollCall colored={beat === 1} isMobile />}
+            fontSize: isMobile ? 11 : 13,
+            fontWeight: 400,
+            letterSpacing: '-0.2px',
+            textDecoration: 'underline',
+            textUnderlineOffset: 3,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            padding: 0,
+            marginTop: 26,
+            pointerEvents: 'auto',
+          }}
+        >
+          Meet the full team
+        </button>
+        {/* Ambient floor cue — keep scrolling into the journey. */}
+        <div style={{
+          marginTop: 24,
+          ...LABEL,
+          letterSpacing: '1.5px',
+          color: 'rgba(255,255,255,0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}>
+          Scroll
+          <span style={{ display: 'inline-block', animation: 'scrollHint 2s ease-in-out infinite' }}>↓</span>
+        </div>
+        {/* Mobile: the engraved roll-call plaque flows below the statement */}
+        {isMobile && <SponsorRollCall />}
       </div>
       {/* Desktop: the roll call lives in the timeline's sticky layer
-          (RollCallOverlay) so the names hold their ground across both beats
-          while the scroll sprays them from white into chrome. */}
+          (RollCallOverlay), pinned center-right over the statement. */}
     </div>
   )
 }
@@ -952,13 +884,6 @@ export default function Team({ onNavigate }) {
   const entrance = usePageEntrance(3, { staggerMs: 100, initialDelayMs: 50 })
   const teamSectionRef = useRef(null)
 
-  // Gentle chapter snapping on the root scroller (desktop-only via the CSS
-  // media query). Cleanup is mandatory so other routes don't snap.
-  useEffect(() => {
-    document.documentElement.classList.add('team-snap-root')
-    return () => document.documentElement.classList.remove('team-snap-root')
-  }, [])
-
   const prefersReducedMotion = () =>
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -997,6 +922,72 @@ export default function Team({ onNavigate }) {
       if (raf) cancelAnimationFrame(raf)
       window.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', onScroll)
+    }
+  }, [])
+
+  // Forward-only chapter snapping (desktop). The page scrolls smoothly and
+  // freely — the ONLY assist is a gentle settle INTO the next stop in the
+  // direction you're already travelling, once you coast to rest near it. It
+  // never snaps backward (the old CSS `proximity` snap did, which read as a
+  // yank). Reduced motion and mobile get pure native scrolling, no snap.
+  useEffect(() => {
+    const isDesktop = () => window.innerWidth >= 700
+    const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const SNAP_BAND = 0.34 // settle within this fraction of a viewport of the next stop
+    let lastY = window.scrollY
+    let dir = 0            // +1 travelling down, -1 up
+    let idleTimer = 0
+    let snapping = false   // true while our own smooth scroll runs — ignore its events
+    let snapClear = 0
+
+    const stops = () => chapterRefs.current
+      .filter(Boolean)
+      .map((el) => el.getBoundingClientRect().top + window.scrollY)
+      .sort((a, b) => a - b)
+
+    const settle = () => {
+      if (!isDesktop() || reduced() || snapping) return
+      const s = stops()
+      if (s.length < 2) return
+      const y = window.scrollY
+      // Only inside the chapter timeline — the partners/roster below scroll free.
+      if (y < s[0] - 1 || y > s[s.length - 1] + 1) return
+      const vh = window.innerHeight || 1
+      const target = dir >= 0
+        ? s.find((v) => v > y + 1)                 // next stop ahead (scrolling down)
+        : [...s].reverse().find((v) => v < y - 1)  // next stop ahead (scrolling up)
+      if (target == null) return
+      if (Math.abs(target - y) <= vh * SNAP_BAND) {
+        snapping = true
+        window.scrollTo({ top: Math.round(target), behavior: 'smooth' })
+        clearTimeout(snapClear)
+        snapClear = setTimeout(() => { snapping = false }, 700)
+      }
+    }
+
+    const onScroll = () => {
+      const y = window.scrollY
+      if (y !== lastY) dir = y > lastY ? 1 : -1
+      lastY = y
+      if (snapping) return
+      clearTimeout(idleTimer)
+      idleTimer = setTimeout(settle, 140) // act only once the user coasts to rest
+    }
+    // A fresh user gesture always wins — never fight the scroll (the timeline
+    // otherwise captures no wheel/touch by design).
+    const release = () => { snapping = false; clearTimeout(snapClear) }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('wheel', release, { passive: true })
+    window.addEventListener('touchstart', release, { passive: true })
+    window.addEventListener('keydown', release)
+    return () => {
+      clearTimeout(idleTimer)
+      clearTimeout(snapClear)
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('wheel', release)
+      window.removeEventListener('touchstart', release)
+      window.removeEventListener('keydown', release)
     }
   }, [])
 
@@ -1125,12 +1116,9 @@ export default function Team({ onNavigate }) {
           ghost stops; interactive children re-enable themselves. */}
       {CHAPTERS.map((chapter, ci) => {
         let content
-        if (chapter.type === 'statement-1') {
-          content = <StatementChapter beat={0} isMobile={isMobile} />
-        } else if (chapter.type === 'statement-2') {
+        if (chapter.type === 'statement') {
           content = (
             <StatementChapter
-              beat={1}
               isMobile={isMobile}
               onMeetTeam={() => teamSectionRef.current?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' })}
             />
