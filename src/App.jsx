@@ -370,7 +370,7 @@ export default function App() {
   const [triggerColor, setTriggerColor] = useState('rgba(255,255,255,0.7)')
 
   useEffect(() => {
-    if (!navOverflowing || (isHomeRoute && !isMobile)) return
+    if (!navOverflowing) return
 
     function updateTriggerColor() {
       const btn = hamburgerRef.current
@@ -469,9 +469,10 @@ export default function App() {
 
       {/* Compact-mode hamburger trigger: fixed top-left, two horizontal lines,
           animates to an X when the overlay is open. Lives outside any transform
-          or opacity wrapper so it stays put on scroll. Skipped on home —
-          the bottom-left nav baked into MainView covers narrow screens. */}
-      {(!isHomeRoute || isMobile) && navOverflowing && (
+          or opacity wrapper so it stays put on scroll. Shown whenever the nav
+          overflows — including the home route (the home's only on-page control is
+          the Support CTA; wide desktop still reveals the full nav on hover-to-top). */}
+      {navOverflowing && (
         <button
           ref={hamburgerRef}
           onClick={() => setNavMenuOpen((o) => !o)}
@@ -505,7 +506,7 @@ export default function App() {
       )}
 
       {/* Compact-mode overlay: full-viewport backdrop + vertical stack. */}
-      {(!isHomeRoute || isMobile) && navOverflowing && (
+      {navOverflowing && (
         <div
           onClick={() => setNavMenuOpen(false)}
           role="dialog"
