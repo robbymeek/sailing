@@ -80,7 +80,7 @@ const TUNE = {
   hudAlpha: 1.0, // peak HUD strength at full hover — 1.0 = the most contrasted (pure b/w)
   hudRevealStart: 0.9, // orb scale (hoverScale) where the whole HUD BEGINS to fade in
   hudRevealFull: 0.95, // HUD reaches full clarity at this fraction of peakScale (0.95 × max)
-  hudSize: 0.075, // title (LA 2028 / OLYMPICS) type size, as a fraction of orb diameter
+  hudSize: 0.088, // title (LA 2028 / OLYMPICS) type size, as a fraction of orb diameter
   hudTimerRatio: 0.7, // countdown size relative to the title (< 1 → title reads larger)
   hudTitleGap: 1.02, // gap between the two title lines LA 2028 / OLYMPICS (× title font size)
   hudLineGap: 1.25, // gap from OLYMPICS down to the countdown (× title font size)
