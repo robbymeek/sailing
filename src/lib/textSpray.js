@@ -48,8 +48,12 @@ const CHROME_STOPS = [
 // tail: px of scroll a particle lives; peak: how deep the hanging cloud
 // bulges below the top edge; exit: upward overshoot that carries it off the
 // top of the screen; spread: lateral half-reach of the symmetric fan.
-const TUNE_DESKTOP = { grid: 2, tail: 430, peak: 41, exit: 280, spread: 90, curlAmp: 18, size: 2.2, band: 320, dprCap: 2 }
-const TUNE_MOBILE = { grid: 3, tail: 230, peak: 26, exit: 190, spread: 48, curlAmp: 12, size: 1.6, band: 240, dprCap: 1.5 }
+// tail sized so the spray is fully spent BEFORE the HIGHLIGHTS dropdown scrolls
+// to the top: the RESULTS h1 (~95px tall) sits ~280px above that header, so the
+// last-released row (life = tail*1.3) must clear inside ~145px of scroll →
+// tail ≈ 110 (owner: "up and out of the way by the highlights drop down").
+const TUNE_DESKTOP = { grid: 2, tail: 110, peak: 41, exit: 280, spread: 90, curlAmp: 18, size: 2.2, band: 320, dprCap: 2 }
+const TUNE_MOBILE = { grid: 3, tail: 110, peak: 26, exit: 190, spread: 48, curlAmp: 12, size: 1.6, band: 240, dprCap: 1.5 }
 
 // Start the loop a little before the release line so the first released rows
 // never pop in late; stop once the whole cloud (text + tail) is spent.
