@@ -202,6 +202,13 @@ button {
   cursor: grabbing;
 }
 
+/* Home menu links: keyboard focus ring (hover color is driven in JS state). */
+.home-nav-link:focus-visible {
+  outline: 2px solid #1E40FF;
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
 /* Baked orb clips: never show a native play glyph (iOS paints one on a video
    whose autoplay was refused, e.g. Low Power Mode). BakedOrb also swaps to the
    poster frame when playback stalls — this is the belt-and-braces layer. */

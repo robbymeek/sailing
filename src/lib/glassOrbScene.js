@@ -67,29 +67,35 @@ const TUNE = {
   fresnel: 0.4, // cool fresnel rim wash
   glint: 1.3, // specular highlight strength
   // ---- cursor-proximity growth + reveal (all live-tunable via ?key=) ----
-  reach: 1.0, // full-page influence, as a fraction of the viewport diagonal
-  proxExp: 3.0, // response steepness: higher = tinier far, sharper accel near the orb
-  peakScale: 1.7, // orb size (× rest) when the cursor is right on it
+  reach: 0.5, // approach range = corner→orb distance (½ the diagonal for the centered orb),
+  //             so t=0 when the cursor is in a far corner and t=1 when it's on the orb
+  proxExp: 1.3, // growth curve t^k: ~10% closer from a corner → ~5% of the growth, and the
+  //              rate keeps accelerating toward the orb (faster the closer the cursor gets)
+  restScale: 0.875, // orb size (× base) at rest / cursor in a far corner (smallest)
+  peakScale: 1.33, // orb size (× base) when the cursor is right on it (largest)
   revealRest: 0.85, // interior brightness at rest (≈ today; a hair darker)
   revealPeak: 1.2, // interior brightness at closest approach (brighter → reveals more)
   nearStrength: 0.03, // refraction strength at closest approach: flattens the lens so
   //                     the interior (and the in-orb HUD) resolve clearly on approach
   hudAlpha: 1.0, // peak HUD strength at full hover — 1.0 = the most contrasted (pure b/w)
-  hudLabelFloor: 0.3, // prox where LA 2028 OLYMPICS begins to emerge (faint, small, below the boat)
-  hudGrowEnd: 0.7, // prox by which the headline has grown to full size + strength
-  boatRiseAt: 0.45, // prox where the boat + headline begin to LIFT together (shared curve, one motion)
-  timerFloor: 0.62, // prox where the timer begins to appear (once the lift has opened room)
-  hudSize: 0.062, // LA 2028 OLYMPICS type size at FULL development, as a fraction of orb diameter
-  hudStartScale: 0.62, // headline size when it first appears, relative to full (grows → 1)
-  hudTimerRatio: 0.74, // timer size relative to the headline (< 1 → headline reads larger)
-  hudDrop: 0.34, // headline baseline below orb centre at full development (fraction of orb radius)
-  hudDropStart: 0.48, // headline baseline when it first appears (lower; rises to hudDrop WITH the boat)
-  hudLineGap: 0.24, // gap from the headline down to the timer (fraction of orb radius)
-  hudTrack: 0.12, // headline letter-spacing as a fraction of its font size
+  hudRevealStart: 1.0, // orb scale (hoverScale) where the whole HUD BEGINS to fade in
+  hudRevealFull: 0.95, // HUD reaches full clarity at this fraction of peakScale (0.95 × max)
+  hudSize: 0.075, // title (LA 2028 / OLYMPICS) type size, as a fraction of orb diameter
+  hudTimerRatio: 0.7, // countdown size relative to the title (< 1 → title reads larger)
+  hudTitleGap: 1.02, // gap between the two title lines LA 2028 / OLYMPICS (× title font size)
+  hudLineGap: 1.25, // gap from OLYMPICS down to the countdown (× title font size)
+  hudTrack: 0.12, // title letter-spacing as a fraction of its font size
   hudWarp: 3.0, // extra glass warp on the HUD while it emerges (× the page warp), eases to 1 settled
-  boatGrow: 0.7, // boat grows this fraction of the orb's growth (< 1 → boat grows less than orb)
-  boatMaxScale: 1.3, // hard cap on the boat's size (× its base), however large the orb gets
-  boatRise: 0.38, // boat rises this fraction of orb radius as it reaches full hover
+  boatGrow: 1.0, // boat grows 1:1 with the orb (stays proportionally orb-filling)
+  boatMaxScale: 1.33, // hard cap on the boat's size (× its base) — matches peakScale
+  // ---- idle breathing pulse (ambient life at rest; mirrored on the mobile baked
+  //      orb in BakedOrb.jsx so the phone and desktop breathe on the same rhythm) ----
+  pulseScale: 0.015, // peak swell of the idle breath (× rest) — near-subliminal
+  pulseGlow: 0.06, // interior brightening at the breath peak (added to uReveal)
+  pulsePeriod: 6000, // ms for one full breath (swell out + relax back)
+  inhaleScale: 0.03, // extra one-shot swell the instant the page reaches rest
+  inhaleGlow: 0.1, // extra brightening on that first 'inhale'
+  inhaleMs: 2200, // duration of the one-shot inhale envelope
 }
 const FRESNEL_COLOR = new THREE.Color(0.62, 0.72, 0.86)
 const LIGHT_DIR = new THREE.Vector3(-0.5, 0.7, 0.6).normalize()
@@ -378,43 +384,39 @@ export default function createGlassOrbScene(
   const HUD_FONT = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
   let hudDrawn = false // whether textCv currently holds glyphs (so we clear it once on exit)
   // Draw the HUD glyphs (COVERAGE only, flat white) into textCv at the orb's current
-  // on-screen size/position. Colour, contrast and fade are all decided in the shader.
-  // labelReveal (strength) + labelDev (0→1 size/position development) + timerReveal are
-  // all baked into the mask here, so the headline can grow, strengthen and rise into
-  // place while the shader keeps ONE on/off strength.
-  function drawHudMask(w, h, labelReveal, labelGrow, labelLift, timerReveal) {
+  // on-screen size/position — three centred lines (LA 2028 / OLYMPICS / countdown).
+  // Colour + contrast are decided in the shader; `reveal` (one alpha for all three) is
+  // baked into the mask here, so the whole HUD fades in as one while the shader keeps
+  // ONE on/off strength.
+  function drawHudMask(w, h, reveal) {
     const scale = w / Math.max(1, canvas.clientWidth)
     const cx = orbFracX * w
     const cy = orbFracY * h
     const orbDia = orbDiameterPx * hoverScale * scale
-    const orbRad = orbDia / 2
-    // Headline develops: grows from hudStartScale → full (labelGrow) and, on a curve it
-    // SHARES with the boat's rise (labelLift), moves from hudDropStart → hudDrop — so it
-    // emerges small just below the boat and lifts into place as one motion with the boat.
-    const labelSize = TUNE.hudSize * orbDia * (TUNE.hudStartScale + (1 - TUNE.hudStartScale) * labelGrow)
-    const dropFrac = TUNE.hudDropStart + (TUNE.hudDrop - TUNE.hudDropStart) * labelLift
-    const labelY = cy + dropFrac * orbRad
+    const labelSize = TUNE.hudSize * orbDia
     const timerSize = TUNE.hudSize * orbDia * TUNE.hudTimerRatio
-    const timerY = labelY + TUNE.hudLineGap * orbRad // timer directly under the settled headline
+    // Three centred lines — LA 2028 / OLYMPICS / countdown — the block centred on cy.
+    const gapTitle = labelSize * TUNE.hudTitleGap // between the two title lines
+    const gapTimer = labelSize * TUNE.hudLineGap // OLYMPICS → countdown
+    const y1 = cy - (gapTitle + gapTimer) / 2 // LA 2028
+    const y2 = y1 + gapTitle // OLYMPICS
+    const y3 = y2 + gapTimer // countdown
     textCtx.clearRect(0, 0, w, h)
     textCtx.save()
     textCtx.textAlign = 'center'
     textCtx.textBaseline = 'middle'
     textCtx.fillStyle = '#ffffff' // coverage only — the shader picks black/white per pixel
-    // LA 2028 OLYMPICS — emerges small + faint below the boat, then grows, strengthens
-    // and rises into place (labelReveal = strength, labelDev = size + position).
-    if (labelReveal > 0.01) {
-      textCtx.globalAlpha = labelReveal
-      textCtx.font = `500 ${labelSize}px ${HUD_FONT}`
-      if ('letterSpacing' in textCtx) textCtx.letterSpacing = `${TUNE.hudTrack * labelSize}px`
-      textCtx.fillText('LA 2028 OLYMPICS', cx, labelY)
-    }
-    // the live countdown — becomes visible as the boat LIFTS and opens room below
-    if (timerReveal > 0.01 && hudStr) {
-      textCtx.globalAlpha = timerReveal
+    textCtx.globalAlpha = reveal
+    // title — two lines, tracked, at full size (no grow-in)
+    textCtx.font = `500 ${labelSize}px ${HUD_FONT}`
+    if ('letterSpacing' in textCtx) textCtx.letterSpacing = `${TUNE.hudTrack * labelSize}px`
+    textCtx.fillText('LA 2028', cx, y1)
+    textCtx.fillText('OLYMPICS', cx, y2)
+    // the live countdown — same fade, smaller, untracked
+    if (hudStr) {
       if ('letterSpacing' in textCtx) textCtx.letterSpacing = '0px'
       textCtx.font = `600 ${timerSize}px ${HUD_FONT}`
-      textCtx.fillText(hudStr, cx, timerY)
+      textCtx.fillText(hudStr, cx, y3)
     }
     textCtx.restore()
   }
@@ -429,19 +431,16 @@ export default function createGlassOrbScene(
       if (hudDrawn) { textCtx.clearRect(0, 0, w, h); textTex.needsUpdate = true; hudDrawn = false }
     }
     if (morphing) { clearIfDrawn(); return }
-    const prox = Math.min(1, Math.max(0, (hoverScale - 1) / Math.max(1e-3, TUNE.peakScale - 1)))
-    // ONE motion: the headline grows + strengthens (labelGrow), then it and the boat
-    // LIFT together on a SHARED curve (labelLift === the boat's rise), and the timer
-    // fades in once the lift opens room. The HUD also warps harder while emerging and
-    // clarifies as it settles (uHudWarp), so it reads as forming inside the glass.
-    const labelGrow = smooth(TUNE.hudLabelFloor, TUNE.hudGrowEnd, prox)
-    const labelReveal = labelGrow * TUNE.hudAlpha
-    const labelLift = smooth(TUNE.boatRiseAt, 1, prox)
-    const timerReveal = smooth(TUNE.timerFloor, 1, prox) * TUNE.hudAlpha
-    orbMat.uniforms.uHudWarp.value = 1 + (TUNE.hudWarp - 1) * (1 - labelGrow)
-    if (labelReveal < 0.01 && timerReveal < 0.01) { clearIfDrawn(); return }
+    // The WHOLE HUD (LA 2028 / OLYMPICS / countdown) fades in together on ONE curve tied
+    // to the orb's SIZE: it begins at hudRevealStart and reaches full clarity at
+    // hudRevealFull × peakScale. It also warps harder while faint and clarifies as it
+    // settles (uHudWarp), so all three lines form inside the glass as one.
+    const dev = smooth(TUNE.hudRevealStart, TUNE.hudRevealFull * TUNE.peakScale, hoverScale)
+    const reveal = dev * TUNE.hudAlpha
+    orbMat.uniforms.uHudWarp.value = 1 + (TUNE.hudWarp - 1) * (1 - dev)
+    if (reveal < 0.01) { clearIfDrawn(); return }
     orbMat.uniforms.uHudStrength.value = 1
-    drawHudMask(w, h, labelReveal, labelGrow, labelLift, timerReveal)
+    drawHudMask(w, h, reveal)
     textTex.needsUpdate = true
     hudDrawn = true
   }
@@ -462,26 +461,22 @@ export default function createGlassOrbScene(
         const cx = ((anchor.position.x / (baseZ * tanHalfV * aspect)) * 0.5 + 0.5) * canvas.clientWidth
         const cy = (0.5 - 0.5 * (anchor.position.y / (baseZ * tanHalfV))) * canvas.clientHeight
         const orbDiaPx = (orb.scale.x * canvas.clientHeight) / (baseZ * tanHalfV)
-        // Ease the hover look (boat grown LESS than the orb + risen) back to the
-        // canonical centred, orb-filling boat across the GROW beat, so the morph
-        // never pops when it takes over from the hover state.
+        // Ease the boat back to the canonical centred, orb-filling look across the
+        // GROW beat. damp≈1 now that the boat grows 1:1 with the orb — it only engages
+        // if the size cap binds — so the morph never pops taking over from the hover.
         const gm = smooth(0, 0.22, morphM)
         const startHoverScale = startScale / orbBaseScale
         const boatScaleAtClick = Math.min(TUNE.boatMaxScale, 1 + (startHoverScale - 1) * TUNE.boatGrow)
         const damp0 = boatScaleAtClick / Math.max(1e-3, startHoverScale)
         const damp = damp0 + (1 - damp0) * gm
         const bs = orbDiaPx * boatFrac * TUNE.boatZoom * scale * damp
-        const rise = TUNE.boatRise * (orbDiaPx / 2) * (1 - gm)
-        compCtx.drawImage(src, cx * scale - bs / 2, (cy - rise) * scale - bs / 2, bs, bs)
+        compCtx.drawImage(src, cx * scale - bs / 2, cy * scale - bs / 2, bs, bs)
       } else {
-        // boat grows WITH the orb (boatGrow) but capped at boatMaxScale, and stays
-        // centred until the cursor is over the orb, then RISES (boatRiseAt → 1) to open
-        // room for the timer below the headline.
-        const prox = Math.min(1, Math.max(0, (hoverScale - 1) / Math.max(1e-3, TUNE.peakScale - 1)))
+        // boat grows 1:1 with the orb (boatGrow), capped at boatMaxScale, and stays
+        // centred the whole time — the HUD sits centered over it (see drawHudMask).
         const boatScale = Math.min(TUNE.boatMaxScale, 1 + (hoverScale - 1) * TUNE.boatGrow)
         const bs = boatSize * boatScale * TUNE.boatZoom * scale
-        const rise = TUNE.boatRise * ((orbDiameterPx * hoverScale * scale) / 2) * smooth(TUNE.boatRiseAt, 1, prox)
-        compCtx.drawImage(src, (w - bs) / 2, (h - bs) / 2 - rise, bs, bs)
+        compCtx.drawImage(src, (w - bs) / 2, (h - bs) / 2, bs, bs)
       }
     }
     // In-orb HUD — refresh its coverage mask + reveal strength (the shader recolours
@@ -746,6 +741,7 @@ export default function createGlassOrbScene(
   let started = false
   let readyAt = 0
   let preloadTimer = 0
+  let inhaleStart = 0 // performance.now() when the one-shot wake fired; 0 = idle
 
   function frame() {
     rafId = requestAnimationFrame(frame)
@@ -771,16 +767,42 @@ export default function createGlassOrbScene(
         const reach = Math.max(1, TUNE.reach * Math.hypot(canvas.clientWidth, cH))
         const t = THREE.MathUtils.clamp((reach - d) / reach, 0, 1)
         const p = Math.pow(t, TUNE.proxExp)
-        const targetScale = 1 + (TUNE.peakScale - 1) * p
+        const targetScale = TUNE.restScale + (TUNE.peakScale - TUNE.restScale) * p
         hoverScale += (targetScale - hoverScale) * HOVER_EASE
-        orb.scale.setScalar(orbBaseScale * hoverScale)
+
+        // prox = 0 at rest (looks like before) → 1 at closest approach. Shared with
+        // composite() (the in-orb HUD alpha) via the same recovered term, and it
+        // GATES the idle breath below so the resting-orb pulse yields entirely to
+        // the proximity growth (at full hover the geometry is exactly as designed).
+        const prox = THREE.MathUtils.clamp((hoverScale - TUNE.restScale) / Math.max(1e-3, TUNE.peakScale - TUNE.restScale), 0, 1)
+
+        // IDLE BREATH: a slow, near-subliminal swell + interior glow so the orb is
+        // visibly the one living thing in the dead space — plus one deeper one-shot
+        // 'inhale' the instant the page reaches rest (cued via wake() from MainView,
+        // gated there so SPA re-entry never replays it). Pure functions of time,
+        // folded ON TOP of the hover scale so they never fight the click zone; eased
+        // in with the fade-in and faded out by (1 − prox) as the cursor engages.
+        // Mirrored on the mobile baked orb (BakedOrb.jsx) via CSS on the same rhythm.
+        const breathT = 0.5 - 0.5 * Math.cos((now / TUNE.pulsePeriod) * Math.PI * 2)
+        let swell = TUNE.pulseScale * breathT
+        let glow = TUNE.pulseGlow * breathT
+        if (inhaleStart) {
+          const u = (now - inhaleStart) / TUNE.inhaleMs
+          if (u >= 1) inhaleStart = 0
+          else {
+            const env = u < 0.3 ? smooth(0, 0.3, u) : 1 - smooth(0.3, 1, u)
+            swell += TUNE.inhaleScale * env
+            glow += TUNE.inhaleGlow * env
+          }
+        }
+        const breathGate = (1 - prox) * orbMat.uniforms.uFadeIn.value
+        swell *= breathGate
+        glow *= breathGate
+        orb.scale.setScalar(orbBaseScale * hoverScale * (1 + swell))
 
         // REVEAL: drive brightness + clarity off the SMOOTHED growth (not raw p) so
         // the interior resolves in lock-step with the size instead of leading it.
-        // prox = 0 at rest (looks like before) → 1 at closest approach. Shared with
-        // composite() (the in-orb HUD alpha) via the same recovered term.
-        const prox = THREE.MathUtils.clamp((hoverScale - 1) / Math.max(1e-3, TUNE.peakScale - 1), 0, 1)
-        orbMat.uniforms.uReveal.value = TUNE.revealRest + (TUNE.revealPeak - TUNE.revealRest) * prox
+        orbMat.uniforms.uReveal.value = TUNE.revealRest + (TUNE.revealPeak - TUNE.revealRest) * prox + glow
         orbMat.uniforms.uStrength.value = TUNE.strength + (TUNE.nearStrength - TUNE.strength) * prox
 
         const f = THREE.MathUtils.clamp((now - readyAt) / FADE_IN_MS, 0, 1)
@@ -904,12 +926,21 @@ export default function createGlassOrbScene(
     }
   }
 
+  // One-shot "inhale": a single deeper breath, fired by MainView the instant the
+  // page reaches rest so a first-timer's eye lands on the orb as it wakes. Pure
+  // envelope over the idle breath (see the render loop); no-op under reduced motion.
+  function wake() {
+    if (prefersReducedMotion || disposed || morphing) return
+    inhaleStart = performance.now()
+  }
+
   // ---------- PUBLIC API ----------
   return {
     resize, // re-fit to the current canvas size — call on window 'resize'
     setPosition, // setPosition(fracX, fracY): move the orb's centre (0..1 of the
     // viewport; 0.5,0.5 = middle). Refraction follows it; the background morphs.
     startMorph, // play the one-shot glass-orb → The Road globe transition
+    wake, // fire the one-shot idle 'inhale' when the page settles at rest
     dispose, // tear down: WebGL context, listeners, GIF decoder, GPU resources
   }
 }

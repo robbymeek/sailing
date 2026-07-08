@@ -131,6 +131,12 @@ function startMorph() {
   if (scene && scene.startMorph) scene.startMorph()
 }
 
+// Fire the orb's one-shot idle "inhale" (see glassOrbScene.wake) — cued by
+// MainView the moment the home settles at rest. Safe before the scene attaches.
+function wake() {
+  if (scene && scene.wake) scene.wake()
+}
+
 // Dissolve the overlay out (after the real globe has painted underneath), then
 // tear it down. Gated by the caller on the globe's onReady, never a blind timer.
 function crossfadeOut(ms = 250) {
@@ -165,6 +171,7 @@ export default {
   setVisible,
   fadeOut,
   startMorph,
+  wake,
   resize,
   crossfadeOut,
   detach,

@@ -72,6 +72,20 @@ const CLICK_HALO_PX = 52
 const MASK_SOLID_PX = 10
 const MASK_FADE_PX = 26
 
+// ---------- idle breathing pulse (mirrors the desktop live orb; glassOrbScene TUNE) ----------
+// A slow, near-subliminal swell + brightness breath so the orb reads as the one
+// living thing on the page, plus one deeper one-shot "inhale" when the rest loop
+// first plays (the phone's equivalent of the desktop settling to rest). Applied as
+// CSS transform+filter on the rest <video>, so it composes with the desktop-baked
+// proximity scale on boxRef and needs no re-bake. Kept in sync with glassOrbScene's
+// pulse* / inhale* TUNE values so both paths breathe on the same rhythm.
+const PULSE_SCALE = 0.015 // peak swell of the idle breath (× rest)
+const PULSE_GLOW = 0.06 // brightness lift at the breath peak
+const PULSE_PERIOD_MS = 6000 // one full breath (swell out + relax back)
+const INHALE_SCALE = 0.03 // extra one-shot swell on the first settle
+const INHALE_GLOW = 0.1 // extra brightness on that first inhale
+const INHALE_MS = 2200 // duration of the one-shot inhale envelope
+
 // Morph stall guards. The clip normally starts within a frame or two of play();
 // if it hasn't, we re-check every 900ms while data is still arriving (readyState ≥
 // HAVE_METADATA) up to MORPH_START_MAX_CHECKS — skipping on the first check would
@@ -155,6 +169,50 @@ const BakedOrb = forwardRef(function BakedOrb(
       window.removeEventListener('touchstart', retry)
       window.removeEventListener('pointerdown', retry)
       document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [prefersReducedMotion])
+
+  // Idle breathing pulse on the rest loop — matches the desktop orb's rhythm. One
+  // rAF writes transform+filter to the rest <video> (composing with any boxRef
+  // proximity scale on the desktop-baked path); frozen during the morph and skipped
+  // for reduced motion. The one-shot "inhale" fires when playback first starts (the
+  // phone's equivalent of the page settling to rest). Amplitude is tiny — the rim
+  // stays inside the mask feather and the tap hotspot (a separate circle) is unmoved.
+  useEffect(() => {
+    if (prefersReducedMotion) return undefined
+    const v = restRef.current
+    if (!v) return undefined
+    const ss = (t) => t * t * (3 - 2 * t) // smoothstep 0→1
+    let raf = 0
+    let inhaleStart = 0
+    let woke = false
+    const onPlaying = () => { if (!woke) { woke = true; inhaleStart = performance.now() } }
+    v.addEventListener('playing', onPlaying)
+    const tick = () => {
+      raf = requestAnimationFrame(tick)
+      if (morphingRef.current) return // orb frozen; the morph clip owns the frame
+      const now = performance.now()
+      const breathT = 0.5 - 0.5 * Math.cos((now / PULSE_PERIOD_MS) * Math.PI * 2)
+      let swell = PULSE_SCALE * breathT
+      let glow = PULSE_GLOW * breathT
+      if (inhaleStart) {
+        const u = (now - inhaleStart) / INHALE_MS
+        if (u >= 1) inhaleStart = 0
+        else {
+          const env = u < 0.3 ? ss(u / 0.3) : 1 - ss((u - 0.3) / 0.7)
+          swell += INHALE_SCALE * env
+          glow += INHALE_GLOW * env
+        }
+      }
+      v.style.transform = `scale(${(1 + swell).toFixed(4)})`
+      v.style.filter = `brightness(${(1 + glow).toFixed(4)})`
+    }
+    raf = requestAnimationFrame(tick)
+    return () => {
+      cancelAnimationFrame(raf)
+      v.removeEventListener('playing', onPlaying)
+      v.style.transform = ''
+      v.style.filter = ''
     }
   }, [prefersReducedMotion])
 

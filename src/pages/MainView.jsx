@@ -40,10 +40,29 @@ const ORB_READY_TIMEOUT_MS = 10000
 // the live countdown INSIDE the glass — the DOM corner countdown was retired for it.
 const COUNTDOWN_TARGET = Date.parse('2028-07-14T00:00:00')
 
+// Single source of truth for the home on-page CTA. The Support button + blurb are
+// the ONLY on-page menu now — the pages are reached via the top hover-nav /
+// hamburger + the orb. Large, left-aligned, window-responsive (clamp); the Support
+// arrow's head lands at 85% of the viewport width. Same layout on every view.
+const HOME_NAV = {
+  support: { label: 'Support', route: 'Support' },
+  supportClamp: '22px', // held at the mobile/narrow size — the value at the arrow's cap point (~775px vw); no desktop growth
+  supportWeight: 600,
+  supportColor: 'rgba(255,255,255,0.95)',
+  hoverColor: '#1E40FF',
+  blurbClamp: 'clamp(12px, 1.05vw, 15.5px)',
+  blurbColor: 'rgba(255,255,255,0.72)',
+}
+const HOME_BLURB =
+  'Robby Meek is a sailor for the US Sailing Team attending Harvard University working to compete and excel at the 2028 Olympic Games.'
+
 // Module-level flag: the cinematic intro plays once per JS bundle
 // initialization (hard refresh) and is skipped on SPA navigation back
 // to /. No storage APIs — this lives for the tab's lifetime only.
 let introHasPlayed = false
+// Same lifetime as introHasPlayed: the orb's one-shot idle "inhale" fires once per
+// tab (on the first settle to rest), never again on SPA re-entry to home.
+let orbWakePlayed = false
 
 // WebGL2 capability gate lives in ../lib/webglSupport (shared with TheRoad).
 
@@ -305,6 +324,13 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
   // in-place canvas opacity rule). Once a morph starts it owns its own opacity.
   useEffect(() => {
     if (morph === 0) orbOverlay.setVisible(showOrb && orbReady && phase === 'rest')
+    // Cue the orb's one-shot idle "inhale" the instant it becomes visible at rest,
+    // so the eye lands on the marble as it wakes. Module-gated → never replays on
+    // SPA re-entry to home (same rule as the cinematic intro).
+    if (showOrb && orbReady && phase === 'rest' && !orbWakePlayed) {
+      orbWakePlayed = true
+      orbOverlay.wake()
+    }
   }, [showOrb, orbReady, phase, morph])
 
   // Cross-device diagnostics: exposes the orb's own gating decision (which the
@@ -625,62 +651,33 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
         />
       )}
 
-      {/* Bottom-left persistent nav — always visible after intro */}
+      {/* Home CTA — the only on-page menu: a large left-aligned Support button whose
+          arrow runs to 85% of the viewport, with the blurb beneath it. Identical on
+          mobile and every desktop width (only fixed↔absolute differs for the embedded
+          scroll). Fade/slide (uiVisible * (1-textOut)) is preserved. */}
       <nav
         aria-label="Primary"
         style={{
           position: embedded ? 'absolute' : 'fixed',
-          bottom: 32,
-          left: 32,
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'flex-start',
-          gap: 20,
+          left: 'clamp(20px, 5vw, 64px)', // padded from the left
+          right: '15%', // arrow head lands at 85% of the viewport on small/mobile screens…
+          maxWidth: 620, // …but the block stops growing past this on large screens (arrow + text cap)
+          bottom: 'clamp(28px, 5vh, 48px)',
+          display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+          gap: 'clamp(12px, 1.6vh, 20px)',
           opacity: (uiVisible ? 1 : 0) * (1 - textOut),
           transform: `translateX(${-28 * textOut}px)`,
-          // Baked morph: textOut snaps 0→1, so transform needs its own transition
-          // (the desktop live orb animates textOut per-frame instead).
           transition: `opacity 0.6s ease${bakedMorphOut ? ', transform 0.6s ease' : ''}`,
           pointerEvents: uiVisible && textOut < 0.05 ? 'auto' : 'none',
           zIndex: 20,
-          maxWidth: 380,
         }}
       >
-        {/* Nav row with dot separators */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 0,
-          flexWrap: 'wrap',
-        }}>
-          {[
-            ['BIOGRAPHY', 'Biography'],
-            ['THE TEAM', 'The Team'],
-            ['CONTACT', 'Contact'],
-          ].map(([label, route], i, arr) => (
-            <span key={route} style={{ display: 'inline-flex', alignItems: 'center' }}>
-              <HomeNavLink label={label} onClick={() => onNavigate(route)} />
-              {i < arr.length - 1 && (
-                <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 8, margin: '0 16px', userSelect: 'none' }}>●</span>
-              )}
-            </span>
-          ))}
-        </div>
-
-        {/* SUPPORT → */}
-        <HomeNavLink label="SUPPORT →" onClick={() => onNavigate('Support')} isSupport />
-
-        {/* Blurb */}
+        <SupportArrow onClick={() => onNavigate(HOME_NAV.support.route)} />
         <p style={{
-          color: 'rgba(255,255,255,0.4)',
-          fontSize: 11,
-          lineHeight: 1.5,
-          margin: 0,
-          fontWeight: 400,
-          letterSpacing: '-0.1px',
-          maxWidth: 320,
-        }}>
-          Robby Meek is a sailor for the US Sailing Team attending Harvard University working to compete and excel at the 2028 Olympic Games.
-        </p>
+          color: HOME_NAV.blurbColor, fontSize: HOME_NAV.blurbClamp,
+          lineHeight: 1.55, margin: 0, fontWeight: 400, letterSpacing: 0,
+          maxWidth: 'min(100%, 560px)', textAlign: 'left',
+        }}>{HOME_BLURB}</p>
       </nav>
 
 
@@ -722,6 +719,7 @@ const BAKE_ORB_R = 130 // matches BakedOrb: orb radius in the 1080×1920 baked s
 // + countdown live in the DOM just above the orb. mix-blend-mode: difference gives the
 // same self-adapting contrast as the desktop shader (white over dark areas, dark over
 // light) and it fades in on mount. Non-interactive — only the orb navigates to The Road.
+// (The desktop live orb centers this HUD over the boat; on mobile it stays above.)
 function MobileOrbHud({ target }) {
   const { days, hrs, mins, secs } = useCountdown(target)
   const [vp, setVp] = useState(() => ({
@@ -787,33 +785,42 @@ function BakedOrbBackdrop({ embedded }) {
   )
 }
 
-// Small stateful nav link: color transitions to royal blue on hover.
-function HomeNavLink({ label, onClick, isSupport }) {
+// Home Support CTA: the word "Support" (large, left) + a long arrow whose head
+// lands at the nav's right edge (85% of the viewport). Scales with the window;
+// hover/focus → royal blue. A real <button> for keyboard + screen readers.
+function SupportArrow({ onClick }) {
   const [hover, setHover] = useState(false)
+  const thick = 2 // fixed — the line thickness, gap and arrowhead lock at this scale;
+  //                only the shaft LENGTH flexes (and is capped by the nav's maxWidth)
   return (
     <button
+      className="home-nav-link"
       onClick={onClick}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       onFocus={() => setHover(true)}
       onBlur={() => setHover(false)}
+      aria-label="Support"
       style={{
-        background: 'none',
-        border: 'none',
-        // Generous hitbox: pad the target, pull it back out with negative margins
-        // so the visual layout doesn't move (8px stays clear of the 20px nav gap).
-        padding: '8px 10px',
-        margin: '-8px -10px',
-        cursor: 'pointer',
-        color: hover ? '#1E40FF' : 'rgba(255,255,255,0.75)',
-        fontSize: isSupport ? 14 : 13,
-        fontWeight: isSupport ? 500 : 400,
-        letterSpacing: isSupport ? '1px' : '-0.2px',
-        fontFamily: 'inherit',
-        transition: 'color 0.25s ease',
+        display: 'flex', alignItems: 'center', gap: 16, // fixed gap — no desktop growth
+        width: '100%',
+        background: 'none', border: 'none', cursor: 'pointer', padding: '6px 0',
+        color: hover ? HOME_NAV.hoverColor : HOME_NAV.supportColor,
+        transition: 'color 0.25s ease', fontFamily: 'inherit',
       }}
     >
-      {label}
+      <span style={{
+        fontSize: HOME_NAV.supportClamp, fontWeight: HOME_NAV.supportWeight,
+        letterSpacing: '0.3px', whiteSpace: 'nowrap', lineHeight: 1,
+      }}>Support</span>
+      {/* long shaft (fills to the nav's 85% right edge) + an undistorted SVG chevron */}
+      <span aria-hidden="true" style={{ flex: 1, height: thick, background: 'currentColor', borderRadius: 2 }} />
+      <svg
+        aria-hidden="true" viewBox="0 0 12 16" fill="none"
+        style={{ width: 12, height: 16, flexShrink: 0, marginLeft: -2, display: 'block' }}
+      >
+        <path d="M3 2 L10 8 L3 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
     </button>
   )
 }
