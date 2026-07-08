@@ -3,8 +3,9 @@ import { useState } from 'react'
 const PAGES = ['Home', 'Biography', 'The Team', 'The Road', 'Contact', 'Support']
 
 // Display-label overrides for nav items whose page key shouldn't render
-// verbatim. Currently empty — kept for the next divergence.
-const SHORT_LABELS = {}
+// verbatim. The route key stays 'Support' (routing + the /support page) — only the
+// label reads clearer, so a newcomer doesn't mistake it for a help desk.
+const SHORT_LABELS = { Support: 'Back the Campaign' }
 
 export default function Nav({ current, onNavigate, variant, excludeItems }) {
   const [hoveredItem, setHoveredItem] = useState(null)

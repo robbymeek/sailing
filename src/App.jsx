@@ -274,9 +274,29 @@ export default function App() {
     typeof window !== 'undefined' && window.innerWidth < 700
   )
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 700)
+    // Snapshot the layout mode the page LOADED in. On the HOME route, crossing the
+    // 700px threshold swaps the whole tree (live WebGL orb ↔ baked video). Rebuilding
+    // the body-level orb scene in place is flaky — it re-fetches/re-decodes the boat GIF
+    // and photo, which garbles the refraction and the in-orb HUD (LA 2028 / countdown).
+    // So on home we do ONE clean reload after the drag settles; other routes relayout
+    // fine on their own and just flip the state. Debounced → exactly one reload per real
+    // crossing, and after the reload `loadedMobile` matches the width so it never loops.
+    const loadedMobile = window.innerWidth < 700
+    let reloadTimer = 0
+    const onResize = () => {
+      const nowMobile = window.innerWidth < 700
+      setIsMobile(nowMobile)
+      clearTimeout(reloadTimer)
+      if (nowMobile !== loadedMobile && window.location.pathname === '/') {
+        reloadTimer = setTimeout(() => {
+          if ((window.innerWidth < 700) !== loadedMobile && window.location.pathname === '/') {
+            window.location.reload()
+          }
+        }, 250)
+      }
+    }
     window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
+    return () => { window.removeEventListener('resize', onResize); clearTimeout(reloadTimer) }
   }, [])
 
   const [hoverNav, setHoverNav] = useState(false)
@@ -570,7 +590,7 @@ export default function App() {
                     letterSpacing: '-0.6px', padding: '8px 14px',
                   }}
                 >
-                  {item}
+                  {item === 'Support' ? 'Back the Campaign' : item}
                 </button>
               )
             })}

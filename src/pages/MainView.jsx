@@ -10,6 +10,7 @@ import hikingBg from '../assets/home-intro/img-5957.jpg'
 // background — the full-res photo is only needed for the desktop orb's refraction.
 import hikingBgMobile from '../assets/home-intro/img-5957-mobile.jpg'
 import BakedOrb, { BAKED_ORB_READY } from '../components/BakedOrb'
+import HomeSponsorStrip from '../components/HomeSponsorStrip'
 import blackBridge from '../lib/blackBridge'
 
 const BASE = import.meta.env.BASE_URL
@@ -52,8 +53,8 @@ const HOME_NAV = {
   // Cool grey harmonized with the orb's FRESNEL_COLOR rim (≈rgb 158,184,219) — recessive.
   links: [
     { label: 'Biography', route: 'Biography' },
-    { label: 'The Road', route: 'The Road' },
     { label: 'The Team', route: 'The Team' },
+    { label: 'The Road', route: 'The Road' },
     { label: 'Contact', route: 'Contact' },
   ],
   footerClamp: 'clamp(15px, 1.2vw, 18px)', // a bit bigger so it reads as navigable
@@ -695,7 +696,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
             zIndex: 20,
           }}
         >
-          <FooterLink support label="Support →" onClick={() => onNavigate(HOME_NAV.support.route)} />
+          <FooterLink support label="Back the Campaign →" onClick={() => onNavigate(HOME_NAV.support.route)} />
           <p style={{
             color: HOME_NAV.footerBlurbColor, fontSize: HOME_NAV.footerBlurbClamp,
             lineHeight: 1.55, margin: 0, fontWeight: 400, letterSpacing: 0,
@@ -732,7 +733,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
               </span>
             ))}
           </div>
-          <FooterLink support label="Support →" onClick={() => onNavigate(HOME_NAV.support.route)} />
+          <FooterLink support label="Back the Campaign →" onClick={() => onNavigate(HOME_NAV.support.route)} />
           <p style={{
             color: HOME_NAV.footerBlurbColor, fontSize: HOME_NAV.footerBlurbClamp,
             lineHeight: 1.55, margin: 0, fontWeight: 400, letterSpacing: 0,
@@ -740,6 +741,12 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
           }}>{HOME_BLURB}</p>
         </nav>
       )}
+
+      {/* Title-sponsor sticker — a quiet credibility mark. MOBILE: a strip across the
+          top (clears the hamburger, sits above the LA 2028 HUD, scrolls off with the
+          frame). DESKTOP: a compact vertical sticker to the right of the centered orb.
+          Fades in lockstep with the home nav via uiVisible*(1-textOut). */}
+      <HomeSponsorStrip embedded={embedded} uiVisible={uiVisible} textOut={textOut} />
 
       {/* Mobile scroll cue — a quiet named-destination hint that scrolling leads to
           the bio (so it doesn't read as a dead end). Gently bounces (site scrollHint),
