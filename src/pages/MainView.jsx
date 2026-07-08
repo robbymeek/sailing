@@ -47,25 +47,21 @@ const COUNTDOWN_TARGET = Date.parse('2028-07-14T00:00:00')
 const HOME_NAV = {
   support: { label: 'Support', route: 'Support' },
   hoverColor: '#1E40FF', // campaign accent — hover/focus on any home link
-  // DESKTOP footer: the four sections (quiet, dot-separated, left) + Support pushed
-  // right, on one thin baseline so the orb owns the field. Cool grey harmonized with
-  // the orb's FRESNEL_COLOR rim (≈rgb 158,184,219, lightened) — recessive, not white.
+  // Home footer styling — shared by the DESKTOP stack (four sections dot-separated,
+  // then Support, then blurb) and the MOBILE hero (just Support + blurb, bottom-left).
+  // Cool grey harmonized with the orb's FRESNEL_COLOR rim (≈rgb 158,184,219) — recessive.
   links: [
     { label: 'Biography', route: 'Biography' },
     { label: 'The Road', route: 'The Road' },
     { label: 'The Team', route: 'The Team' },
     { label: 'Contact', route: 'Contact' },
   ],
-  footerClamp: 'clamp(13px, 1vw, 15px)',
-  footerColor: 'rgba(198,212,235,0.6)',
-  footerDot: 'rgba(198,212,235,0.3)',
-  footerSupportColor: 'rgba(214,224,242,0.82)',
-  // MOBILE (embedded) keeps the SupportArrow (long arrow) + blurb below the orb:
-  supportClamp: '22px', // held at the mobile/narrow size — the value at the arrow's cap point (~775px vw); no desktop growth
-  supportWeight: 600,
-  supportColor: 'rgba(255,255,255,0.95)',
-  blurbClamp: 'clamp(12px, 1.05vw, 15.5px)',
-  blurbColor: 'rgba(255,255,255,0.72)',
+  footerClamp: 'clamp(15px, 1.2vw, 18px)', // a bit bigger so it reads as navigable
+  footerColor: 'rgba(198,212,235,0.66)',
+  footerDot: 'rgba(198,212,235,0.34)',
+  footerSupportColor: 'rgba(222,231,247,0.92)', // Support is the action — clearly brighter
+  footerBlurbClamp: 'clamp(12px, 0.9vw, 14px)',
+  footerBlurbColor: 'rgba(198,212,235,0.5)',
 }
 const HOME_BLURB =
   'Robby Meek is a sailor for the US Sailing Team attending Harvard University working to compete and excel at the 2028 Olympic Games.'
@@ -126,6 +122,18 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
     }
     rafId = requestAnimationFrame(update)
     return () => cancelAnimationFrame(rafId)
+  }, [embedded])
+
+  // Mobile scroll cue: hide it once the visitor starts scrolling into the bio (and
+  // bring it back near the top, so reverse-scroll replays). Window scroll — the
+  // MobileHome page scrolls as one; the home is the top section.
+  const [cueScrolled, setCueScrolled] = useState(false)
+  useEffect(() => {
+    if (!embedded) return undefined
+    const onScroll = () => setCueScrolled(window.scrollY > 24)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [embedded])
 
   // Skip check: respect the module-level played flag + reduced-motion.
@@ -667,20 +675,19 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
 
       {/* Home menu. MOBILE (embedded): the Support CTA (long arrow) + blurb, absolute
           at the bottom so it scrolls off with the frame — UNCHANGED. DESKTOP: a quiet
-          baseline footer — the four sections (dot-separated, left) + Support pushed
-          right, one thin line so the orb owns the field. Fade (uiVisible*(1-textOut))
-          is preserved in both. */}
+          bottom-left stack — the four sections (dot-separated) on top, Support beneath,
+          blurb below; a touch larger so it reads as navigable, still recessive so the
+          orb owns the field. Fade (uiVisible*(1-textOut)) is preserved in both. */}
       {embedded ? (
         <nav
           aria-label="Primary"
           style={{
             position: 'absolute',
-            left: 'clamp(20px, 5vw, 64px)', // padded from the left
-            right: '15%', // arrow head lands at 85% of the viewport on small/mobile screens…
-            maxWidth: 620, // …but the block stops growing past this on large screens (arrow + text cap)
-            bottom: 'clamp(28px, 5vh, 48px)',
+            left: 'clamp(20px, 5vw, 64px)', // padded from the left, where it was
+            maxWidth: 'min(88vw, 420px)',
+            bottom: 'clamp(56px, 9vh, 84px)', // raised a touch to clear the scroll cue below
             display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
-            gap: 'clamp(12px, 1.6vh, 20px)',
+            gap: 'clamp(8px, 1.2vh, 14px)',
             opacity: (uiVisible ? 1 : 0) * (1 - textOut),
             transform: `translateX(${-28 * textOut}px)`,
             transition: `opacity 0.6s ease${bakedMorphOut ? ', transform 0.6s ease' : ''}`,
@@ -688,11 +695,11 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
             zIndex: 20,
           }}
         >
-          <SupportArrow onClick={() => onNavigate(HOME_NAV.support.route)} />
+          <FooterLink support label="Support →" onClick={() => onNavigate(HOME_NAV.support.route)} />
           <p style={{
-            color: HOME_NAV.blurbColor, fontSize: HOME_NAV.blurbClamp,
+            color: HOME_NAV.footerBlurbColor, fontSize: HOME_NAV.footerBlurbClamp,
             lineHeight: 1.55, margin: 0, fontWeight: 400, letterSpacing: 0,
-            maxWidth: 'min(100%, 560px)', textAlign: 'left',
+            maxWidth: 'min(100%, 420px)', textAlign: 'left',
           }}>{HOME_BLURB}</p>
         </nav>
       ) : (
@@ -700,10 +707,11 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
           aria-label="Primary"
           style={{
             position: 'fixed',
-            left: 'clamp(24px, 4vw, 56px)', right: 'clamp(24px, 4vw, 56px)',
-            bottom: 'clamp(20px, 3vh, 34px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            gap: 24, flexWrap: 'wrap',
+            left: 'clamp(24px, 4vw, 56px)',
+            bottom: 'clamp(24px, 4vh, 40px)',
+            display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+            gap: 'clamp(12px, 1.6vh, 18px)',
+            maxWidth: 'min(88vw, 460px)',
             opacity: (uiVisible ? 1 : 0) * (1 - textOut),
             transform: `translateY(${8 * textOut}px)`,
             transition: `opacity 0.6s ease${bakedMorphOut ? ', transform 0.6s ease' : ''}`,
@@ -725,7 +733,39 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
             ))}
           </div>
           <FooterLink support label="Support →" onClick={() => onNavigate(HOME_NAV.support.route)} />
+          <p style={{
+            color: HOME_NAV.footerBlurbColor, fontSize: HOME_NAV.footerBlurbClamp,
+            lineHeight: 1.55, margin: 0, fontWeight: 400, letterSpacing: 0,
+            maxWidth: 'min(100%, 440px)', textAlign: 'left',
+          }}>{HOME_BLURB}</p>
         </nav>
+      )}
+
+      {/* Mobile scroll cue — a quiet named-destination hint that scrolling leads to
+          the bio (so it doesn't read as a dead end). Gently bounces (site scrollHint),
+          fades in after the intro, fades out once you scroll (returns near the top),
+          and taps to smooth-scroll down into the section. Desktop home never scrolls. */}
+      {embedded && (
+        <button
+          onClick={() => window.scrollTo({ top: window.innerHeight, behavior: 'smooth' })}
+          aria-label="Scroll to biography"
+          style={{
+            position: 'absolute', left: '50%', bottom: 'clamp(16px, 2.5vh, 26px)',
+            transform: 'translateX(-50%)',
+            background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
+            color: 'rgba(210,222,240,0.78)',
+            fontSize: 12, fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase',
+            fontFamily: 'inherit', whiteSpace: 'nowrap',
+            opacity: (uiVisible && !cueScrolled ? 1 : 0) * (1 - textOut),
+            transition: 'opacity 0.5s ease',
+            pointerEvents: uiVisible && !cueScrolled && textOut < 0.05 ? 'auto' : 'none',
+            zIndex: 20,
+          }}
+        >
+          <span style={{ display: 'inline-block', animation: prefersReducedMotion ? 'none' : 'scrollHint 1.6s ease-in-out infinite' }}>
+            Biography ↓
+          </span>
+        </button>
       )}
 
 
@@ -858,46 +898,6 @@ function FooterLink({ label, onClick, support }) {
       }}
     >
       {label}
-    </button>
-  )
-}
-
-// Home Support CTA (MOBILE): the word "Support" (large, left) + a long arrow whose
-// head lands at the nav's right edge (85% of the viewport). Scales with the window;
-// hover/focus → royal blue. A real <button> for keyboard + screen readers.
-function SupportArrow({ onClick }) {
-  const [hover, setHover] = useState(false)
-  const thick = 2 // fixed — the line thickness, gap and arrowhead lock at this scale;
-  //                only the shaft LENGTH flexes (and is capped by the nav's maxWidth)
-  return (
-    <button
-      className="home-nav-link"
-      onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      onFocus={() => setHover(true)}
-      onBlur={() => setHover(false)}
-      aria-label="Support"
-      style={{
-        display: 'flex', alignItems: 'center', gap: 16, // fixed gap — no desktop growth
-        width: '100%',
-        background: 'none', border: 'none', cursor: 'pointer', padding: '6px 0',
-        color: hover ? HOME_NAV.hoverColor : HOME_NAV.supportColor,
-        transition: 'color 0.25s ease', fontFamily: 'inherit',
-      }}
-    >
-      <span style={{
-        fontSize: HOME_NAV.supportClamp, fontWeight: HOME_NAV.supportWeight,
-        letterSpacing: '0.3px', whiteSpace: 'nowrap', lineHeight: 1,
-      }}>Support</span>
-      {/* long shaft (fills to the nav's 85% right edge) + an undistorted SVG chevron */}
-      <span aria-hidden="true" style={{ flex: 1, height: thick, background: 'currentColor', borderRadius: 2 }} />
-      <svg
-        aria-hidden="true" viewBox="0 0 12 16" fill="none"
-        style={{ width: 12, height: 16, flexShrink: 0, marginLeft: -2, display: 'block' }}
-      >
-        <path d="M3 2 L10 8 L3 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
     </button>
   )
 }
