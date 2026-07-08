@@ -79,6 +79,10 @@ const CURRENT_MAP = {
   '/the-road': 'The Road',
 }
 
+// The Road: how far you scroll before the nav banner hides into its hover-reveal
+// state (roughly the nav's own height, so it hides once you've scrolled it away).
+const NAV_HIDE_SCROLL = 90
+
 function getNavMode(pathname) {
   // Home uses hover-revealed top nav at large widths in addition to its
   // baked-in bottom-left nav. Compact-mode fallbacks (hamburger + pinned
@@ -263,7 +267,7 @@ export default function App() {
 
   const isExiting = transitionStage === 'exiting'
   const navPath = isExiting ? displayLocation.pathname : location.pathname
-  const navMode = getNavMode(navPath)
+  const baseNavMode = getNavMode(navPath)
 
   // Mobile detection for combined home+biography and compact nav
   const [isMobile, setIsMobile] = useState(
@@ -276,6 +280,16 @@ export default function App() {
   }, [])
 
   const [hoverNav, setHoverNav] = useState(false)
+
+  // Track scrolling past the top so The Road can hide its nav into a hover-reveal
+  // banner (like Home) once the hero has scrolled away. Re-checks on route change.
+  const [scrolledPastNav, setScrolledPastNav] = useState(false)
+  useEffect(() => {
+    const onScroll = () => setScrolledPastNav(window.scrollY > NAV_HIDE_SCROLL)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [location.pathname])
 
   // Compact-mode nav state: when the full horizontal nav doesn't fit (narrow
   // desktop window or mobile), switch to a hamburger + overlay. Detection uses
@@ -311,6 +325,12 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [navMenuOpen])
 
+  // The Road nav adopts Home's hover-reveal behavior once scrolled past the top
+  // (desktop only — compact/hamburger mode is untouched).
+  const roadHiddenNav =
+    location.pathname === '/the-road' && scrolledPastNav && !navOverflowing
+  const navMode = roadHiddenNav ? 'hover' : baseNavMode
+
   // The home route uses hover nav, but it has its own cinematic intro and a
   // bottom-left nav that already telegraphs navigability — we don't need the
   // discovery hint there. Other hover routes (currently none) would still get it.
@@ -321,7 +341,7 @@ export default function App() {
   // Runs once per mount of a hover route, does not use any storage APIs.
   const [navHint, setNavHint] = useState(false)
   useEffect(() => {
-    if (navMode !== 'hover' || isHomeRoute) {
+    if (navMode !== 'hover' || isHomeRoute || location.pathname === '/the-road') {
       setNavHint(false)
       return
     }
@@ -347,6 +367,9 @@ export default function App() {
   if (navMode === 'static') navPosition = 'relative'
   else if (navMode === 'sticky') navPosition = 'sticky'
   else navPosition = 'absolute'
+  // The Road nav is fixed so the hidden banner can re-reveal at the viewport top
+  // on hover (absolute would leave it scrolled off above the fold).
+  if (location.pathname === '/the-road') navPosition = 'fixed'
 
   // Nav background uses TARGET for immediate color change
   const targetMode = getNavMode(location.pathname)
@@ -360,6 +383,9 @@ export default function App() {
   } else {
     navBg = getBg(location.pathname)
   }
+  // Hover-reveal road nav is a transparent banner like Home's (the solid bar only
+  // shows at the top of the page, before it hides).
+  if (roadHiddenNav) navBg = 'transparent'
 
   const navVariant = getVariant(location.pathname)
 
@@ -430,10 +456,10 @@ export default function App() {
   return (
     <div
       onMouseMove={(e) => {
-        if (getNavMode(location.pathname) === 'hover') setHoverNav(e.clientY < 80)
+        if (navMode === 'hover') setHoverNav(e.clientY < 80)
       }}
       onMouseLeave={() => {
-        if (getNavMode(location.pathname) === 'hover') setHoverNav(false)
+        if (navMode === 'hover') setHoverNav(false)
       }}
     >
       {/* Hidden measurement nav: renders the full horizontal nav off-screen so
