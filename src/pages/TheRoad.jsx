@@ -539,7 +539,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
   })
   const [finaleT, setFinaleT] = useState(0)
   const [heroDone, setHeroDone] = useState(false)
-  const [isMobile] = useState(() => window.innerWidth < 700)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 700)
   const [playing, setPlaying] = useState(false)
   const [docked, setDocked] = useState(false) // "Back to Biography" docks to the top once scrolled past the nav
   // Save-Data / 2g → skip the photo backdrops + warm-ahead entirely (the same
@@ -640,11 +640,28 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
     }
   }
 
+  // Keep the desktop/mobile split responsive: crossing the 700px breakpoint (e.g.
+  // dragging the window narrow) flips isMobile so the whole page re-lays out to the
+  // matching frame instead of staying in the desktop layout and getting smushed.
+  // setIsMobile with the same value is a no-op, so this only re-renders on a cross.
+  useEffect(() => {
+    const onBreakpoint = () => setIsMobile(window.innerWidth < 700)
+    window.addEventListener('resize', onBreakpoint)
+    return () => window.removeEventListener('resize', onBreakpoint)
+  }, [])
+
+  // The tour controls outlive globe re-inits — dispose only on unmount.
+  useEffect(() => () => { if (tourRef.current) tourRef.current.dispose() }, [])
+
+  // Re-runs when isMobile flips: the globe scene bakes isMobile into its pose
+  // (confined-left vs high-centered), pixel ratio, stars and pins, so a breakpoint
+  // cross rebuilds it. dispose() intentionally keeps the canvas context (see
+  // globeScene.js), so re-creating on the same canvas is safe.
   useEffect(() => {
     let scene
     try {
       scene = createGlobeScene(canvasRef.current, FRAMES, {
-        isMobile: window.innerWidth < 700,
+        isMobile,
         baseUrl: import.meta.env.BASE_URL,
         onReady: () => { setReady(true); if (onGlobeReady) onGlobeReady() },
         getProgress: computeScroll,
@@ -661,9 +678,8 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
     return () => {
       window.removeEventListener('resize', onResize)
       scene.dispose()
-      if (tourRef.current) tourRef.current.dispose()
     }
-  }, [])
+  }, [isMobile]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Seamless arrival: lock scrolling through the staged reveal (globe → pins →
   // text) so the tour can't be scrubbed mid-animation, then release it.
@@ -760,6 +776,20 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
   const progIn = curLeg >= 0 ? stopInLeg(curLeg) : 0
   const progOut = prevLeg >= 0 ? stopInLeg(prevLeg) : 0
   const controlsInteractive = frameOpacity > 0.5
+  // Click a tracker box -> fly to that leg's first stop (settled, list visible).
+  // Reuses the tour tween; adds no state to the closed form, so reverse-scrub is safe.
+  const jumpToLeg = (i) => {
+    const ih = window.innerHeight || 1
+    // the final leg's only stop IS the finale climax, where the frame is faded out;
+    // land on the recap instead, where "Leg 5 / 5" is still lit and its stop listed.
+    if (i === CHAPTERS.length - 1) {
+      const recap = SEGMENTS.find((s) => s.type === 'recap')
+      if (recap) { tourRef.current?.toY(recap.start * ih); return }
+    }
+    const si = CHAPTERS[i]?.stopIndices?.[0]
+    if (si == null) return
+    tourRef.current?.toY(STOP_Y[si] * ih)
+  }
   return (
     <div style={{ background: 'rgb(0,0,0)' }}>
       {/* venue-photo backdrops sit UNDER the alpha-true globe canvas (same
@@ -812,7 +842,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
           display: 'flex', flexDirection: 'column', pointerEvents: 'none',
           opacity: frameOpacity, transform: `translateY(${(1 - frameOpacity) * 14}px)`,
         }}>
-          <LegHeader numPrev={numPrev} numCur={numCur} numT={numT} timelineF={timelineF} isMobile={false} />
+          <LegHeader numPrev={numPrev} numCur={numCur} numT={numT} timelineF={timelineF} isMobile={false} onJump={jumpToLeg} interactive={controlsInteractive} />
           <LegList prevLeg={prevLeg} curLeg={curLeg} chT={listChT} progOut={progOut} progIn={progIn} isMobile={false} />
           {/* passage readout + Play — persistent (fade only with the whole frame) */}
           <div style={{
@@ -835,7 +865,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
           zIndex: 3, display: 'flex', flexDirection: 'column', pointerEvents: 'none',
           opacity: frameOpacity, transform: `translateY(${(1 - frameOpacity) * 12}px)`,
         }}>
-          <LegHeader numPrev={numPrev} numCur={numCur} numT={numT} timelineF={timelineF} isMobile />
+          <LegHeader numPrev={numPrev} numCur={numCur} numT={numT} timelineF={timelineF} isMobile onJump={jumpToLeg} interactive={controlsInteractive} />
           <LegList prevLeg={prevLeg} curLeg={curLeg} chT={listChT} progOut={progOut} progIn={progIn} isMobile />
           <div style={{
             flexShrink: 0, marginTop: 14,
@@ -899,15 +929,29 @@ const legAbbr = (label) => {
   return `${firstHalf ? 'H1' : 'H2'} ${m[2]}`
 }
 const mix = (a, b, t) => a + (b - a) * t
-function LegTimeline({ activeF, isMobile }) {
+// The half-year tracker. Each box lights by scroll (`on`) AND — when the frame is
+// interactive — is a button that flies the tour to that leg's first stop (onJump).
+function LegTimeline({ activeF, isMobile, onJump, interactive }) {
+  const [hoverIdx, setHoverIdx] = useState(-1)
+  const clickable = interactive && typeof onJump === 'function'
   return (
-    <div style={{ display: 'flex', gap: isMobile ? 4 : 5, alignItems: 'center' }}>
+    // re-enable pointer events (the whole frame is pointerEvents:'none'); off while
+    // the frame is mid-fade so half-transparent boxes aren't clickable
+    <div style={{ display: 'flex', gap: isMobile ? 4 : 5, alignItems: 'center', pointerEvents: clickable ? 'auto' : 'none' }}>
       {CHAPTERS.map((ch, i) => {
         // 1 = fully lit, 0 = unlit; fractional for the two boxes mid-handoff
         const on = clamp(1 - Math.abs(i - activeF), 0, 1)
+        const hovered = clickable && hoverIdx === i
         return (
           <span
             key={ch.id}
+            role={clickable ? 'button' : undefined}
+            tabIndex={clickable ? 0 : undefined}
+            aria-label={clickable ? `Go to Leg ${i + 1}, ${legAbbr(ch.label)}` : undefined}
+            onClick={clickable ? () => onJump(i) : undefined}
+            onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onJump(i) } } : undefined}
+            onMouseEnter={clickable ? () => setHoverIdx(i) : undefined}
+            onMouseLeave={clickable ? () => setHoverIdx(-1) : undefined}
             style={{
               padding: isMobile ? '3px 5px' : '4px 7px',
               border: `1px solid rgba(${mix(255, 0, on)},${mix(255, 80, on)},${mix(255, 255, on)},${mix(0.18, 1, on)})`,
@@ -916,6 +960,13 @@ function LegTimeline({ activeF, isMobile }) {
               fontSize: isMobile ? 8.5 : 9.5, fontWeight: 600, letterSpacing: '0.6px',
               textTransform: 'uppercase', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums',
               boxShadow: on > 0.01 ? `0 0 ${14 * on}px rgba(0,80,255,${0.5 * on})` : 'none',
+              cursor: clickable ? 'pointer' : 'default',
+              // hover affordance rides ONLY scroll-independent props (filter/transform)
+              // so the per-frame lit-box animation (border/bg/color) is never smeared
+              filter: hovered ? 'brightness(1.5)' : 'none',
+              transform: hovered ? 'translateY(-1px)' : 'none',
+              transition: 'filter 120ms ease, transform 120ms ease',
+              WebkitTapHighlightColor: 'transparent', userSelect: 'none',
             }}
           >
             {legAbbr(ch.label)}
@@ -949,13 +1000,13 @@ function LegNumber({ prev, cur, t }) {
 // The PERSISTENT header — "Leg N / 5" (number swaps) + the half-year tracker
 // (lit box hands off). Lives in the frame ABOVE the list and never remounts
 // between legs, so nothing here flickers as the tour moves on.
-function LegHeader({ numPrev, numCur, numT, timelineF, isMobile }) {
+function LegHeader({ numPrev, numCur, numT, timelineF, isMobile, onJump, interactive }) {
   return (
     <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', margin: '0 0 22px' }}>
       <h2 style={{ color: '#fff', fontSize: isMobile ? 30 : 'clamp(34px, 5vw, 60px)', fontWeight: 800, letterSpacing: '-2px', lineHeight: 1, margin: 0 }}>
         Leg <LegNumber prev={numPrev} cur={numCur} t={numT} /> / {CHAPTERS.length}
       </h2>
-      <LegTimeline activeF={timelineF} isMobile={isMobile} />
+      <LegTimeline activeF={timelineF} isMobile={isMobile} onJump={onJump} interactive={interactive} />
     </div>
   )
 }
