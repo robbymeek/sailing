@@ -120,6 +120,23 @@ function MobileHome({ onNavigate, hoverNavOpen, bioSectionRef }) {
   )
 }
 
+// Desktop home mirrors MobileHome: MainView + HomeFilmBridge (the ROBBY MEEK
+// wordmark beat) + Biography as one scrollable page. MainView's exit-veil fades
+// the frame (photo, orb, nav, sponsors) to black on scroll so the hand-off into
+// the bridge matches, exactly like mobile. The live orb still morphs → The Road
+// on click; scrolling reveals the biography below.
+function DesktopHome({ onNavigate, hoverNavOpen, bioSectionRef }) {
+  return (
+    <div>
+      <MainView onNavigate={onNavigate} hoverNavOpen={hoverNavOpen} />
+      <HomeFilmBridge />
+      <div ref={bioSectionRef}>
+        <Biography onNavigate={onNavigate} scrollOffsetRef={bioSectionRef} />
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -632,7 +649,7 @@ export default function App() {
             isMobile ? (
               <MobileHome onNavigate={go} hoverNavOpen={hoverNav} bioSectionRef={mobileBioRef} />
             ) : (
-              <MainView onNavigate={go} hoverNavOpen={hoverNav} />
+              <DesktopHome onNavigate={go} hoverNavOpen={hoverNav} bioSectionRef={mobileBioRef} />
             )
           } />
           <Route path="/biography" element={<Biography onNavigate={go} />} />

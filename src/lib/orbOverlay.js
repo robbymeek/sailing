@@ -117,6 +117,19 @@ function setVisible(v) {
   }
 }
 
+// Stick the orb to the page while scrolling: the overlay canvas is position:fixed
+// (so it survives the morph route-swap), so instead of fading it in place we
+// translate it UP by the page's scroll offset and fade it in lockstep with the exit
+// veil — the whole centerpiece then scrolls away uniformly. Scroll-driven, so no CSS
+// transition. Call (0, 1) to restore it at the top. MainView drives this from its
+// scroll rAF; the morph path never calls it (it owns the orb's transform/opacity).
+function setScrollFade(offsetY, opacity) {
+  if (!canvasEl) return
+  canvasEl.style.transition = 'none'
+  canvasEl.style.transform = offsetY ? `translate3d(0, ${-offsetY}px, 0)` : 'none'
+  canvasEl.style.opacity = String(opacity)
+}
+
 // Fade the overlay out fast so it leaves WITH the page's exit fade instead of
 // staying at full opacity and "popping" while everything else fades. Used when
 // leaving home via a normal nav; the orb→globe morph path never calls this
@@ -169,6 +182,7 @@ function detach() {
 export default {
   attach,
   setVisible,
+  setScrollFade,
   fadeOut,
   startMorph,
   wake,
