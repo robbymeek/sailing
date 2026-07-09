@@ -542,7 +542,7 @@ function YourNameInput({ onNavigate, showBoat = false }) {
           fontFamily: 'inherit',
           transition: 'color 0.2s ease',
         }}
-        aria-label="Go to support"
+        aria-label="Back the campaign"
       >
         →
       </button>
