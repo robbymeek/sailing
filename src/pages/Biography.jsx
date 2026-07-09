@@ -204,6 +204,11 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
   }, [preload])
 
 
+  // True only on the standalone /biography route, where the film plays as the
+  // opening hero at the very top of the page (drives the little breathing gap
+  // of background we leave between the video and the intro section below).
+  const isHero = !scrollOffsetRef && !preload
+
   return (
     <div ref={rootRef} style={{ background: 'rgb(230,235,240)', minHeight: '100vh' }}>
 
@@ -213,7 +218,7 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
            or every route would download the film). */}
       <SailingBanner
         isMobile={isMobile}
-        hero={!scrollOffsetRef && !preload}
+        hero={isHero}
         inert={preload}
       />
 
@@ -227,6 +232,10 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
         minHeight: '100vh',
         overflow: 'visible',
         background: 'rgb(230,235,240)',
+        // A little breathing room of plain background right below the hero film
+        // before the intro section starts (standalone route only — in MobileHome
+        // the banner is a mid-page strip handed off by HomeFilmBridge instead).
+        marginTop: isHero ? (isMobile ? 28 : 56) : 0,
         zIndex: 2,
       }}
         className="bio-hero"
@@ -449,9 +458,12 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
            carry here. ===== */}
       <div style={{ background: 'rgb(18,0,120)', position: 'relative', zIndex: 5, borderTop: '4px solid #ffffff' }}>
 
-        {/* Bio text — clean two-column on desktop */}
+        {/* Bio text — clean two-column on desktop. Extra vertical padding on
+            desktop so the paragraphs breathe on the blue page (was 50px both
+            ends — read too crowded against the white seam and the résumé CTA). */}
         <div style={{
-          maxWidth: 900, margin: '0 auto', padding: '50px 40px',
+          maxWidth: 900, margin: '0 auto',
+          padding: isMobile ? '50px 40px' : '84px 40px 72px',
           display: 'flex', gap: 40, flexWrap: 'wrap',
         }}>
           <div style={{ flex: '1 1 380px', minWidth: 280 }}>
