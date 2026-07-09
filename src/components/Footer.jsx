@@ -31,7 +31,10 @@ export default function Footer({ variant, onNavigate }) {
         ))}
       </div>
       <p style={{ color: tc, fontSize: 11, margin: '8px 0' }}>
-        Contact: robbymeek+LA2028@gmail.com
+        Contact:{' '}
+        <a href="mailto:info@robbysailing.com" style={{ color: tc, textDecoration: 'underline', textUnderlineOffset: '2px' }}>
+          info@robbysailing.com
+        </a>
       </p>
       <p style={{ color: tc, fontSize: 10, margin: '4px 0' }}>
         Regarding sponsorships or other inquiries.{' '}

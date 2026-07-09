@@ -56,7 +56,7 @@ const redirectFor = (pathname) =>
 const INNER_BG = {
   '/biography': 'rgb(230,235,240)',
   '/team': 'rgb(12,14,18)',
-  '/contact': 'rgb(240,240,240)',
+  '/contact': 'rgb(255,255,255)',
   '/support': 'rgb(240,240,240)',
   '/the-road': 'rgb(0,0,0)',
 }
@@ -250,8 +250,14 @@ export default function App() {
 
   // Background color management
   useEffect(() => {
-    document.body.style.background = getBg(location.pathname)
+    const bg = getBg(location.pathname)
+    document.body.style.background = bg
     document.body.style.transition = 'background 0.4s ease'
+    // Also sync <html>: the index.html cold-load script paints documentElement
+    // once, but on client-side navigation only <body> was updated — so an
+    // overscroll/bounce could reveal a stale colour (e.g. arriving at /contact
+    // from a dark page). Keeping <html> in step makes the bounce match the page.
+    document.documentElement.style.background = bg
   }, [location.pathname])
 
   // Idle-prefetch the lazy The Road chunk so the 350ms route transition

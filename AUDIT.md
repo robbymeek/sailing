@@ -69,7 +69,7 @@ Legend: **[T1]** invisible fix · **[T2]** visible/ambiguous (needs approval) ·
 
 - **[T2] No `*` catch-all route** (`src/App.jsx:517-539`). Only 6 routes + 3 redirects; any other URL (typo, stale share) renders the **nav with a blank content area** — a silent blank page, not a helpful 404. *Fix:* add a `path="*"` route → a small 404 view or a redirect to Home. **New visible behavior → Tier 2.**
 - **[OK]** Every internal `onNavigate`/link target resolves (unknown names safely fall back to `/`). Redirects `/coming-soon→/the-road`, `/event-calendar→/biography`, `/path→/team` all work.
-- **[OK]** `mailto:robbymeek+LA2028@gmail.com` (`Contact.jsx:33`) is well-formed. Support intentionally has no form (static donate guide → external `sfny.org/donate`).
+- **[OK]** `mailto:robby@robbysailing.com` (`Contact.jsx`, personal) and `mailto:info@robbysailing.com` (`Footer.jsx`, general) are well-formed. Support intentionally has no form (static donate guide → external `sfny.org/donate`).
 - **[MANUAL] 4 external press links return 403** (all `sailingscuttlebutt.com` articles) to both `curl` and real headless Chrome, while the site root returns 200 — see Open Questions.
 
 ### E. Assets & cruft
