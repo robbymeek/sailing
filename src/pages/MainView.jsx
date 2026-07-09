@@ -41,26 +41,13 @@ const ORB_READY_TIMEOUT_MS = 10000
 // the live countdown INSIDE the glass — the DOM corner countdown was retired for it.
 const COUNTDOWN_TARGET = Date.parse('2028-07-14T00:00:00')
 
-// Single source of truth for the home on-page CTA. The Support button + blurb are
-// the ONLY on-page menu now — the pages are reached via the top hover-nav /
-// hamburger + the orb. Large, left-aligned, window-responsive (clamp); the Support
-// arrow's head lands at 85% of the viewport width. Same layout on every view.
+// Shared config for the home on-page controls. Pages are reached via the top links
+// (Biography / The Team / Contact), the orb (The Road), and the Support CTA; on
+// mobile via the hamburger. Blurb colours are a cool grey harmonized with the orb's
+// FRESNEL_COLOR rim (≈rgb 158,184,219) so they stay recessive on the dark photo.
 const HOME_NAV = {
   support: { label: 'Support', route: 'Support' },
   hoverColor: '#1E40FF', // campaign accent — hover/focus on any home link
-  // Home footer styling — shared by the DESKTOP stack (four sections dot-separated,
-  // then Support, then blurb) and the MOBILE hero (just Support + blurb, bottom-left).
-  // Cool grey harmonized with the orb's FRESNEL_COLOR rim (≈rgb 158,184,219) — recessive.
-  links: [
-    { label: 'Biography', route: 'Biography' },
-    { label: 'The Team', route: 'The Team' },
-    { label: 'The Road', route: 'The Road' },
-    { label: 'Contact', route: 'Contact' },
-  ],
-  footerClamp: 'clamp(15px, 1.2vw, 18px)', // a bit bigger so it reads as navigable
-  footerColor: 'rgba(198,212,235,0.66)',
-  footerDot: 'rgba(198,212,235,0.34)',
-  footerSupportColor: 'rgba(222,231,247,0.92)', // Support is the action — clearly brighter
   footerBlurbClamp: 'clamp(12px, 0.9vw, 14px)',
   footerBlurbColor: 'rgba(198,212,235,0.5)',
 }
@@ -696,7 +683,8 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
             zIndex: 20,
           }}
         >
-          <FooterLink support label="Back the Campaign →" onClick={() => onNavigate(HOME_NAV.support.route)} />
+          {/* Same refined bordered CTA as desktop. */}
+          <SupportCTA onClick={() => onNavigate(HOME_NAV.support.route)} />
           <p style={{
             color: HOME_NAV.footerBlurbColor, fontSize: HOME_NAV.footerBlurbClamp,
             lineHeight: 1.55, margin: 0, fontWeight: 400, letterSpacing: 0,
@@ -704,42 +692,64 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
           }}>{HOME_BLURB}</p>
         </nav>
       ) : (
-        <nav
-          aria-label="Primary"
-          style={{
-            position: 'fixed',
-            left: 'clamp(24px, 4vw, 56px)',
-            bottom: 'clamp(24px, 4vh, 40px)',
-            display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
-            gap: 'clamp(12px, 1.6vh, 18px)',
-            maxWidth: 'min(88vw, 460px)',
-            opacity: (uiVisible ? 1 : 0) * (1 - textOut),
-            transform: `translateY(${8 * textOut}px)`,
-            transition: `opacity 0.6s ease${bakedMorphOut ? ', transform 0.6s ease' : ''}`,
-            pointerEvents: uiVisible && textOut < 0.05 ? 'auto' : 'none',
-            zIndex: 20,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-            {HOME_NAV.links.map((l, i, arr) => (
-              <span key={l.route} style={{ display: 'inline-flex', alignItems: 'center' }}>
-                <FooterLink label={l.label} onClick={() => onNavigate(l.route)} />
-                {i < arr.length - 1 && (
-                  <span aria-hidden="true" style={{
-                    color: HOME_NAV.footerDot, fontSize: HOME_NAV.footerClamp,
-                    margin: '0 clamp(6px, 0.7vw, 12px)', userSelect: 'none',
-                  }}>·</span>
-                )}
-              </span>
-            ))}
-          </div>
-          <FooterLink support label="Back the Campaign →" onClick={() => onNavigate(HOME_NAV.support.route)} />
-          <p style={{
-            color: HOME_NAV.footerBlurbColor, fontSize: HOME_NAV.footerBlurbClamp,
-            lineHeight: 1.55, margin: 0, fontWeight: 400, letterSpacing: 0,
-            maxWidth: 'min(100%, 440px)', textAlign: 'left',
-          }}>{HOME_BLURB}</p>
-        </nav>
+        // Desktop home: STFYC-style top links (Biography / The Team / Contact) plus a
+        // bordered "Back the Campaign" CTA + blurb in the bottom-left. Mobile is the
+        // embedded branch above; the app's own top nav is suppressed on desktop home
+        // (App.jsx). Both groups sit ABOVE the orb's grab-cursor circle (zIndex 45) so
+        // a link overlapping the orb's click zone on a short/landscape viewport still
+        // receives its own click — paired with the interactive-target guard in
+        // glassOrbScene's window-level hit-test so the tap can't hijack into the morph.
+        <>
+          {/* Top links — uppercase, wide-tracked, small, cool-white; a transparent
+              bar across the very top (echoes stfyc.com). Fades with the intro +
+              morph in lockstep with the rest of the home UI. */}
+          <nav
+            aria-label="Primary"
+            style={{
+              // Brought down so the text top lines up with the top of the white
+              // sponsor banner — same value as HomeSponsorStrip's desktop top
+              // (measured: the all-caps glyph top sits exactly at this container
+              // top). Same vh-based clamp so the row tracks the banner as the
+              // window resizes; the vw-based gap keeps the spacing proportional.
+              position: 'fixed', top: 'clamp(64px, 9vh, 96px)', left: 0, right: 0,
+              display: 'flex', justifyContent: 'center', alignItems: 'center',
+              gap: 'clamp(36px, 5.4vw, 90px)',
+              opacity: (uiVisible ? 1 : 0) * (1 - textOut),
+              transition: 'opacity 0.6s ease',
+              pointerEvents: uiVisible && textOut < 0.05 ? 'auto' : 'none',
+              zIndex: 47, // above the orb grab-cursor circle (45) so links win overlapping clicks
+            }}
+          >
+            <TopLink label="Biography" onClick={() => onNavigate('Biography')} />
+            <TopLink label="The Team" onClick={() => onNavigate('The Team')} />
+            <TopLink label="Contact" onClick={() => onNavigate('Contact')} />
+          </nav>
+
+          {/* Back the Campaign CTA + blurb — bottom-left, button directly above the
+              blurb (one left-aligned column), in its own landmark. */}
+          <nav
+            aria-label="Support the campaign"
+            style={{
+              position: 'fixed', left: 'clamp(24px, 4vw, 56px)', bottom: 'clamp(24px, 4vh, 40px)',
+              display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+              gap: 'clamp(16px, 2vh, 24px)',
+              maxWidth: 'min(88vw, 360px)',
+              opacity: (uiVisible ? 1 : 0) * (1 - textOut),
+              transform: `translateY(${8 * textOut}px)`,
+              transition: `opacity 0.6s ease${bakedMorphOut ? ', transform 0.6s ease' : ''}`,
+              pointerEvents: uiVisible && textOut < 0.05 ? 'auto' : 'none',
+              zIndex: 47,
+            }}
+          >
+            <SupportCTA onClick={() => onNavigate(HOME_NAV.support.route)} />
+            <p style={{
+              color: HOME_NAV.footerBlurbColor,
+              fontSize: 'clamp(12.5px, 0.95vw, 14px)',
+              lineHeight: 1.6, margin: 0, fontWeight: 400, letterSpacing: '0.2px',
+              maxWidth: '320px', textAlign: 'left',
+            }}>{HOME_BLURB}</p>
+          </nav>
+        </>
       )}
 
       {/* Title-sponsor sticker — a quiet credibility mark. MOBILE: a strip across the
@@ -880,9 +890,9 @@ function BakedOrbBackdrop({ embedded }) {
   )
 }
 
-// Desktop footer link: small + quiet, cool-grey (harmonized with the orb's rim);
-// hover/focus → the campaign accent. `support` reads a hair brighter as the action.
-function FooterLink({ label, onClick, support }) {
+// Desktop home top link, stfyc.com vibe: uppercase, wide letter-spacing, small,
+// cool-white; hover/focus → the campaign accent.
+function TopLink({ label, onClick }) {
   const [hover, setHover] = useState(false)
   return (
     <button
@@ -894,17 +904,59 @@ function FooterLink({ label, onClick, support }) {
       onBlur={() => setHover(false)}
       style={{
         background: 'none', border: 'none', cursor: 'pointer',
-        padding: '8px 6px', margin: '-8px -6px', // padded hitbox, pulled back out
-        color: hover ? HOME_NAV.hoverColor : (support ? HOME_NAV.footerSupportColor : HOME_NAV.footerColor),
-        fontSize: HOME_NAV.footerClamp,
-        fontWeight: support ? 600 : 500,
-        letterSpacing: '0.3px',
+        padding: '10px 8px', margin: '-10px -8px', // padded hitbox, pulled back out
+        color: hover ? HOME_NAV.hoverColor : 'rgba(214,226,244,0.82)',
+        fontSize: 'clamp(12px, 1.05vw, 15px)',
+        fontWeight: 500,
+        letterSpacing: '3px',
+        textTransform: 'uppercase',
         fontFamily: 'inherit',
         whiteSpace: 'nowrap',
-        transition: 'color 0.25s ease',
+        transition: 'color 0.3s ease',
       }}
     >
       {label}
+    </button>
+  )
+}
+
+// The campaign's single call to action. A refined hairline-outlined button kept
+// near the top-link size, but brighter/heavier and with an arrow so it still reads
+// as THE action rather than another nav link. Hover lifts the border + label to the
+// campaign accent, tints a whisper of fill, and nudges the arrow forward.
+function SupportCTA({ onClick }) {
+  const [hover, setHover] = useState(false)
+  return (
+    <button
+      className="home-nav-link"
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onFocus={() => setHover(true)}
+      onBlur={() => setHover(false)}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 12,
+        background: hover ? 'rgba(30,64,255,0.10)' : 'rgba(255,255,255,0.015)',
+        border: `1px solid ${hover ? 'rgba(30,64,255,0.72)' : 'rgba(200,214,236,0.38)'}`,
+        borderRadius: 2,
+        cursor: 'pointer',
+        padding: '14px 24px',
+        color: hover ? HOME_NAV.hoverColor : 'rgba(228,236,248,0.94)',
+        fontSize: 'clamp(12.5px, 1vw, 15px)',
+        fontWeight: 600,
+        letterSpacing: '2.4px',
+        textTransform: 'uppercase',
+        fontFamily: 'inherit',
+        whiteSpace: 'nowrap',
+        transition: 'color 0.3s ease, border-color 0.3s ease, background 0.3s ease',
+      }}
+    >
+      <span>Back the Campaign</span>
+      <span aria-hidden="true" style={{
+        fontSize: '1.15em', lineHeight: 1,
+        transform: hover ? 'translateX(3px)' : 'translateX(0)',
+        transition: 'transform 0.3s ease',
+      }}>→</span>
     </button>
   )
 }

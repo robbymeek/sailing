@@ -722,6 +722,13 @@ export default function createGlassOrbScene(
   const onUp = (e) => {
     if (!state.down) return
     state.down = false
+    // Ignore releases that land on an interactive control (nav link, CTA, etc.).
+    // hitsOrbZone is screen-space only, so an on-screen button that overlaps the
+    // orb's click circle — e.g. the centered home top nav on a short/landscape
+    // viewport — would otherwise hijack the tap into the orb→globe morph.
+    const t = e.target
+    if (t && typeof t.closest === 'function' &&
+        t.closest('a, button, [role="button"], input, select, textarea, label')) return
     if (performance.now() - state.downT < CLICK_MS && state.moved < CLICK_PX && onClick && hitsOrbZone(e)) onClick()
   }
   const onLeave = () => { state.tx = 0; state.ty = 0; state.cx = -1e6; state.cy = -1e6 } // park cursor far → orb eases back to rest
