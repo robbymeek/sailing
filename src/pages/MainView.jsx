@@ -748,14 +748,14 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
           Fades in lockstep with the home nav via uiVisible*(1-textOut). */}
       <HomeSponsorStrip embedded={embedded} uiVisible={uiVisible} textOut={textOut} />
 
-      {/* Mobile scroll cue — a quiet named-destination hint that scrolling leads to
-          the bio (so it doesn't read as a dead end). Gently bounces (site scrollHint),
+      {/* Mobile scroll cue — a quiet "Explore" hint that scrolling leads on into the
+          page (so it doesn't read as a dead end). Gently bounces (site scrollHint),
           fades in after the intro, fades out once you scroll (returns near the top),
           and taps to smooth-scroll down into the section. Desktop home never scrolls. */}
       {embedded && (
         <button
           onClick={() => window.scrollTo({ top: window.innerHeight, behavior: 'smooth' })}
-          aria-label="Scroll to biography"
+          aria-label="Explore — scroll down"
           style={{
             position: 'absolute', left: '50%', bottom: 'clamp(16px, 2.5vh, 26px)',
             transform: 'translateX(-50%)',
@@ -770,7 +770,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
           }}
         >
           <span style={{ display: 'inline-block', animation: prefersReducedMotion ? 'none' : 'scrollHint 1.6s ease-in-out infinite' }}>
-            Biography ↓
+            Explore ↓
           </span>
         </button>
       )}
