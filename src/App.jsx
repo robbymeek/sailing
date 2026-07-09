@@ -362,6 +362,18 @@ export default function App() {
   // discovery hint there. Other hover routes (currently none) would still get it.
   const isHomeRoute = location.pathname === '/'
 
+  // Compact (hamburger) trigger. On the HOME route the top nav lives in MainView
+  // and the whole tree swaps to the mobile layout at exactly isMobile (700px), so
+  // tie the hamburger to that SAME threshold — otherwise the measured-overflow
+  // trigger (~740px) fires first and the hamburger appears while the desktop top
+  // nav is still up (both visible at once). Non-home routes keep the content-width
+  // overflow trigger, where the regular Nav and hamburger are already complementary.
+  // Keyed to navPath (the DISPLAYED route) not location.pathname: during the
+  // leave-home exit fade the home tree is still on screen while location has already
+  // flipped, so an immediate check would briefly show the hamburger over it.
+  const homeShown = navPath === '/'
+  const compactNav = homeShown ? isMobile : navOverflowing
+
   // Discovery affordance: on hover-mode routes, briefly fade the nav in at low opacity
   // after the boat entrance completes so first-time visitors notice nav exists.
   // Runs once per mount of a hover route, does not use any storage APIs.
@@ -422,7 +434,7 @@ export default function App() {
   const [triggerColor, setTriggerColor] = useState('rgba(255,255,255,0.7)')
 
   useEffect(() => {
-    if (!navOverflowing) return
+    if (!compactNav) return // only sample when the hamburger is actually shown
 
     function updateTriggerColor() {
       const btn = hamburgerRef.current
@@ -477,7 +489,7 @@ export default function App() {
       clearInterval(interval)
       if (rafId != null) cancelAnimationFrame(rafId)
     }
-  }, [navOverflowing, isHomeRoute, location.pathname])
+  }, [compactNav, location.pathname])
 
   return (
     <div
@@ -499,8 +511,12 @@ export default function App() {
         <Nav current="Home" onNavigate={() => {}} variant="dark" />
       </div>
 
-      {/* Regular centered Nav — hidden when compact mode is active. */}
-      {!navOverflowing && (
+      {/* Regular centered Nav — hidden when compact mode is active, and also
+          suppressed on the DESKTOP home route: the home carries its own top links
+          (Biography/The Team/Contact) in MainView now. Mobile/compact still gets the
+          hamburger via the compactNav path below. Keyed to homeShown (the displayed
+          route) so it doesn't flash in during the leave-home exit fade. */}
+      {!compactNav && !homeShown && (
         <div style={{
           position: navPosition,
           top: 0, left: 0, right: 0,
@@ -521,10 +537,10 @@ export default function App() {
 
       {/* Compact-mode hamburger trigger: fixed top-left, two horizontal lines,
           animates to an X when the overlay is open. Lives outside any transform
-          or opacity wrapper so it stays put on scroll. Shown whenever the nav
-          overflows — including the home route (the home's only on-page control is
-          the Support CTA; wide desktop still reveals the full nav on hover-to-top). */}
-      {navOverflowing && (
+          or opacity wrapper so it stays put on scroll. Shown in compact mode —
+          on home that's exactly the mobile layout (isMobile, via compactNav) so
+          it swaps in precisely as the desktop top nav swaps out. */}
+      {compactNav && (
         <button
           ref={hamburgerRef}
           onClick={() => setNavMenuOpen((o) => !o)}
@@ -558,7 +574,7 @@ export default function App() {
       )}
 
       {/* Compact-mode overlay: full-viewport backdrop + vertical stack. */}
-      {navOverflowing && (
+      {compactNav && (
         <div
           onClick={() => setNavMenuOpen(false)}
           role="dialog"
