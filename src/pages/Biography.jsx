@@ -3,7 +3,7 @@ import Footer from '../components/Footer'
 import useCountdown from '../hooks/useCountdown'
 import useTextSpray from '../hooks/useTextSpray'
 import RESULT_GROUPS from '../data/events'
-import { ResultRow, GroupHeader, BridgeRow, EventModal } from '../components/eventUI'
+import { ResultRow, GroupHeader, EventModal } from '../components/eventUI'
 import ExitNav from '../components/ExitNav'
 import SailingBanner from '../components/SailingBanner'
 import { EXIT_CARDS } from '../components/exitCards'
@@ -561,8 +561,6 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
              collapsible list behind its GroupHeader. */}
         <div style={{ maxWidth: 900, margin: '0 auto', padding: isMobile ? '32px 20px' : '40px 40px' }}>
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-            {/* The chrome "door" into the future campaign tour, pinned to the top. */}
-            <BridgeRow onNavigate={onNavigate} />
             {RESULT_GROUPS.map((group) => {
               const open = !!openGroups[group.title]
               return (

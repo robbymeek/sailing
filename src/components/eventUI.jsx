@@ -135,45 +135,6 @@ export function ResultRow({ result, isActive, isMobile, onActivate }) {
   )
 }
 
-// The chrome "door" into the future campaign tour. Styled with the same LA 2028
-// shimmer (chrome-text) so it invites the click, and navigates to The Road
-// instead of opening a modal.
-export function BridgeRow({ onNavigate }) {
-  const [hovered, setHovered] = useState(false)
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClick={() => onNavigate('The Road')}
-      style={{
-        padding: hovered ? '22px 20px' : '18px 0',
-        borderBottom: '1px solid rgba(255,255,255,0.1)',
-        cursor: 'pointer',
-        background: hovered ? 'rgb(0,20,120)' : 'transparent',
-        margin: hovered ? '4px -20px' : '0',
-        transition: 'all 0.25s ease',
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
-        <span className="chrome-text" style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.2px' }}>
-          Upcoming: Full-Time Olympic Training
-        </span>
-        <span
-          style={{
-            color: hovered ? '#fff' : 'rgba(255,255,255,0.5)',
-            fontSize: 13,
-            flexShrink: 0,
-            whiteSpace: 'nowrap',
-            transition: 'color 0.2s ease',
-          }}
-        >
-          2026 – 2028 →
-        </span>
-      </div>
-    </div>
-  )
-}
-
 export function EventModal({ result, group, onClose }) {
   return (
     <div

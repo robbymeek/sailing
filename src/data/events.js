@@ -38,17 +38,7 @@
 //    url        official event page (optional)
 //
 //  FUTURE events are intentionally NOT here: the 2026 → 2028 campaign lives on
-//  The Road globe tour (src/data/campaignStops.js). The one forward-looking
-//  row is the chrome "Full-Time Olympic Training" bridge (OLYMPIC_BRIDGE),
-//  which links to The Road instead of opening a modal.
-
-// The chrome-shimmer "door" into the future tour. Rendered specially (BridgeRow
-// in components/eventUI.jsx): LA 2028-style chrome text; click → The Road.
-export const OLYMPIC_BRIDGE = {
-  id: 'olympic-training',
-  n: 'Upcoming: Full-Time Olympic Training',
-  d: '2026 – 2028',
-}
+//  The Road globe tour (src/data/campaignStops.js).
 
 const RESULT_GROUPS = [
   {
