@@ -103,12 +103,8 @@ export default function HomeSponsorStrip({ embedded = false, uiVisible = true, t
           left: 0,
           right: 0,
           minHeight: MOBILE_BANNER_H,
-          // Translucent frosted white so the orb hero reads through the sponsor bar
-          // (desktop lockups stay solid PANEL_BG).
-          background: 'rgba(255,255,255,0.38)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-          boxShadow: '0 4px 18px rgba(0,0,0,0.16)',
+          background: PANEL_BG,
+          boxShadow: PANEL_SHADOW,
           display: 'flex',
           alignItems: 'stretch',
           padding: '8px 6px',

@@ -84,17 +84,30 @@ const MOBILE_BAR_BG = {
 }
 const withAlpha = (rgb, a) => rgb.replace('rgb(', 'rgba(').replace(')', `, ${a})`)
 
+// Peak opacity of the pinned bar — kept translucent (frosted via backdrop-blur) so the
+// page shows through behind the Menu rather than a solid slab.
+const BAR_MAX_ALPHA = 0.5
+const BAR_MAX_BLUR = 12
 // Mobile menu-bar geometry as a closed form of scroll: on home it rests just below the
 // sponsor banner (restOffset) and pins to top:0 on scroll; on inner pages it's pinned
-// (restOffset 0). Reversible — scrolling back to the top of home restores the float.
+// (restOffset 0). `t` runs 0 (floating over the orb) → 1 (pinned): the bar fades to a
+// translucent frosted panel as it pins. Reversible — scrolling to the top of home restores
+// the clean float.
 function computeMobileBar(navPath, barBg, fgPinned) {
-  if (typeof window === 'undefined') return { topPx: 0, bg: barBg, fg: fgPinned }
+  if (typeof window === 'undefined') {
+    return { topPx: 0, bg: withAlpha(barBg, BAR_MAX_ALPHA), fg: fgPinned, blur: BAR_MAX_BLUR }
+  }
   const restOffset = navPath === '/' ? mobileBannerHeightPx() : 0
   const y = window.scrollY
   const topPx = Math.max(0, restOffset - y)
-  const bgOpacity = restOffset > 0 ? Math.max(0, Math.min(1, y / restOffset)) : 1
-  const floating = restOffset > 0 && bgOpacity < 0.5
-  return { topPx, bg: withAlpha(barBg, bgOpacity), fg: floating ? 'rgba(255,255,255,0.92)' : fgPinned }
+  const t = restOffset > 0 ? Math.max(0, Math.min(1, y / restOffset)) : 1
+  const floating = restOffset > 0 && t < 0.5
+  return {
+    topPx,
+    bg: withAlpha(barBg, t * BAR_MAX_ALPHA),
+    fg: floating ? 'rgba(255,255,255,0.92)' : fgPinned,
+    blur: t * BAR_MAX_BLUR,
+  }
 }
 
 const CURRENT_MAP = {
@@ -485,9 +498,12 @@ export default function App() {
     const apply = () => {
       const el = barRef.current
       if (!el) return
-      const { topPx, bg, fg } = computeMobileBar(navPath, barBg, barFgPinned)
+      const { topPx, bg, fg, blur } = computeMobileBar(navPath, barBg, barFgPinned)
+      const filt = blur > 0.1 ? `blur(${blur}px)` : 'none'
       el.style.top = `${topPx}px`
       el.style.background = bg
+      el.style.backdropFilter = filt
+      el.style.setProperty('-webkit-backdrop-filter', filt)
       el.style.setProperty('--fg', fg)
     }
     apply()
@@ -562,6 +578,8 @@ export default function App() {
             position: 'fixed', left: 0, right: 0, top: initialBar.topPx,
             height: 52, zIndex: 80,
             background: initialBar.bg,
+            backdropFilter: initialBar.blur > 0.1 ? `blur(${initialBar.blur}px)` : undefined,
+            WebkitBackdropFilter: initialBar.blur > 0.1 ? `blur(${initialBar.blur}px)` : undefined,
             display: 'flex', alignItems: 'center',
             pointerEvents: navMenuOpen ? 'none' : 'auto',
             ['--fg']: initialBar.fg,
