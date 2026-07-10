@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef, lazy, Suspense } from 'react'
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
-import Nav from './components/Nav'
+import DesktopBanner, { DesktopMenuOverlay, withAlpha, BAR_MAX_ALPHA, BAR_MAX_BLUR } from './components/DesktopBanner'
 import orbOverlay from './lib/orbOverlay'
 import blackBridge from './lib/blackBridge'
 
@@ -84,12 +84,8 @@ const MOBILE_BAR_BG = {
   '/contact': 'rgb(255,255,255)',
   '/support': 'rgb(240,240,240)',
 }
-const withAlpha = (rgb, a) => rgb.replace('rgb(', 'rgba(').replace(')', `, ${a})`)
-
-// Peak opacity of the pinned bar — kept translucent (frosted via backdrop-blur) so the
-// page shows through behind the Menu rather than a solid slab.
-const BAR_MAX_ALPHA = 0.5
-const BAR_MAX_BLUR = 12
+// withAlpha / BAR_MAX_ALPHA / BAR_MAX_BLUR live in DesktopBanner.jsx now — one frosted
+// colour model shared by the mobile bar and the desktop banner (imported above).
 // Mobile menu-bar geometry as a closed form of scroll: on home it rests just below the
 // sponsor banner (restOffset) and pins to top:0 on scroll; on inner pages it's pinned
 // (restOffset 0). `t` runs 0 (floating over the orb) → 1 (pinned): the bar fades to a
@@ -121,39 +117,14 @@ const CURRENT_MAP = {
   '/the-road': 'The Road',
 }
 
-// The Road: how far you scroll before the nav banner hides into its hover-reveal
-// state (roughly the nav's own height, so it hides once you've scrolled it away).
-const NAV_HIDE_SCROLL = 90
-
-function getNavMode(pathname) {
-  // Home uses hover-revealed top nav at large widths in addition to its
-  // baked-in bottom-left nav. Compact-mode fallbacks (hamburger + pinned
-  // Support) are suppressed on / because the bottom-left nav already covers
-  // narrow screens — see the isHomeRoute gates below.
-  if (pathname === '/') return 'hover'
-  if (pathname === '/team') return 'overlay'
-  // Biography opens on the full-bleed sailing video: the nav floats over it
-  // with a TRANSPARENT background (unlike 'overlay', whose solid navBg is
-  // color-matched to each dark hero) and scrolls away with the page.
-  if (pathname === '/biography') return 'overlay-clear'
-  // The Road is a fixed-canvas scrollytelling page — overlay the nav over
-  // the dark hero and let it scroll away with the page.
-  if (pathname === '/the-road') return 'overlay'
-  if (pathname === '/support') return 'static'
-  // Contact is a single-viewport page — overlay the nav so the nav's height
-  // counts toward the 100dvh and the page can stay exactly one screen tall.
-  if (pathname === '/contact') return 'overlay'
-  return 'static'
-}
-
 // On mobile, the home route renders MainView + Biography as one scrollable page.
 // HomeFilmBridge sits between them: a black title-card beat so the dark home
 // frame hands off to the biography's film strip instead of hard-cutting into it
 // (MainView's embedded exit fade lands on the same black).
-function MobileHome({ onNavigate, hoverNavOpen, bioSectionRef }) {
+function MobileHome({ onNavigate, bioSectionRef }) {
   return (
     <div>
-      <MainView onNavigate={onNavigate} hoverNavOpen={hoverNavOpen} embedded />
+      <MainView onNavigate={onNavigate} embedded />
       <HomeFilmBridge />
       <div ref={bioSectionRef}>
         <Biography onNavigate={onNavigate} scrollOffsetRef={bioSectionRef} />
@@ -167,10 +138,10 @@ function MobileHome({ onNavigate, hoverNavOpen, bioSectionRef }) {
 // the frame (photo, orb, nav, sponsors) to black on scroll so the hand-off into
 // the bridge matches, exactly like mobile. The live orb still morphs → The Road
 // on click; scrolling reveals the biography below.
-function DesktopHome({ onNavigate, hoverNavOpen, bioSectionRef }) {
+function DesktopHome({ onNavigate, bioSectionRef }) {
   return (
     <div>
-      <MainView onNavigate={onNavigate} hoverNavOpen={hoverNavOpen} />
+      <MainView onNavigate={onNavigate} />
       <HomeFilmBridge />
       <div ref={bioSectionRef}>
         <Biography onNavigate={onNavigate} scrollOffsetRef={bioSectionRef} />
@@ -209,15 +180,11 @@ export default function App() {
     return INNER_BG[pathname] || 'rgb(19,23,31)'
   }
 
-  function getVariant(pathname) {
-    return VARIANT_MAP[pathname] || 'dark'
-  }
-
   const mobileBioRef = useRef(null)
 
   const go = (page, state) => {
-    // On mobile home, "Home" scrolls to top
-    if (page === 'Home' && isMobile && location.pathname === '/') {
+    // On the home route (one long scrollable page on BOTH layouts), "Home" scrolls to top
+    if (page === 'Home' && location.pathname === '/') {
       window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
@@ -353,7 +320,6 @@ export default function App() {
 
   const isExiting = transitionStage === 'exiting'
   const navPath = isExiting ? displayLocation.pathname : location.pathname
-  const baseNavMode = getNavMode(navPath)
 
   // Mobile detection for combined home+biography and compact nav
   const [isMobile, setIsMobile] = useState(
@@ -385,40 +351,9 @@ export default function App() {
     return () => { window.removeEventListener('resize', onResize); clearTimeout(reloadTimer) }
   }, [])
 
-  const [hoverNav, setHoverNav] = useState(false)
-
-  // Track scrolling past the top so The Road can hide its nav into a hover-reveal
-  // banner (like Home) once the hero has scrolled away. Re-checks on route change.
-  const [scrolledPastNav, setScrolledPastNav] = useState(false)
-  useEffect(() => {
-    const onScroll = () => setScrolledPastNav(window.scrollY > NAV_HIDE_SCROLL)
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [location.pathname])
-
-  // Compact-mode nav state: when the full horizontal nav doesn't fit (narrow
-  // desktop window or mobile), switch to a hamburger + overlay. Detection uses
-  // a hidden measurement Nav so we compare real content width to viewport,
-  // no hardcoded breakpoints.
-  const navMeasureRef = useRef(null)
-  const [navOverflowing, setNavOverflowing] = useState(false)
+  // Menu overlay open state — shared by the mobile bar's hamburger and the desktop
+  // banner's (the two never render together).
   const [navMenuOpen, setNavMenuOpen] = useState(false)
-
-  useLayoutEffect(() => {
-    const el = navMeasureRef.current
-    if (!el) return
-    const check = () => {
-      const measured = el.getBoundingClientRect().width
-      // 140px slack accounts for the pinned top-left hamburger + top-right Support
-      // CTA that sit outside the centered nav in compact mode, plus safe margin.
-      setNavOverflowing(measured + 140 > window.innerWidth)
-    }
-    check()
-    const ro = new ResizeObserver(check)
-    ro.observe(document.body)
-    return () => ro.disconnect()
-  }, [])
 
   // Close the overlay on route change and on Escape.
   useEffect(() => {
@@ -431,93 +366,23 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [navMenuOpen])
 
-  // The Road nav adopts Home's hover-reveal behavior once scrolled past the top
-  // (desktop only — compact/hamburger mode is untouched).
-  const roadHiddenNav =
-    location.pathname === '/the-road' && scrolledPastNav && !navOverflowing
-  const navMode = roadHiddenNav ? 'hover' : baseNavMode
-
-  // The home route uses hover nav, but it has its own cinematic intro and a
-  // bottom-left nav that already telegraphs navigability — we don't need the
-  // discovery hint there. Other hover routes (currently none) would still get it.
-  const isHomeRoute = location.pathname === '/'
-
-  // Compact (hamburger) trigger. On the HOME route the top nav lives in MainView
-  // and the whole tree swaps to the mobile layout at exactly isMobile (700px), so
-  // tie the hamburger to that SAME threshold — otherwise the measured-overflow
-  // trigger (~740px) fires first and the hamburger appears while the desktop top
-  // nav is still up (both visible at once). Non-home routes keep the content-width
-  // overflow trigger, where the regular Nav and hamburger are already complementary.
   // Keyed to navPath (the DISPLAYED route) not location.pathname: during the
   // leave-home exit fade the home tree is still on screen while location has already
-  // flipped, so an immediate check would briefly show the hamburger over it.
+  // flipped, so an immediate check would briefly swap the bars over it.
   const homeShown = navPath === '/'
-  const compactNav = homeShown ? isMobile : navOverflowing
-
-  // Discovery affordance: on hover-mode routes, briefly fade the nav in at low opacity
-  // after the boat entrance completes so first-time visitors notice nav exists.
-  // Runs once per mount of a hover route, does not use any storage APIs.
-  const [navHint, setNavHint] = useState(false)
-  useEffect(() => {
-    if (navMode !== 'hover' || isHomeRoute || location.pathname === '/the-road') {
-      setNavHint(false)
-      return
-    }
-    const showT = setTimeout(() => setNavHint(true), 1300)
-    const hideT = setTimeout(() => setNavHint(false), 3500)
-    return () => {
-      clearTimeout(showT)
-      clearTimeout(hideT)
-    }
-  }, [navMode, location.pathname, isHomeRoute])
-
-  let navVisible
-  let navOpacity
-  if (navMode === 'hover') {
-    navVisible = hoverNav || navHint
-    navOpacity = hoverNav ? 1 : (navHint ? 0.15 : 0)
-  } else {
-    navVisible = true
-    navOpacity = 1
-  }
-
-  let navPosition
-  if (navMode === 'static') navPosition = 'relative'
-  else if (navMode === 'sticky') navPosition = 'sticky'
-  else navPosition = 'absolute'
-  // The Road nav is fixed so the hidden banner can re-reveal at the viewport top
-  // on hover (absolute would leave it scrolled off above the fold).
-  if (location.pathname === '/the-road') navPosition = 'fixed'
-
-  // Nav background uses TARGET for immediate color change
-  const targetMode = getNavMode(location.pathname)
-  let navBg
-  if (targetMode === 'hover') {
-    navBg = 'transparent'
-  } else if (targetMode === 'overlay-clear') {
-    navBg = 'transparent' // floats over the biography video (its scrim carries legibility)
-  } else if (targetMode === 'sticky') {
-    navBg = 'rgba(20,110,240,0.92)'
-  } else {
-    navBg = getBg(location.pathname)
-  }
-  // Hover-reveal road nav is a transparent banner like Home's (the solid bar only
-  // shows at the top of the page, before it hides).
-  if (roadHiddenNav) navBg = 'transparent'
-
-  const navVariant = getVariant(location.pathname)
 
   // Mobile sticky menu bar: fixed bar carrying the hamburger + "Menu". Driven by a
   // single rAF scroll loop writing to barRef so the app root never re-renders on
   // scroll. Deterministic per-route color (no luminance sampling): --fg tints the
-  // bars and the label, the background fades in as it pins.
+  // bars and the label, the background fades in as it pins. barBg/barFgPinned also
+  // feed the desktop banner (same colour model).
   const barRef = useRef(null)
   const barBg = MOBILE_BAR_BG[navPath] || 'rgb(0,0,0)'
   const barFgPinned = VARIANT_MAP[navPath] === 'light' ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.92)'
   const initialBar = computeMobileBar(navPath, barBg, barFgPinned)
 
   useEffect(() => {
-    if (!compactNav) return undefined
+    if (!isMobile) return undefined
     const apply = () => {
       const el = barRef.current
       if (!el) return
@@ -542,50 +407,36 @@ export default function App() {
       window.removeEventListener('resize', apply)
       if (rafId != null) cancelAnimationFrame(rafId)
     }
-  }, [compactNav, navPath, barBg, barFgPinned])
+  }, [isMobile, navPath, barBg, barFgPinned])
 
   return (
-    <div
-      onMouseMove={(e) => {
-        if (navMode === 'hover') setHoverNav(e.clientY < 80)
-      }}
-      onMouseLeave={() => {
-        if (navMode === 'hover') setHoverNav(false)
-      }}
-    >
-      {/* Hidden measurement nav: renders the full horizontal nav off-screen so
-          ResizeObserver can compare its natural content width to the viewport
-          and decide when to collapse into compact mode. */}
-      <div ref={navMeasureRef} aria-hidden="true" style={{
-        position: 'fixed', top: -9999, left: -9999,
-        visibility: 'hidden', pointerEvents: 'none',
-        whiteSpace: 'nowrap',
-      }}>
-        <Nav current="Home" onNavigate={() => {}} variant="dark" />
-      </div>
-
-      {/* Regular centered Nav — hidden when compact mode is active, and also
-          suppressed on the DESKTOP home route: the home carries its own top links
-          (Biography/The Team/Contact) in MainView now. Mobile/compact still gets the
-          hamburger via the compactNav path below. Keyed to homeShown (the displayed
-          route) so it doesn't flash in during the leave-home exit fade. */}
-      {!compactNav && !homeShown && (
-        <div style={{
-          position: navPosition,
-          top: 0, left: 0, right: 0,
-          zIndex: 50,
-          background: navBg,
-          opacity: navOpacity,
-          transform: navVisible ? 'translateY(0)' : 'translateY(-10px)',
-          transition: 'opacity 0.6s ease, transform 0.3s ease, background 0.3s ease',
-          pointerEvents: (navMode === 'hover' ? hoverNav : navVisible) ? 'auto' : 'none',
-        }}>
-          <Nav
-            current={CURRENT_MAP[location.pathname] || 'Home'}
-            onNavigate={go}
-            variant={navVariant}
-          />
-        </div>
+    <div>
+      {/* Desktop sticky nav banner: sponsor lockup · Donate and Support CTA · hamburger/
+          Menu, on EVERY desktop route. On home it rests at the old top-bar insets and
+          rides up/pins to top:0 on scroll (frosting in — the mobile bar's closed-form
+          pattern); on inner pages it's pinned from the start. Keyed to navPath (the
+          DISPLAYED route) and living outside the route-fade wrapper, so it persists
+          un-blinking across route swaps; z80 keeps its hamburger-X above the menu
+          overlay (z70). */}
+      {!isMobile && (
+        <DesktopBanner
+          navPath={navPath}
+          barBg={barBg}
+          fgPinned={barFgPinned}
+          menuOpen={navMenuOpen}
+          onMenuToggle={() => setNavMenuOpen((o) => !o)}
+          onNavigate={go}
+          isSupport={navPath === '/support'}
+        />
+      )}
+      {/* Desktop menu overlay — numbered index of the five pages, current one dimmed. */}
+      {!isMobile && (
+        <DesktopMenuOverlay
+          open={navMenuOpen}
+          currentPage={CURRENT_MAP[navPath] || 'Home'}
+          onNavigate={go}
+          onClose={() => setNavMenuOpen(false)}
+        />
       )}
 
       {/* Mobile sticky menu bar: a slim bar carrying the hamburger + "Menu". On the home
@@ -594,7 +445,7 @@ export default function App() {
           (writes top/background/--fg to barRef) — --fg tints both the bars and the label.
           Lives outside any transform/opacity wrapper so it stays put; z80 keeps it above
           the overlay (z70) so the X still closes the menu. */}
-      {compactNav && (
+      {isMobile && (
         <div
           ref={barRef}
           style={{
@@ -659,8 +510,8 @@ export default function App() {
         </div>
       )}
 
-      {/* Compact-mode overlay: full-viewport backdrop + vertical stack. */}
-      {compactNav && (
+      {/* Mobile menu overlay: full-viewport backdrop + vertical stack. */}
+      {isMobile && (
         <div
           onClick={() => setNavMenuOpen(false)}
           role="dialog"
@@ -716,9 +567,9 @@ export default function App() {
         <Routes location={displayLocation}>
           <Route path="/" element={
             isMobile ? (
-              <MobileHome onNavigate={go} hoverNavOpen={hoverNav} bioSectionRef={mobileBioRef} />
+              <MobileHome onNavigate={go} bioSectionRef={mobileBioRef} />
             ) : (
-              <DesktopHome onNavigate={go} hoverNavOpen={hoverNav} bioSectionRef={mobileBioRef} />
+              <DesktopHome onNavigate={go} bioSectionRef={mobileBioRef} />
             )
           } />
           <Route path="/biography" element={<Biography onNavigate={go} />} />

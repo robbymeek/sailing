@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import usePageEntrance from '../hooks/usePageEntrance'
 import Footer from '../components/Footer'
+import { DESKTOP_BANNER_H } from '../components/HomeSponsorStrip'
 import wordmark from '../assets/contact/robby-meek-wordmark.png'
 import bandPhoto from '../assets/support/robby-sailing.jpg'
 
@@ -153,8 +154,15 @@ export default function Support({ onNavigate }) {
   // platform, so an acknowledgment is the honest maximum).
   const prefillName = useLocation().state?.prefillName
   const [narrow, setNarrow] = useState(typeof window !== 'undefined' && window.innerWidth <= 900)
+  // Mobile (<700) keeps its 56px top padding under the 52px sticky bar; every desktop
+  // width (700+) must instead clear the fixed sponsor nav banner (DESKTOP_BANNER_H) —
+  // keyed at 700, NOT `narrow`'s 900, because the banner exists from 700 up.
+  const [mobile, setMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 700)
   useEffect(() => {
-    const h = () => setNarrow(window.innerWidth <= 900)
+    const h = () => {
+      setNarrow(window.innerWidth <= 900)
+      setMobile(window.innerWidth < 700)
+    }
     window.addEventListener('resize', h)
     return () => window.removeEventListener('resize', h)
   }, [])
@@ -164,7 +172,7 @@ export default function Support({ onNavigate }) {
 
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG }}>
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: `${narrow ? 56 : 44}px clamp(16px, 4vw, 40px) 0` }}>
+      <div style={{ maxWidth: 1080, margin: '0 auto', padding: `${mobile ? '56px' : `calc(${DESKTOP_BANNER_H} + 40px)`} clamp(16px, 4vw, 40px) 0` }}>
         {/* masthead */}
         <div style={{ ...entrance.style(0) }}>
           <img

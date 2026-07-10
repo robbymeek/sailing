@@ -9,8 +9,9 @@ import hikingBg from '../assets/home-intro/img-5957.jpg'
 // background — the full-res photo is only needed for the desktop orb's refraction.
 import hikingBgMobile from '../assets/home-intro/img-5957-mobile.jpg'
 import BakedOrb, { BAKED_ORB_READY } from '../components/BakedOrb'
-import HomeSponsorStrip, { SponsorRect, SPONSOR_PAIRS, MOBILE_BANNER_H } from '../components/HomeSponsorStrip'
-import DonateLockup from '../components/DonateLockup'
+import HomeSponsorStrip, { SponsorRect, SPONSOR_PAIRS } from '../components/HomeSponsorStrip'
+import { HOME_FG, HOME_SPONSOR_W } from '../components/DesktopBanner'
+import homeChrome from '../lib/homeChrome'
 import blackBridge from '../lib/blackBridge'
 
 const BASE = import.meta.env.BASE_URL
@@ -41,52 +42,19 @@ const ORB_READY_TIMEOUT_MS = 10000
 // the live countdown INSIDE the glass — the DOM corner countdown was retired for it.
 const COUNTDOWN_TARGET = Date.parse('2028-07-14T00:00:00')
 
-// Desktop home layout insets — shared by the nav row, the two sponsor rectangles
-// (HomeSponsorStrip mirrors HOME_TOP/HOME_SIDE), and the blurb, so the top-left
-// sponsor rectangle lines up with the nav headers.
-const HOME_TOP = 'clamp(28px, 4vh, 48px)' // top inset: nav row + top-left sponsor rect
-const HOME_SIDE = 'clamp(24px, 4vw, 56px)' // left/right inset: nav, sponsors, blurb
-// Width of each sponsor lockup (top nav bar + bottom-left). Shrinks on narrow windows so
-// the top bar (lockup · CTA · Menu) keeps fitting on one line down to the 700px mobile cutover.
-const HOME_SPONSOR_W = 'clamp(178px, 22vw, 330px)'
-// Desktop top-right cluster — the Donate and Support CTA + hamburger/Menu. These scale with the
-// viewport (house clamp() idiom) so the cluster keeps proper weight against the sponsor box at
-// every width: at ~1024px they sit near the floors (≈ the old fixed sizes, so the one-line row
-// still fits down to the 700px cutover); by ~1440–1920px they grow, capped so ultrawide can't
-// bloat. Only the desktop home consumes these — mobile keeps DonateLockup's fixed defaults.
-const HOME_CTA_SUPPORT = 'clamp(15px, 1.45vw, 22px)' // "SUPPORT" word (drives the chevron width)
-const HOME_CTA_CURSIVE = 'clamp(13px, 1.25vw, 19px)' // cursive "Donate / and"
-const HOME_CTA_ARROW = 'clamp(7px, 0.62vw, 10px)'    // chevron band height
-const HOME_MENU_SIZE = 'clamp(14px, 1.15vw, 18px)'   // "MENU" label (floor = the old fixed 14px)
-const HOME_MENU_LINE_W = 'clamp(30px, 2.2vw, 44px)'  // hamburger line width (floor = old 30px; X-cross math is width-independent)
+// Desktop top bar, hamburger menu and their sizing constants live in
+// components/DesktopBanner.jsx now (the App-level sticky nav banner) — HOME_FG and
+// HOME_SPONSOR_W are imported back from there for the blurb, scroll cue and the
+// bottom-left sponsor lockup.
 
-// Shared bright cool-white for the home's on-page text — the menu, the blurb and the
-// Explore cue all match the Donate and Support CTA so the controls read as one crisp
-// set over the brightened rest photo. Single source of truth (the CTA colour prop,
-// the hamburger, the blurb and the scroll cue all point here).
-const HOME_FG = 'rgba(236,242,255,0.92)'
-
-// Shared config for the home on-page controls. Pages are reached via the top links
-// (Biography / The Team / Contact), the orb (The Road), and the Support CTA; on
-// mobile via the hamburger.
+// Shared config for the home on-page text. Pages are reached via the banner's menu,
+// the orb (The Road), and the banner's Donate and Support CTA.
 const HOME_NAV = {
-  support: { label: 'Support', route: 'Support' },
-  hoverColor: '#1E40FF', // campaign accent — hover/focus on any home link
   footerBlurbClamp: 'clamp(12px, 0.9vw, 14px)',
   footerBlurbColor: HOME_FG,
 }
 const HOME_BLURB =
   'Robby Meek is a sailor for the US Sailing Team attending Harvard University working to compete and excel at the 2028 Olympic Games.'
-
-// Desktop home menu — the section links live ONLY here now: at every desktop width the top
-// bar shows just the Donate and Support CTA + the hamburger, and this numbered menu holds the
-// sections. Support is NOT listed here — the top-bar Donate and Support CTA owns it.
-const HOME_MENU = [
-  { label: 'Biography', route: 'Biography' },
-  { label: 'The Team', route: 'The Team' },
-  { label: 'The Road', route: 'The Road' },
-  { label: 'Contact', route: 'Contact' },
-]
 
 // Module-level flag: the cinematic intro plays once per JS bundle
 // initialization (hard refresh) and is skipped on SPA navigation back
@@ -202,15 +170,6 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [showOrb])
-
-  // Desktop hamburger menu open/close state (the top bar is identical at every width now).
-  const [menuOpen, setMenuOpen] = useState(false)
-  useEffect(() => {
-    if (!menuOpen) return undefined
-    const onKey = (e) => { if (e.key === 'Escape') setMenuOpen(false) }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [menuOpen])
 
   // beginMorph (orb clicked) + navTo (fired by the scene at m≈0.82). Held in refs
   // so they always see the current uiVisible/onNavigate without re-attaching.
@@ -518,6 +477,17 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
     return t * t * (3 - 2 * t)
   })()
 
+  // Publish the desktop nav banner's chrome fade — the same (uiVisible)*(1-textOut)
+  // the old absolute top bar used, so the App-level DesktopBanner keeps the intro
+  // reveal + orb-morph fade-out choreography. Render-body write (HomeIntro re-renders
+  // every live-morph frame via setMorph — same contract as the refs above); the
+  // banner's rAF loop reads it each frame while the home route is displayed. The
+  // embedded (mobile) home must never write it — the mobile bar is a different
+  // surface that stays up through the intro. Reset on unmount so leaving home can
+  // never strand the banner invisible on an inner page.
+  if (!embedded) homeChrome.fade = (uiVisible ? 1 : 0) * (1 - textOut)
+  useEffect(() => () => { homeChrome.fade = 1 }, [])
+
   // Once the orb has become the globe (morph ≥ 0.9), fade the page background
   // (the faded photo) to FULL black — so the globe ends up on pure black BEFORE
   // we swap routes. The swap is then black→black (invisible), not a photo cut.
@@ -769,40 +739,12 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
           }}>{HOME_BLURB}</p>
         </nav>
       ) : (
-        // Desktop home top bar. At EVERY width: sponsor lockup (left) · Donate and Support CTA +
-        // hamburger/Menu (right). The section links live only in the hamburger's numbered menu.
-        // The second sponsor lockup + blurb sit bottom-left in one column. Everything is ABSOLUTE
-        // so it scrolls away with the frame into the biography below, above the orb grab circle
-        // (z45) so controls over the orb's click zone still win clicks.
+        // Desktop home: the top bar (sponsor lockup · Donate CTA · hamburger/Menu) is
+        // the App-level DesktopBanner now — fixed, it rides up and pins on scroll and
+        // fades with uiVisible/textOut via the homeChrome signal written above. Only
+        // the second sponsor lockup + blurb remain here, bottom-left in one column,
+        // ABSOLUTE so they scroll away with the frame into the biography below.
         <>
-          <nav
-            aria-label="Primary"
-            style={{
-              position: 'absolute', top: HOME_TOP, left: HOME_SIDE, right: HOME_SIDE,
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              gap: 'clamp(12px, 1.6vw, 30px)',
-              opacity: (uiVisible ? 1 : 0) * (1 - textOut),
-              transform: `translateY(${-8 * textOut}px)`,
-              transition: `opacity 0.6s ease${bakedMorphOut ? ', transform 0.6s ease' : ''}`,
-              pointerEvents: uiVisible && textOut < 0.05 ? 'auto' : 'none',
-              zIndex: 47,
-            }}
-          >
-            <SponsorRect pair={SPONSOR_PAIRS[0]} style={{ width: HOME_SPONSOR_W, flexShrink: 0 }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(14px, 1.75vw, 28px)', flexShrink: 0 }}>
-              <DonateLockup
-                onClick={() => onNavigate(HOME_NAV.support.route)}
-                color={HOME_FG}
-                supportSize={HOME_CTA_SUPPORT}
-                cursiveSize={HOME_CTA_CURSIVE}
-                arrowH={HOME_CTA_ARROW}
-                gap="clamp(9px, 0.95vw, 14px)"
-                padding="clamp(6px, 0.7vw, 10px) clamp(10px, 1.05vw, 18px)"
-              />
-              <HomeHamburger open={menuOpen} onToggle={() => setMenuOpen((o) => !o)} />
-            </div>
-          </nav>
-
           {/* Bottom-left: the blurb with the second sponsor lockup flush in the very
               bottom-left corner beneath it — the white box butts against the screen's
               left edge and the black ROBBY MEEK bridge below (no corner inset). One
@@ -829,32 +771,6 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
             }}>{HOME_BLURB}</p>
             <SponsorRect pair={SPONSOR_PAIRS[1]} style={{ width: '100%' }} />
           </div>
-
-          {/* Hamburger menu overlay (compact tiers) — a classy LEFT-aligned index menu,
-              vertically centered over a softly-blurred backdrop; always lists Donate and
-              Support. Closes on link tap / backdrop / Escape / growing back to full width. */}
-          {menuOpen && (
-            <div
-              onClick={() => setMenuOpen(false)}
-              role="dialog"
-              aria-label="Menu"
-              style={{
-                position: 'fixed', inset: 0,
-                background: 'rgba(9,11,15,0.9)',
-                backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)',
-                zIndex: 80, display: 'flex', alignItems: 'center',
-              }}
-            >
-              <div style={{
-                display: 'flex', flexDirection: 'column', gap: 'clamp(12px, 2.4vh, 24px)',
-                alignItems: 'flex-start', paddingLeft: 'clamp(40px, 9vw, 130px)',
-              }}>
-                {HOME_MENU.map(({ label, route }, i) => (
-                  <MenuLink key={route} index={i + 1} label={label} onClick={() => { setMenuOpen(false); onNavigate(route) }} />
-                ))}
-              </div>
-            </div>
-          )}
         </>
       )}
 
@@ -959,75 +875,5 @@ function BakedOrbBackdrop({ embedded }) {
   )
 }
 
-// Desktop compact-mode hamburger (top-right). Two cool-white lines that cross into an
-// X when the menu is open.
-function HomeHamburger({ open, onToggle }) {
-  const LIGHT = HOME_FG // matches the Donate and Support CTA — one crisp set of home controls
-  // Only the line WIDTH scales with the viewport; height (2.5) and inter-line gap (8) stay fixed so
-  // the open-state cross offset stays exactly (2.5 + 8) / 2 = 5.25px and the X keeps forming cleanly.
-  const line = {
-    display: 'block', width: HOME_MENU_LINE_W, height: 2.5,
-    background: LIGHT, borderRadius: 2,
-    transition: 'transform 0.3s ease',
-  }
-  return (
-    <button
-      onClick={onToggle}
-      aria-label={open ? 'Close menu' : 'Open menu'}
-      aria-expanded={open}
-      style={{
-        background: 'none', border: 'none', cursor: 'pointer', padding: 'clamp(6px, 0.6vw, 10px)',
-        display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 'clamp(9px, 0.9vw, 14px)', flexShrink: 0,
-      }}
-    >
-      <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, width: HOME_MENU_LINE_W }}>
-        <span style={{ ...line, transform: open ? 'translateY(5.25px) rotate(45deg)' : 'none' }} />
-        <span style={{ ...line, transform: open ? 'translateY(-5.25px) rotate(-45deg)' : 'none' }} />
-      </span>
-      <span aria-hidden="true" style={{
-        color: LIGHT, fontSize: HOME_MENU_SIZE, fontWeight: 600, letterSpacing: 'clamp(2px, 0.16vw, 3px)',
-        textTransform: 'uppercase', fontFamily: 'inherit', whiteSpace: 'nowrap',
-        opacity: open ? 0 : 1, transition: 'opacity 0.2s ease',
-      }}>Menu</span>
-    </button>
-  )
-}
-
-// A link in the desktop hamburger menu overlay — a classy LEFT-aligned index item:
-// a small muted ordinal, then a large uppercase label; hover shifts it right into
-// the campaign accent (the ordinal lights up too).
-function MenuLink({ label, onClick, index }) {
-  const [hover, setHover] = useState(false)
-  return (
-    <button
-      className="home-nav-link"
-      onClick={(e) => { e.stopPropagation(); onClick() }}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      onFocus={() => setHover(true)}
-      onBlur={() => setHover(false)}
-      style={{
-        background: 'none', border: 'none', cursor: 'pointer',
-        display: 'inline-flex', alignItems: 'baseline', gap: 'clamp(14px, 1.6vw, 22px)',
-        padding: '6px 0', textAlign: 'left', fontFamily: 'inherit',
-        color: hover ? HOME_NAV.hoverColor : HOME_FG,
-        transform: hover ? 'translateX(12px)' : 'translateX(0)',
-        transition: 'color 0.28s ease, transform 0.28s ease',
-      }}
-    >
-      {index != null && (
-        <span aria-hidden="true" style={{
-          fontSize: 'clamp(11px, 0.85vw, 13px)', fontWeight: 500,
-          letterSpacing: '1.5px', fontVariantNumeric: 'tabular-nums',
-          color: hover ? HOME_NAV.hoverColor : 'rgba(150,166,192,0.55)',
-          transition: 'color 0.28s ease',
-        }}>{String(index).padStart(2, '0')}</span>
-      )}
-      <span style={{
-        fontSize: 'clamp(26px, 4.4vw, 42px)', fontWeight: 500,
-        letterSpacing: '0.5px', textTransform: 'uppercase', lineHeight: 1.04,
-        whiteSpace: 'nowrap',
-      }}>{label}</span>
-    </button>
-  )
-}
+// The desktop hamburger + menu overlay live in components/DesktopBanner.jsx now
+// (BannerHamburger / DesktopMenuOverlay) — site-wide, rendered by App.

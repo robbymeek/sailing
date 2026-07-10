@@ -37,13 +37,20 @@ export const MOBILE_BANNER_H = 'clamp(58px, 9vh, 70px)'
 export const mobileBannerHeightPx = () =>
   Math.min(70, Math.max(58, 0.09 * (typeof window !== 'undefined' ? window.innerHeight : 800)))
 
+// The desktop nav banner's height ≡ the SponsorRect's height (the lockup IS the banner,
+// zero vertical padding around it). Shared as a CSS clamp for DesktopBanner and as a px
+// estimate for layout math that must clear the banner (e.g. The Road's back button).
+export const DESKTOP_BANNER_H = 'clamp(66px, 9vh, 92px)'
+export const desktopBannerHeightPx = () =>
+  Math.min(92, Math.max(66, 0.09 * (typeof window !== 'undefined' ? window.innerHeight : 800)))
+
 // The four sponsors split into two pairs — one lockup each on desktop.
 export const SPONSOR_PAIRS = [SPONSORS.slice(0, 2), SPONSORS.slice(2, 4)]
 
 // One white sponsor rectangle carrying a PAIR of logos, upright side by side (equal-AREA
-// / equal-weight sizing). The caller positions and widths it via `style` — MainView uses
-// it as a flex sibling in the desktop top bar and as an absolute lockup bottom-left.
-// Non-interactive so it never competes with the orb's click zone.
+// / equal-weight sizing). The caller positions and widths it via `style` — DesktopBanner
+// uses it as the sticky nav banner's left lockup, MainView as an absolute lockup
+// bottom-left. Non-interactive so it never competes with the orb's click zone.
 export function SponsorRect({ pair, style }) {
   return (
     <div
@@ -55,7 +62,8 @@ export function SponsorRect({ pair, style }) {
         // Taller than before so the logos can grow — each fills its cell as much as
         // possible while the equal-AREA sizing keeps the pair at equal visual weight
         // (so the wide marks fill the cell WIDTH and the squarer ones the HEIGHT).
-        minHeight: 'clamp(66px, 9vh, 92px)',
+        // Single source of truth with the desktop nav banner: banner height ≡ this.
+        minHeight: DESKTOP_BANNER_H,
         padding: '7px',
         boxSizing: 'border-box',
         pointerEvents: 'none',
