@@ -785,11 +785,13 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
             </div>
           </nav>
 
-          {/* Bottom-left: the second sponsor lockup with the blurb beneath it, one column so
-              they share a width and adapt together as the screen resizes. */}
+          {/* Bottom-left: the blurb with the second sponsor lockup flush in the very
+              bottom-left corner beneath it — the white box butts against the screen's
+              left edge and the black ROBBY MEEK bridge below (no corner inset). One
+              column so the blurb + lockup share a width and adapt together on resize. */}
           <div
             style={{
-              position: 'absolute', left: HOME_SIDE, bottom: 'clamp(24px, 4vh, 40px)',
+              position: 'absolute', left: 0, bottom: 0,
               display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
               gap: 'clamp(12px, 1.8vh, 20px)', width: HOME_SPONSOR_W, maxWidth: '84vw',
               opacity: (uiVisible ? 1 : 0) * (1 - textOut),
@@ -797,13 +799,17 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
               pointerEvents: 'none', zIndex: 46,
             }}
           >
-            <SponsorRect pair={SPONSOR_PAIRS[1]} style={{ width: '100%' }} />
             <p style={{
               color: HOME_NAV.footerBlurbColor,
               fontSize: 'clamp(12.5px, 0.95vw, 14px)',
               lineHeight: 1.6, margin: 0, fontWeight: 400, letterSpacing: '0.2px',
               textAlign: 'left',
+              // Left inset off the screen edge; box stays full column width so the
+              // right side still wraps at the sponsor banner's right edge.
+              width: '100%', boxSizing: 'border-box',
+              paddingLeft: 'clamp(14px, 1.5vw, 20px)',
             }}>{HOME_BLURB}</p>
+            <SponsorRect pair={SPONSOR_PAIRS[1]} style={{ width: '100%' }} />
           </div>
 
           {/* Hamburger menu overlay (compact tiers) — a classy LEFT-aligned index menu,
