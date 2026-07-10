@@ -228,8 +228,8 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
         overflow: 'visible',
         background: 'rgb(230,235,240)',
         // A little breathing room of plain background right below the hero film
-        // before the intro section starts (standalone route only — in MobileHome
-        // the banner is a mid-page strip handed off by HomeFilmBridge instead).
+        // before the intro section starts (standalone route only — the hidden
+        // preload copy renders the banner inert, with no hero affordances).
         marginTop: isHero ? (isMobile ? 28 : 56) : 0,
         zIndex: 2,
       }}
