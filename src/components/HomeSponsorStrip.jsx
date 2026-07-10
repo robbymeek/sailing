@@ -38,11 +38,9 @@ export const mobileBannerHeightPx = () =>
   Math.min(70, Math.max(58, 0.09 * (typeof window !== 'undefined' ? window.innerHeight : 800)))
 
 // The desktop nav banner's height ≡ the SponsorRect's height (the lockup IS the banner,
-// zero vertical padding around it). Shared as a CSS clamp for DesktopBanner and as a px
-// estimate for layout math that must clear the banner (e.g. The Road's back button).
+// zero vertical padding around it). Every consumer that must clear the banner (The Road's
+// back button, Support's top padding) composes this clamp via CSS calc().
 export const DESKTOP_BANNER_H = 'clamp(66px, 9vh, 92px)'
-export const desktopBannerHeightPx = () =>
-  Math.min(92, Math.max(66, 0.09 * (typeof window !== 'undefined' ? window.innerHeight : 800)))
 
 // The four sponsors split into two pairs — one lockup each on desktop.
 export const SPONSOR_PAIRS = [SPONSORS.slice(0, 2), SPONSORS.slice(2, 4)]

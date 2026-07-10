@@ -47,12 +47,8 @@ const COUNTDOWN_TARGET = Date.parse('2028-07-14T00:00:00')
 // HOME_SPONSOR_W are imported back from there for the blurb, scroll cue and the
 // bottom-left sponsor lockup.
 
-// Shared config for the home on-page text. Pages are reached via the banner's menu,
-// the orb (The Road), and the banner's Donate and Support CTA.
-const HOME_NAV = {
-  footerBlurbClamp: 'clamp(12px, 0.9vw, 14px)',
-  footerBlurbColor: HOME_FG,
-}
+// The mini-bio blurb (bottom-left on both layouts). Colour = HOME_FG, imported above.
+const BLURB_SIZE = 'clamp(12px, 0.9vw, 14px)'
 const HOME_BLURB =
   'Robby Meek is a sailor for the US Sailing Team attending Harvard University working to compete and excel at the 2028 Olympic Games.'
 
@@ -483,10 +479,12 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
   // every live-morph frame via setMorph — same contract as the refs above); the
   // banner's rAF loop reads it each frame while the home route is displayed. The
   // embedded (mobile) home must never write it — the mobile bar is a different
-  // surface that stays up through the intro. Reset on unmount so leaving home can
-  // never strand the banner invisible on an inner page.
+  // surface that stays up through the intro. No unmount reset needed (and none is
+  // safe: StrictMode's mount→cleanup→remount would replay it AFTER the intro renders
+  // wrote 0, ghosting the banner over the cold-load intro): off home the banner
+  // ignores the signal entirely, and a home remount rewrites it here, pre-paint,
+  // before the banner's layout effect re-reads it.
   if (!embedded) homeChrome.fade = (uiVisible ? 1 : 0) * (1 - textOut)
-  useEffect(() => () => { homeChrome.fade = 1 }, [])
 
   // Once the orb has become the globe (morph ≥ 0.9), fade the page background
   // (the faded photo) to FULL black — so the globe ends up on pure black BEFORE
@@ -733,7 +731,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
           {/* Bottom-left: the mini-bio blurb. (Donate CTA + LA 2028 countdown both live in
               the top sticky bar now — App.jsx.) */}
           <p style={{
-            color: HOME_NAV.footerBlurbColor, fontSize: HOME_NAV.footerBlurbClamp,
+            color: HOME_FG, fontSize: BLURB_SIZE,
             lineHeight: 1.55, margin: 0, fontWeight: 400, letterSpacing: 0,
             maxWidth: 'min(100%, 420px)', textAlign: 'left',
           }}>{HOME_BLURB}</p>
@@ -760,7 +758,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
             }}
           >
             <p style={{
-              color: HOME_NAV.footerBlurbColor,
+              color: HOME_FG,
               fontSize: 'clamp(12.5px, 0.95vw, 14px)',
               lineHeight: 1.6, margin: 0, fontWeight: 400, letterSpacing: '0.2px',
               textAlign: 'left',

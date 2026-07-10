@@ -1,11 +1,12 @@
 import { useState, useEffect, useLayoutEffect, useRef, lazy, Suspense } from 'react'
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
-import DesktopBanner, { DesktopMenuOverlay, withAlpha, BAR_MAX_ALPHA, BAR_MAX_BLUR } from './components/DesktopBanner'
+import DesktopBanner, { DesktopMenuOverlay, MENU_PAGES, withAlpha, BAR_MAX_ALPHA, BAR_MAX_BLUR } from './components/DesktopBanner'
 import orbOverlay from './lib/orbOverlay'
 import blackBridge from './lib/blackBridge'
 
-// Pages shown in the compact (narrow-viewport) overlay nav.
-const COMPACT_PAGES = ['Home', 'Biography', 'The Team', 'The Road', 'Contact', 'Support']
+// Pages shown in the mobile overlay nav: the desktop menu's list plus Support
+// (which the desktop banner's Donate CTA owns) — derived so the two can't drift.
+const COMPACT_PAGES = [...MENU_PAGES, 'Support']
 import MainView from './pages/MainView'
 import HomeFilmBridge from './components/HomeFilmBridge'
 import Biography from './pages/Biography'
@@ -426,14 +427,15 @@ export default function App() {
           menuOpen={navMenuOpen}
           onMenuToggle={() => setNavMenuOpen((o) => !o)}
           onNavigate={go}
-          isSupport={navPath === '/support'}
         />
       )}
-      {/* Desktop menu overlay — numbered index of the five pages, current one dimmed. */}
+      {/* Desktop menu overlay — numbered index of the five pages, current one dimmed.
+          No 'Home' fallback for unknown paths: on an unmapped URL nothing is current,
+          so every link (especially Home, the recovery path) stays live. */}
       {!isMobile && (
         <DesktopMenuOverlay
           open={navMenuOpen}
-          currentPage={CURRENT_MAP[navPath] || 'Home'}
+          currentPage={CURRENT_MAP[navPath]}
           onNavigate={go}
           onClose={() => setNavMenuOpen(false)}
         />

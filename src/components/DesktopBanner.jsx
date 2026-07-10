@@ -53,15 +53,11 @@ const HOME_MENU_LINE_W = 'clamp(30px, 2.2vw, 44px)'  // hamburger line width (X-
 
 const MENU_HOVER = '#1E40FF' // campaign accent — hover/focus on any menu link
 
-// The menu overlay's numbered index. Home leads; Support is NOT listed — the
-// banner's Donate and Support CTA owns it (and dims when you're already there).
-const MENU_ITEMS = [
-  { label: 'Home', route: 'Home' },
-  { label: 'Biography', route: 'Biography' },
-  { label: 'The Team', route: 'The Team' },
-  { label: 'The Road', route: 'The Road' },
-  { label: 'Contact', route: 'Contact' },
-]
+// The menu overlay's numbered index (each entry is both the label and the go()
+// route name). Home leads; Support is NOT listed — the banner's Donate and Support
+// CTA owns it (and dims when you're already there). App derives the mobile
+// overlay's COMPACT_PAGES from this list so the two menus can't drift.
+export const MENU_PAGES = ['Home', 'Biography', 'The Team', 'The Road', 'Contact']
 
 // Banner geometry/colour as a closed form of scroll (mirrors computeMobileBar).
 // t runs 0 (floating at the home rest insets) → 1 (pinned, frosted).
@@ -90,20 +86,31 @@ function computeDesktopBar(navPath, barBg, fgPinned) {
 }
 
 export default function DesktopBanner({
-  navPath, barBg, fgPinned, menuOpen, onMenuToggle, onNavigate, isSupport,
+  navPath, barBg, fgPinned, menuOpen, onMenuToggle, onNavigate,
 }) {
+  const isSupport = navPath === '/support' // faded Donate CTA = "you are here"
   const barRef = useRef(null)
   const clusterRef = useRef(null)
   const mountedRef = useRef(false)
-  const initial = computeDesktopBar(navPath, barBg, fgPinned)
+  const lastKeyRef = useRef(null)
+  // Mount-time snapshot only — the drive effect below owns every dynamic style
+  // before first paint and on every change, so re-renders (menu toggles, App
+  // state) never churn the banner's inline styles.
+  const initialRef = useRef(null)
+  if (initialRef.current === null) initialRef.current = computeDesktopBar(navPath, barBg, fgPinned)
+  const initial = initialRef.current
 
   // Drive loop: writes styles straight to the refs so the app root never re-renders
-  // on scroll (mobile-bar pattern).
+  // on scroll (mobile-bar pattern). Skips the writes entirely while nothing changed
+  // (the common idle case on home, where the rAF loop runs continuously).
   useLayoutEffect(() => {
     const apply = () => {
       const el = barRef.current
       if (!el) return
       const { topPx, padL, padR, bg, blur, fg, fade } = computeDesktopBar(navPath, barBg, fgPinned)
+      const key = `${topPx}|${padL}|${padR}|${bg}|${blur}|${fg}|${fade}`
+      if (key === lastKeyRef.current) return
+      lastKeyRef.current = key
       const filt = blur > 0.1 ? `blur(${blur}px)` : 'none'
       el.style.top = `${topPx}px`
       el.style.paddingLeft = `${padL}px`
@@ -113,11 +120,19 @@ export default function DesktopBanner({
       el.style.setProperty('-webkit-backdrop-filter', filt)
       el.style.setProperty('--fg', fg)
       el.style.opacity = fade
-      // Gate interactivity while faded (intro/morph) — mirrors the old top bar's
-      // pointerEvents: uiVisible && textOut < 0.05 guard.
+      // Interactive ONLY at (near) full visibility — mirrors the old top bar's
+      // pointerEvents: uiVisible && textOut < 0.05 gate, so the cluster goes inert
+      // the moment the orb morph starts, not when it's almost gone. `inert` also
+      // drops the invisible Donate/hamburger from the keyboard tab order (a Tab +
+      // Enter mid-morph would otherwise race the morph's own navigation).
       const cluster = clusterRef.current
-      if (cluster) cluster.style.pointerEvents = fade < 0.05 ? 'none' : 'auto'
+      if (cluster) {
+        const interactive = fade > 0.95
+        cluster.style.pointerEvents = interactive ? 'auto' : 'none'
+        if ('inert' in cluster) cluster.inert = !interactive
+      }
     }
+    lastKeyRef.current = null // effect re-run (route change): force one write-through
     // First MOUNT paints without transitions so a cold load on / starts hidden with
     // no fade-in artifact (MainView writes homeChrome.fade = 0 during the intro's
     // first renders). Route changes keep transitions so bg shifts smoothly.
@@ -134,26 +149,17 @@ export default function DesktopBanner({
     }
     if (navPath === '/') {
       // Home: continuous loop — the homeChrome fade is time-driven (morph/intro),
-      // not scroll-driven. Same pattern as MainView's exit-veil rAF.
+      // not scroll-driven. Same pattern as MainView's exit-veil rAF; the key
+      // compare above makes idle frames free.
       let rafId = requestAnimationFrame(function loop() {
         apply()
         rafId = requestAnimationFrame(loop)
       })
       return () => cancelAnimationFrame(rafId)
     }
-    // Inner routes: geometry is constant (pinned, t = 1) — only listen for safety.
-    let rafId = null
-    const onScroll = () => {
-      if (rafId != null) return
-      rafId = requestAnimationFrame(() => { rafId = null; apply() })
-    }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', apply)
-    return () => {
-      window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', apply)
-      if (rafId != null) cancelAnimationFrame(rafId)
-    }
+    // Inner routes: every output is a constant (pinned, t = 1, fade 1) — one
+    // write-through above suffices; no scroll/resize listeners needed.
+    return undefined
   }, [navPath, barBg, fgPinned])
 
   return (
@@ -192,7 +198,7 @@ export default function DesktopBanner({
         ref={clusterRef}
         style={{
           display: 'flex', alignItems: 'center', gap: 'clamp(14px, 1.75vw, 28px)',
-          flexShrink: 0, pointerEvents: initial.fade < 0.05 ? 'none' : 'auto',
+          flexShrink: 0, pointerEvents: initial.fade > 0.95 ? 'auto' : 'none',
         }}
       >
         {/* No color prop — the lockup tracks var(--fg) so it tints per route like the
@@ -201,6 +207,7 @@ export default function DesktopBanner({
             the menu is open — it is the only path to /support. */}
         <DonateLockup
           onClick={isSupport ? undefined : () => onNavigate('Support')}
+          disabled={isSupport}
           supportSize={HOME_CTA_SUPPORT}
           cursiveSize={HOME_CTA_CURSIVE}
           arrowH={HOME_CTA_ARROW}
@@ -277,13 +284,13 @@ export function DesktopMenuOverlay({ open, currentPage, onNavigate, onClose }) {
         display: 'flex', flexDirection: 'column', gap: 'clamp(12px, 2.4vh, 24px)',
         alignItems: 'flex-start', paddingLeft: 'clamp(40px, 9vw, 130px)',
       }}>
-        {MENU_ITEMS.map(({ label, route }, i) => (
+        {MENU_PAGES.map((page, i) => (
           <MenuLink
-            key={route}
+            key={page}
             index={i + 1}
-            label={label}
-            current={currentPage === route}
-            onClick={() => { onClose(); onNavigate(route) }}
+            label={page}
+            current={currentPage === page}
+            onClick={() => { onClose(); onNavigate(page) }}
           />
         ))}
       </div>

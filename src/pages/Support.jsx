@@ -153,19 +153,17 @@ export default function Support({ onNavigate }) {
   // gesture lands somewhere real (the donation itself happens on the external SFNY
   // platform, so an acknowledgment is the honest maximum).
   const prefillName = useLocation().state?.prefillName
-  const [narrow, setNarrow] = useState(typeof window !== 'undefined' && window.innerWidth <= 900)
-  // Mobile (<700) keeps its 56px top padding under the 52px sticky bar; every desktop
-  // width (700+) must instead clear the fixed sponsor nav banner (DESKTOP_BANNER_H) —
-  // keyed at 700, NOT `narrow`'s 900, because the banner exists from 700 up.
-  const [mobile, setMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 700)
+  const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200)
   useEffect(() => {
-    const h = () => {
-      setNarrow(window.innerWidth <= 900)
-      setMobile(window.innerWidth < 700)
-    }
+    const h = () => setWidth(window.innerWidth)
     window.addEventListener('resize', h)
     return () => window.removeEventListener('resize', h)
   }, [])
+  const narrow = width <= 900 // single-column layout
+  // Mobile (<700) keeps its 56px top padding under the 52px sticky bar; every desktop
+  // width (700+) must instead clear the fixed sponsor nav banner (DESKTOP_BANNER_H) —
+  // keyed at 700, NOT `narrow`'s 900, because the banner exists from 700 up.
+  const mobile = width < 700
 
   const doorHeading = { margin: 0, fontSize: 'clamp(24px, 2.6vw, 34px)', fontWeight: 800, letterSpacing: '-0.8px', lineHeight: 1.12 }
   const doorBody = { margin: '14px 0 0', fontSize: 15.5, lineHeight: 1.65 }
