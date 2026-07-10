@@ -10,7 +10,7 @@ import hikingBg from '../assets/home-intro/img-5957.jpg'
 // background — the full-res photo is only needed for the desktop orb's refraction.
 import hikingBgMobile from '../assets/home-intro/img-5957-mobile.jpg'
 import BakedOrb, { BAKED_ORB_READY } from '../components/BakedOrb'
-import HomeSponsorStrip from '../components/HomeSponsorStrip'
+import HomeSponsorStrip, { SponsorRect, SPONSOR_PAIRS } from '../components/HomeSponsorStrip'
 import blackBridge from '../lib/blackBridge'
 
 const BASE = import.meta.env.BASE_URL
@@ -41,6 +41,19 @@ const ORB_READY_TIMEOUT_MS = 10000
 // the live countdown INSIDE the glass — the DOM corner countdown was retired for it.
 const COUNTDOWN_TARGET = Date.parse('2028-07-14T00:00:00')
 
+// Desktop home layout insets — shared by the nav row, the two sponsor rectangles
+// (HomeSponsorStrip mirrors HOME_TOP/HOME_SIDE), and the blurb, so the top-left
+// sponsor rectangle lines up with the nav headers.
+const HOME_TOP = 'clamp(28px, 4vh, 48px)' // top inset: nav row + top-left sponsor rect
+const HOME_SIDE = 'clamp(24px, 4vw, 56px)' // left/right inset: nav, sponsors, blurb
+// Width of each sponsor lockup (top nav bar + bottom-left). Shrinks on narrow windows so
+// the top bar (lockup · links · CTA) keeps fitting on one line down to ~860px before it
+// has to wrap (the CTA then drops below, never overlapping).
+const HOME_SPONSOR_W = 'clamp(178px, 22vw, 330px)'
+// One shared size for the desktop top links AND the Back the Campaign CTA — a touch larger
+// than the CTA's previous size at full width, shrinking on narrow windows so the row fits.
+const HOME_LINK_SIZE = 'clamp(13px, 1.15vw, 17px)'
+
 // Shared config for the home on-page controls. Pages are reached via the top links
 // (Biography / The Team / Contact), the orb (The Road), and the Support CTA; on
 // mobile via the hamburger. Blurb colours are a cool grey harmonized with the orb's
@@ -53,6 +66,21 @@ const HOME_NAV = {
 }
 const HOME_BLURB =
   'Robby Meek is a sailor for the US Sailing Team attending Harvard University working to compete and excel at the 2028 Olympic Games.'
+
+// Desktop hamburger menu (shown once the top bar is too narrow for the full row).
+// ALWAYS includes Back the Campaign, per the brief.
+const HOME_MENU = [
+  { label: 'Biography', route: 'Biography' },
+  { label: 'The Team', route: 'The Team' },
+  { label: 'The Road', route: 'The Road' },
+  { label: 'Contact', route: 'Contact' },
+  { label: 'Back the Campaign', route: 'Support' },
+]
+// Desktop top-bar responsive breakpoints (width in px). ≥ FULL: sponsor · links · CTA
+// in one row. FULL > w ≥ COMPACT: sponsor · [CTA] [hamburger] (links in the menu).
+// COMPACT > w ≥ 700: sponsor · [hamburger] (CTA folds into the menu too). < 700 = mobile.
+const HOME_BAR_FULL = 880
+const HOME_BAR_COMPACT = 770
 
 // Module-level flag: the cinematic intro plays once per JS bundle
 // initialization (hard refresh) and is skipped on SPA navigation back
@@ -94,17 +122,29 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
   const homeRootRef = useRef(null)
   const exitVeilRef = useRef(null)
   useEffect(() => {
-    if (!embedded) return undefined // desktop home is a fixed viewport — never scrolls
+    // Runs on both mobile and desktop — the desktop home scrolls into the biography
+    // too, so its frame fades to black the same way, and the live orb is stuck to the
+    // page (translated up + faded with the veil) rather than fading early.
     let rafId
+    let orbTouched = false
     const update = () => {
       const root = homeRootRef.current
-      const veil = exitVeilRef.current
-      if (root && veil) {
+      if (root) {
         const rect = root.getBoundingClientRect()
         // Fully black once 62% of the frame has scrolled away — the remaining
         // 38% exits as pure black flush with the bridge below.
         const gone = Math.min(1, Math.max(0, -rect.top / (rect.height * 0.62)))
-        veil.style.opacity = gone
+        const veil = exitVeilRef.current
+        if (veil) veil.style.opacity = gone
+        // Desktop live orb: stick it to the page. It lives in a fixed body-level
+        // overlay (survives the morph route-swap), so translate it UP by the scroll
+        // and fade it in lockstep with the veil — the whole centerpiece scrolls away
+        // uniformly. Only while at rest (the morph owns the orb otherwise); untouched
+        // at the very top so the intro fade-in is preserved, and reset once on return.
+        if (showOrbRef.current && phaseRef.current === 'rest' && morphRef.current === 0) {
+          if (gone > 0.002) { orbOverlay.setScrollFade(-rect.top, 1 - gone); orbTouched = true }
+          else if (orbTouched) { orbOverlay.setScrollFade(0, 1); orbTouched = false }
+        }
       }
       rafId = requestAnimationFrame(update)
     }
@@ -117,12 +157,11 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
   // MobileHome page scrolls as one; the home is the top section.
   const [cueScrolled, setCueScrolled] = useState(false)
   useEffect(() => {
-    if (!embedded) return undefined
     const onScroll = () => setCueScrolled(window.scrollY > 24)
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
-  }, [embedded])
+  }, [])
 
   // Skip check: respect the module-level played flag + reduced-motion.
   const skipIntro = forceSkip || introHasPlayed || prefersReducedMotion
@@ -139,6 +178,43 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
   const [orbFailed, setOrbFailed] = useState(false)
   const [morph, setMorph] = useState(0) // 0→1 morph progress, drives the text-out
   const showOrb = useOrb && !orbFailed
+
+  // The desktop live orb is stuck to the page and translated up with the scroll (see
+  // the exit-veil rAF below). This flag just disables its CLICK once the page has
+  // scrolled a little, so a tap where the orb used to be can't fire the morph while
+  // it's sliding away. Mobile's orb is a baked video inside the frame — no need there.
+  const [scrolledAway, setScrolledAway] = useState(false)
+  const scrolledAwayRef = useRef(false)
+  useEffect(() => {
+    if (!showOrb) return undefined
+    const onScroll = () => {
+      const away = window.scrollY > 40
+      scrolledAwayRef.current = away
+      setScrolledAway(away)
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [showOrb])
+
+  // Desktop top-bar responsive tier (see HOME_BAR_FULL/COMPACT) + hamburger menu state.
+  const [barW, setBarW] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1440))
+  const [menuOpen, setMenuOpen] = useState(false)
+  useEffect(() => {
+    if (embedded) return undefined
+    const onResize = () => setBarW(window.innerWidth)
+    onResize()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [embedded])
+  useEffect(() => {
+    if (!menuOpen) return undefined
+    const onKey = (e) => { if (e.key === 'Escape') setMenuOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [menuOpen])
+  // Close the menu if the window grows back to the full-row tier.
+  useEffect(() => { if (barW >= HOME_BAR_FULL && menuOpen) setMenuOpen(false) }, [barW, menuOpen])
 
   // beginMorph (orb clicked) + navTo (fired by the scene at m≈0.82). Held in refs
   // so they always see the current uiVisible/onNavigate without re-attaching.
@@ -413,7 +489,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
 
   // Keep the click + navigate handlers current (they read uiVisible / onNavigate).
   beginMorphRef.current = () => {
-    if (!uiVisible || orbOverlay.holding) return // only at rest, once
+    if (!uiVisible || orbOverlay.holding || scrolledAwayRef.current) return // only at rest, at top, once
     orbOverlay.holding = true // overlay must survive the upcoming route swap
     orbOverlay.pendingFromOrb = true
     import('./TheRoad') // load The Road ASAP so it's ready under the overlay
@@ -423,6 +499,12 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
   // which App consumes once — router state would persist on the history entry and
   // replay the seamless arrival on every back/forward re-entry.
   navToRef.current = () => onNavigate('The Road')
+
+  // Latest values for the scroll rAF loop above (so it stays subscribed once, not
+  // re-created on every morph frame).
+  const showOrbRef = useRef(false); showOrbRef.current = showOrb
+  const phaseRef = useRef(phase); phaseRef.current = phase
+  const morphRef = useRef(morph); morphRef.current = morph
 
   // The home background is intentionally DEAD SPACE: clicking it does nothing.
   // Only the orb (plus ORB_CLICK_HALO_PX around it — the scene's window-level
@@ -656,7 +738,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
             cursor: 'grab',
             zIndex: 45,
             pointerEvents:
-              uiVisible && phase === 'rest' && morph === 0 ? 'auto' : 'none',
+              uiVisible && phase === 'rest' && morph === 0 && !scrolledAway ? 'auto' : 'none',
           }}
         />
       )}
@@ -692,63 +774,87 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
           }}>{HOME_BLURB}</p>
         </nav>
       ) : (
-        // Desktop home: STFYC-style top links (Biography / The Team / Contact) plus a
-        // bordered "Back the Campaign" CTA + blurb in the bottom-left. Mobile is the
-        // embedded branch above; the app's own top nav is suppressed on desktop home
-        // (App.jsx). Both groups sit ABOVE the orb's grab-cursor circle (zIndex 45) so
-        // a link overlapping the orb's click zone on a short/landscape viewport still
-        // receives its own click — paired with the interactive-target guard in
-        // glassOrbScene's window-level hit-test so the tap can't hijack into the morph.
+        // Desktop home top bar (responsive). ≥ HOME_BAR_FULL: sponsor lockup · links · Back
+        // the Campaign, one row, space-between (equal gaps). Narrower: the links collapse into
+        // a hamburger on the RIGHT with the CTA to its left; narrower still (< HOME_BAR_COMPACT)
+        // the CTA folds into the menu too, leaving just the hamburger. The menu always lists
+        // Back the Campaign. The second sponsor lockup + blurb sit bottom-left in one column.
+        // Everything is ABSOLUTE so it scrolls away with the frame into the biography below,
+        // above the orb grab circle (z45) so links over the orb's click zone still win clicks.
         <>
-          {/* Top links — uppercase, wide-tracked, small, cool-white; a transparent
-              bar across the very top (echoes stfyc.com). Fades with the intro +
-              morph in lockstep with the rest of the home UI. */}
           <nav
             aria-label="Primary"
             style={{
-              // Brought down so the text top lines up with the top of the white
-              // sponsor banner — same value as HomeSponsorStrip's desktop top
-              // (measured: the all-caps glyph top sits exactly at this container
-              // top). Same vh-based clamp so the row tracks the banner as the
-              // window resizes; the vw-based gap keeps the spacing proportional.
-              position: 'fixed', top: 'clamp(64px, 9vh, 96px)', left: 0, right: 0,
-              display: 'flex', justifyContent: 'center', alignItems: 'center',
-              gap: 'clamp(36px, 5.4vw, 90px)',
+              position: 'absolute', top: HOME_TOP, left: HOME_SIDE, right: HOME_SIDE,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 'clamp(12px, 1.6vw, 30px)',
               opacity: (uiVisible ? 1 : 0) * (1 - textOut),
-              transition: 'opacity 0.6s ease',
-              pointerEvents: uiVisible && textOut < 0.05 ? 'auto' : 'none',
-              zIndex: 47, // above the orb grab-cursor circle (45) so links win overlapping clicks
-            }}
-          >
-            <TopLink label="Biography" onClick={() => onNavigate('Biography')} />
-            <TopLink label="The Team" onClick={() => onNavigate('The Team')} />
-            <TopLink label="Contact" onClick={() => onNavigate('Contact')} />
-          </nav>
-
-          {/* Back the Campaign CTA + blurb — bottom-left, button directly above the
-              blurb (one left-aligned column), in its own landmark. */}
-          <nav
-            aria-label="Support the campaign"
-            style={{
-              position: 'fixed', left: 'clamp(24px, 4vw, 56px)', bottom: 'clamp(24px, 4vh, 40px)',
-              display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
-              gap: 'clamp(16px, 2vh, 24px)',
-              maxWidth: 'min(88vw, 360px)',
-              opacity: (uiVisible ? 1 : 0) * (1 - textOut),
-              transform: `translateY(${8 * textOut}px)`,
+              transform: `translateY(${-8 * textOut}px)`,
               transition: `opacity 0.6s ease${bakedMorphOut ? ', transform 0.6s ease' : ''}`,
               pointerEvents: uiVisible && textOut < 0.05 ? 'auto' : 'none',
               zIndex: 47,
             }}
           >
-            <SupportCTA onClick={() => onNavigate(HOME_NAV.support.route)} />
+            <SponsorRect pair={SPONSOR_PAIRS[0]} style={{ width: HOME_SPONSOR_W, flexShrink: 0 }} />
+            {barW >= HOME_BAR_FULL ? (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(12px, 2.2vw, 54px)', flexShrink: 0 }}>
+                  <TopLink big label="Biography" onClick={() => onNavigate('Biography')} />
+                  <TopLink big label="The Team" onClick={() => onNavigate('The Team')} />
+                  <TopLink big label="Contact" onClick={() => onNavigate('Contact')} />
+                </div>
+                <SupportCTA big onClick={() => onNavigate(HOME_NAV.support.route)} />
+              </>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(12px, 1.6vw, 22px)', flexShrink: 0 }}>
+                {barW >= HOME_BAR_COMPACT && (
+                  <SupportCTA big onClick={() => onNavigate(HOME_NAV.support.route)} />
+                )}
+                <HomeHamburger open={menuOpen} onToggle={() => setMenuOpen((o) => !o)} />
+              </div>
+            )}
+          </nav>
+
+          {/* Bottom-left: the second sponsor lockup with the blurb beneath it, one column so
+              they share a width and adapt together as the screen resizes. */}
+          <div
+            style={{
+              position: 'absolute', left: HOME_SIDE, bottom: 'clamp(24px, 4vh, 40px)',
+              display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+              gap: 'clamp(12px, 1.8vh, 20px)', width: HOME_SPONSOR_W, maxWidth: '84vw',
+              opacity: (uiVisible ? 1 : 0) * (1 - textOut),
+              transition: 'opacity 0.6s ease',
+              pointerEvents: 'none', zIndex: 46,
+            }}
+          >
+            <SponsorRect pair={SPONSOR_PAIRS[1]} style={{ width: '100%' }} />
             <p style={{
               color: HOME_NAV.footerBlurbColor,
               fontSize: 'clamp(12.5px, 0.95vw, 14px)',
               lineHeight: 1.6, margin: 0, fontWeight: 400, letterSpacing: '0.2px',
-              maxWidth: '320px', textAlign: 'left',
+              textAlign: 'left',
             }}>{HOME_BLURB}</p>
-          </nav>
+          </div>
+
+          {/* Hamburger menu overlay (compact tiers) — always lists Back the Campaign. Closes
+              on link tap / backdrop / Escape / growing back to the full-width tier. */}
+          {menuOpen && (
+            <div
+              onClick={() => setMenuOpen(false)}
+              role="dialog"
+              aria-label="Menu"
+              style={{
+                position: 'fixed', inset: 0, background: 'rgba(8,10,14,0.96)',
+                zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(20px, 3.4vh, 36px)', alignItems: 'center' }}>
+                {HOME_MENU.map(({ label, route }) => (
+                  <MenuLink key={route} label={label} onClick={() => { setMenuOpen(false); onNavigate(route) }} />
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -758,11 +864,12 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
           Fades in lockstep with the home nav via uiVisible*(1-textOut). */}
       <HomeSponsorStrip embedded={embedded} uiVisible={uiVisible} textOut={textOut} />
 
-      {/* Mobile scroll cue — a quiet "Explore" hint that scrolling leads on into the
-          page (so it doesn't read as a dead end). Gently bounces (site scrollHint),
-          fades in after the intro, fades out once you scroll (returns near the top),
-          and taps to smooth-scroll down into the section. Desktop home never scrolls. */}
-      {embedded && (
+      {/* Scroll cue — a quiet "Explore" hint that scrolling leads on into the page
+          (so it doesn't read as a dead end). Gently bounces (site scrollHint), fades
+          in after the intro, fades out once you scroll (returns near the top), and
+          taps to smooth-scroll down into the section. Now on desktop too, which
+          scrolls into the biography below. */}
+      {(
         <button
           onClick={() => window.scrollTo({ top: window.innerHeight, behavior: 'smooth' })}
           aria-label="Explore — scroll down"
@@ -786,11 +893,12 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
       )}
 
 
-      {/* Embedded exit veil — topmost layer of the home frame; the scroll-
-          linked effect above drives its opacity 0→1 as the frame scrolls off,
-          sinking everything (photo, orb, nav, countdown) into the film
-          bridge's black. Never interactive; invisible at rest. */}
-      {embedded && (
+      {/* Exit veil — topmost layer of the home frame; the scroll-linked effect
+          above drives its opacity 0→1 as the frame scrolls off, sinking everything
+          (photo, nav, sponsors) into the film bridge's black. On desktop the live
+          orb is a separate body-level overlay, faded in lockstep via scrolledAway.
+          Never interactive; invisible at rest. Now on desktop too (it scrolls). */}
+      {(
         <div
           ref={exitVeilRef}
           aria-hidden="true"
@@ -892,7 +1000,7 @@ function BakedOrbBackdrop({ embedded }) {
 
 // Desktop home top link, stfyc.com vibe: uppercase, wide letter-spacing, small,
 // cool-white; hover/focus → the campaign accent.
-function TopLink({ label, onClick }) {
+function TopLink({ label, onClick, big }) {
   const [hover, setHover] = useState(false)
   return (
     <button
@@ -906,7 +1014,8 @@ function TopLink({ label, onClick }) {
         background: 'none', border: 'none', cursor: 'pointer',
         padding: '10px 8px', margin: '-10px -8px', // padded hitbox, pulled back out
         color: hover ? HOME_NAV.hoverColor : 'rgba(214,226,244,0.82)',
-        fontSize: 'clamp(12px, 1.05vw, 15px)',
+        // `big` shares one size with the Back the Campaign CTA (HOME_LINK_SIZE).
+        fontSize: big ? HOME_LINK_SIZE : 'clamp(12px, 1.05vw, 15px)',
         fontWeight: 500,
         letterSpacing: '3px',
         textTransform: 'uppercase',
@@ -924,7 +1033,7 @@ function TopLink({ label, onClick }) {
 // near the top-link size, but brighter/heavier and with an arrow so it still reads
 // as THE action rather than another nav link. Hover lifts the border + label to the
 // campaign accent, tints a whisper of fill, and nudges the arrow forward.
-function SupportCTA({ onClick }) {
+function SupportCTA({ onClick, big }) {
   const [hover, setHover] = useState(false)
   return (
     <button
@@ -940,9 +1049,10 @@ function SupportCTA({ onClick }) {
         border: `1px solid ${hover ? 'rgba(30,64,255,0.72)' : 'rgba(200,214,236,0.38)'}`,
         borderRadius: 2,
         cursor: 'pointer',
-        padding: '14px 24px',
+        padding: big ? '13px 22px' : '14px 24px',
         color: hover ? HOME_NAV.hoverColor : 'rgba(228,236,248,0.94)',
-        fontSize: 'clamp(12.5px, 1vw, 15px)',
+        // `big` matches the desktop top links (HOME_LINK_SIZE).
+        fontSize: big ? HOME_LINK_SIZE : 'clamp(12.5px, 1vw, 15px)',
         fontWeight: 600,
         letterSpacing: '2.4px',
         textTransform: 'uppercase',
@@ -957,6 +1067,55 @@ function SupportCTA({ onClick }) {
         transform: hover ? 'translateX(3px)' : 'translateX(0)',
         transition: 'transform 0.3s ease',
       }}>→</span>
+    </button>
+  )
+}
+
+// Desktop compact-mode hamburger (top-right). Two cool-white lines that cross into an
+// X when the menu is open.
+function HomeHamburger({ open, onToggle }) {
+  const line = {
+    display: 'block', width: 24, height: 1.5,
+    background: 'rgba(220,230,246,0.92)', borderRadius: 2,
+    transition: 'transform 0.3s ease',
+  }
+  return (
+    <button
+      onClick={onToggle}
+      aria-label={open ? 'Close menu' : 'Open menu'}
+      aria-expanded={open}
+      style={{
+        background: 'none', border: 'none', cursor: 'pointer', padding: 6,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        width: 38, height: 30, gap: 7, flexShrink: 0,
+      }}
+    >
+      <span style={{ ...line, transform: open ? 'translateY(4.25px) rotate(45deg)' : 'none' }} />
+      <span style={{ ...line, transform: open ? 'translateY(-4.25px) rotate(-45deg)' : 'none' }} />
+    </button>
+  )
+}
+
+// A link in the desktop hamburger menu overlay — larger, uppercase, cool-white.
+function MenuLink({ label, onClick }) {
+  const [hover, setHover] = useState(false)
+  return (
+    <button
+      className="home-nav-link"
+      onClick={(e) => { e.stopPropagation(); onClick() }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onFocus={() => setHover(true)}
+      onBlur={() => setHover(false)}
+      style={{
+        background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
+        color: hover ? HOME_NAV.hoverColor : 'rgba(224,232,246,0.9)',
+        fontSize: 'clamp(20px, 3.2vw, 28px)',
+        fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase',
+        fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'color 0.25s ease',
+      }}
+    >
+      {label}
     </button>
   )
 }
