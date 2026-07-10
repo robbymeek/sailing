@@ -22,6 +22,20 @@ const CONTACT_EMAIL = 'robby@robbysailing.com'
 const CONTACT_MAILTO = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Supporting the LA 2028 campaign')}`
 const INFO_EMAIL = 'info@robbysailing.com'
 const INFO_MAILTO = `mailto:${INFO_EMAIL}?subject=${encodeURIComponent('Supporting the LA 2028 campaign')}`
+const MUTED = '#646262'   // Contact-page grey, for the intro subline
+
+// The support narrative under the two cards, rendered as one fluid left-aligned
+// passage: the lead-in line, then the considered-giving details (stewardship, the
+// right to decline, and the US tax / employer-matching note). All paragraphs share
+// one size and color. SFNY Tax ID 13-7308006 is verified (Charity Navigator /
+// ProPublica / GuideStar).
+const SUPPORT_NARRATIVE = [
+  'Back the road to Los Angeles and help send Robby to the Olympic start line in 2028. The ILCA is a singlehanded class, but no campaign reaches a start line like this on its own, and every contribution helps close the gap between here and the Games.',
+  'To keep every gift handled responsibly and transparently, all donations are processed and stewarded by the Foundation, which may review them as part of its standard due diligence. For contributions of more than $10,000, please get in touch in advance so we can make sure your support is directed exactly as you intend.',
+  "We reserve the right to decline or return any donation that does not align with the campaign's values or the Foundation's compliance standards.",
+  'If you are a US taxpayer, your gift through the Sailing Foundation of New York is tax-deductible to the fullest extent allowed by law. Many employers will also match charitable donations, often dollar for dollar, so you may be able to double your impact at no additional cost. Just ask your workplace giving or HR team about matching a gift to the Sailing Foundation of New York (Tax ID 13-7308006).',
+  'A matching gift is a donation your employer makes to match your own, at no cost to you. It is one of the simplest ways to help your support go twice as far on the road to LA 2028.',
+]
 
 // The 6 SFNY steps. Step 4's emphasis is NAVY so it stays legible on the white
 // donate card.
@@ -133,7 +147,7 @@ function StepList() {
 }
 
 export default function Support({ onNavigate }) {
-  const entrance = usePageEntrance(4, { staggerMs: 90, initialDelayMs: 60 })
+  const entrance = usePageEntrance(5, { staggerMs: 90, initialDelayMs: 60 })
   // Arriving from The Team's open-berth input: greet the typed name so the roster
   // gesture lands somewhere real (the donation itself happens on the external SFNY
   // platform, so an acknowledgment is the honest maximum).
@@ -161,25 +175,6 @@ export default function Support({ onNavigate }) {
           <div style={{ height: 1, background: 'rgba(20,28,54,0.14)', marginTop: 'clamp(20px, 3vw, 32px)' }} />
         </div>
 
-        {/* cool-graded photo band */}
-        <div style={{
-          ...entrance.style(1), position: 'relative', overflow: 'hidden',
-          marginTop: 'clamp(40px, 5vw, 64px)',
-          height: narrow ? 'clamp(180px, 34vh, 300px)' : 'clamp(200px, 30vh, 360px)',
-          boxShadow: '0 16px 44px rgba(20,28,54,0.10)',
-        }}>
-          <img
-            src={bandPhoto}
-            alt="Robby Meek sailing his ILCA"
-            style={{
-              position: 'absolute', inset: 0, width: '100%', height: '100%',
-              objectFit: 'cover', objectPosition: 'center 32%',
-              filter: 'saturate(0.85) brightness(0.96) contrast(1.03)',
-            }}
-          />
-          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(rgba(20,28,54,0.12), rgba(20,28,54,0.22))' }} />
-        </div>
-
         {/* two doors */}
         <div style={{
           display: 'grid', gridTemplateColumns: narrow ? '1fr' : '1fr 1fr',
@@ -187,7 +182,7 @@ export default function Support({ onNavigate }) {
         }}>
           {/* contact card (primary) */}
           <div style={{
-            ...entrance.style(2), background: NAVY, boxShadow: '0 24px 60px rgba(20,28,54,0.22)',
+            ...entrance.style(1), background: NAVY, boxShadow: '0 24px 60px rgba(20,28,54,0.22)',
             padding: 'clamp(36px, 4vw, 52px)', display: 'flex', flexDirection: 'column', justifyContent: 'center',
           }}>
             {prefillName && (
@@ -209,7 +204,7 @@ export default function Support({ onNavigate }) {
 
           {/* donate card (co-equal) */}
           <div style={{
-            ...entrance.style(3), background: '#fff', border: '1px solid rgba(20,28,54,0.10)',
+            ...entrance.style(2), background: '#fff', border: '1px solid rgba(20,28,54,0.10)',
             boxShadow: '0 16px 44px rgba(20,28,54,0.10)', padding: 'clamp(30px, 3.4vw, 44px)',
           }}>
             <h2 style={{ ...doorHeading, color: NAVY }}>Donate to the campaign</h2>
@@ -235,6 +230,35 @@ export default function Support({ onNavigate }) {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* "Nobody sails alone." + the support narrative, one fluid left-aligned passage */}
+        <div style={{ ...entrance.style(3), maxWidth: 720, margin: 'clamp(40px, 5vw, 60px) 0 0' }}>
+          <h1 style={{ margin: 0, fontSize: 'clamp(19px, 2.1vw, 26px)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.15, color: NAVY }}>
+            Nobody sails alone.
+          </h1>
+          {SUPPORT_NARRATIVE.map((t, i) => (
+            <p key={i} style={{ margin: i === 0 ? '16px 0 0' : '14px 0 0', fontSize: 'clamp(14px, 1.4vw, 15.5px)', lineHeight: 1.7, color: MUTED }}>{t}</p>
+          ))}
+        </div>
+
+        {/* cool-graded photo band — closing sign-off image above the footer */}
+        <div style={{
+          ...entrance.style(4), position: 'relative', overflow: 'hidden',
+          marginTop: 'clamp(40px, 5vw, 64px)',
+          height: narrow ? 'clamp(180px, 34vh, 300px)' : 'clamp(200px, 30vh, 360px)',
+          boxShadow: '0 16px 44px rgba(20,28,54,0.10)',
+        }}>
+          <img
+            src={bandPhoto}
+            alt="Robby Meek sailing his ILCA"
+            style={{
+              position: 'absolute', inset: 0, width: '100%', height: '100%',
+              objectFit: 'cover', objectPosition: 'center 32%',
+              filter: 'saturate(0.85) brightness(0.96) contrast(1.03)',
+            }}
+          />
+          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(rgba(20,28,54,0.12), rgba(20,28,54,0.22))' }} />
         </div>
       </div>
 
