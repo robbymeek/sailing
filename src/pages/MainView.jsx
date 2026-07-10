@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import orbOverlay from '../lib/orbOverlay'
 import { hasWebGL2 } from '../lib/webglSupport'
 import { introPhotos } from '../assets/home-intro'
-// Rest-state background: the portrait sailing shot, shown nearly black under the
-// overlay — and refracted, with the boat, inside the glass orb.
+// Rest-state background: the portrait sailing shot, shown bright under a light
+// 0.42 scrim — and refracted, with the boat, inside the glass orb.
 import hikingBg from '../assets/home-intro/img-5957.jpg'
 // Lightweight (733×1100, ~108KB) version of the same shot for the mobile home
 // background — the full-res photo is only needed for the desktop orb's refraction.
@@ -60,28 +60,32 @@ const HOME_CTA_ARROW = 'clamp(7px, 0.62vw, 10px)'    // chevron band height
 const HOME_MENU_SIZE = 'clamp(14px, 1.15vw, 18px)'   // "MENU" label (floor = the old fixed 14px)
 const HOME_MENU_LINE_W = 'clamp(30px, 2.2vw, 44px)'  // hamburger line width (floor = old 30px; X-cross math is width-independent)
 
+// Shared bright cool-white for the home's on-page text — the menu, the blurb and the
+// Explore cue all match the Donate and Support CTA so the controls read as one crisp
+// set over the brightened rest photo. Single source of truth (the CTA colour prop,
+// the hamburger, the blurb and the scroll cue all point here).
+const HOME_FG = 'rgba(236,242,255,0.92)'
+
 // Shared config for the home on-page controls. Pages are reached via the top links
 // (Biography / The Team / Contact), the orb (The Road), and the Support CTA; on
-// mobile via the hamburger. Blurb colours are a cool grey harmonized with the orb's
-// FRESNEL_COLOR rim (≈rgb 158,184,219) so they stay recessive on the dark photo.
+// mobile via the hamburger.
 const HOME_NAV = {
   support: { label: 'Support', route: 'Support' },
   hoverColor: '#1E40FF', // campaign accent — hover/focus on any home link
   footerBlurbClamp: 'clamp(12px, 0.9vw, 14px)',
-  footerBlurbColor: 'rgba(198,212,235,0.5)',
+  footerBlurbColor: HOME_FG,
 }
 const HOME_BLURB =
   'Robby Meek is a sailor for the US Sailing Team attending Harvard University working to compete and excel at the 2028 Olympic Games.'
 
 // Desktop home menu — the section links live ONLY here now: at every desktop width the top
 // bar shows just the Donate and Support CTA + the hamburger, and this numbered menu holds the
-// sections. ALWAYS includes Donate and Support, per the brief.
+// sections. Support is NOT listed here — the top-bar Donate and Support CTA owns it.
 const HOME_MENU = [
   { label: 'Biography', route: 'Biography' },
   { label: 'The Team', route: 'The Team' },
   { label: 'The Road', route: 'The Road' },
   { label: 'Contact', route: 'Contact' },
-  { label: 'Donate and Support', route: 'Support' },
 ]
 
 // Module-level flag: the cinematic intro plays once per JS bundle
@@ -526,8 +530,8 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
   }, [bgBlack])
 
   // Overlay per phase — black only. The montage darkens gradually, goes fully
-  // black, then eases back to near-black so the hiking photo behind it reads
-  // as a barely-there texture rather than flat black.
+  // black, then eases back to a light scrim so the hiking photo behind it reads
+  // as a bright, legible backdrop at rest (0.42 = ~58% of the photo shows through).
   const overlayStyle = (() => {
     let background = 'rgba(0,0,0,0)'
     let transition = 'background 1.2s linear'
@@ -543,7 +547,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
       // Fade the held last image down to full black over 1.2s (2600→3800ms)
       background = 'rgba(0,0,0,1)'
     } else if (phase === 'rest') {
-      background = 'rgba(0,0,0,0.88)'
+      background = 'rgba(0,0,0,0.42)'
       transition = 'background 1.4s ease'
     }
     return { background, transition }
@@ -574,8 +578,8 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
         </h1>
       )}
 
-      {/* Rest-state background — hiking shot, sits under everything and only
-          shows through the near-black overlay once the intro settles. Toggled
+      {/* Rest-state background — hiking shot, sits under everything and shows
+          through the light 0.42 rest scrim once the intro settles. Toggled
           while hidden behind the fully-black overlay, so no visible pop. On the
           baked path, BakedOrbBackdrop draws its own clip-aligned copy above it. */}
       <img
@@ -649,7 +653,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
           opacity: boatVisible ? 1 : 0, transition: 'opacity 0.8s ease',
           pointerEvents: uiVisible ? 'auto' : 'none',
         }}>
-          {/* The sailing photo + flat 0.88 scrim behind the orb, laid out with the
+          {/* The sailing photo + flat 0.42 scrim behind the orb, laid out with the
               SAME cover math as the baked clips (see BakedOrbBackdrop) so the DOM
               pixels line up with the backdrop baked INTO the video — the orb's
               mask rim and the morph's first frame are then seamless. No porthole,
@@ -788,7 +792,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(14px, 1.75vw, 28px)', flexShrink: 0 }}>
               <DonateLockup
                 onClick={() => onNavigate(HOME_NAV.support.route)}
-                color="rgba(236,242,255,0.92)"
+                color={HOME_FG}
                 supportSize={HOME_CTA_SUPPORT}
                 cursiveSize={HOME_CTA_CURSIVE}
                 arrowH={HOME_CTA_ARROW}
@@ -873,7 +877,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
             position: 'absolute', left: '50%', bottom: 'clamp(16px, 2.5vh, 26px)',
             transform: 'translateX(-50%)',
             background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
-            color: 'rgba(210,222,240,0.78)',
+            color: HOME_FG,
             fontSize: 12, fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase',
             fontFamily: 'inherit', whiteSpace: 'nowrap',
             opacity: (uiVisible && !cueScrolled ? 1 : 0) * (1 - textOut),
@@ -913,7 +917,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
 
 // ---------- baked-orb backdrop ----------
 // The baked clips (bakeMain.js) composite the sailing photo cover-fit into a
-// 1080×1920 frame under a flat rgba(0,0,0,0.88) scrim — the desktop rest look.
+// 1080×1920 frame under a flat rgba(0,0,0,0.42) scrim — the desktop rest look.
 // This draws the SAME thing in the DOM with the SAME two-step cover math (photo →
 // 1080×1920 frame → frame cover-fit to the viewport), so DOM pixels line up with
 // the clip's baked backdrop on every device aspect. That alignment is what makes
@@ -921,7 +925,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
 // read as one continuous image. No porthole: the lit glass is in the clip itself.
 const BAKE_W = 1080
 const BAKE_H = 1920
-const BAKE_ORB_R = 130 // matches BakedOrb: orb radius in the 1080×1920 baked source
+const BAKE_ORB_R = 166 // matches BakedOrb: orb radius in the 1080×1920 baked source (expanded orb)
 
 function BakedOrbBackdrop({ embedded }) {
   const [vp, setVp] = useState(() => ({
@@ -950,7 +954,7 @@ function BakedOrbBackdrop({ embedded }) {
         />
       </div>
       {/* desktop rest overlay: one flat colour, no vignette */}
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.88)' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.42)' }} />
     </div>
   )
 }
@@ -958,7 +962,7 @@ function BakedOrbBackdrop({ embedded }) {
 // Desktop compact-mode hamburger (top-right). Two cool-white lines that cross into an
 // X when the menu is open.
 function HomeHamburger({ open, onToggle }) {
-  const LIGHT = 'rgba(220,230,246,0.92)' // home is always dark, so a fixed light color reads
+  const LIGHT = HOME_FG // matches the Donate and Support CTA — one crisp set of home controls
   // Only the line WIDTH scales with the viewport; height (2.5) and inter-line gap (8) stay fixed so
   // the open-state cross offset stays exactly (2.5 + 8) / 2 = 5.25px and the X keeps forming cleanly.
   const line = {
@@ -1006,7 +1010,7 @@ function MenuLink({ label, onClick, index }) {
         background: 'none', border: 'none', cursor: 'pointer',
         display: 'inline-flex', alignItems: 'baseline', gap: 'clamp(14px, 1.6vw, 22px)',
         padding: '6px 0', textAlign: 'left', fontFamily: 'inherit',
-        color: hover ? HOME_NAV.hoverColor : 'rgba(228,235,247,0.92)',
+        color: hover ? HOME_NAV.hoverColor : HOME_FG,
         transform: hover ? 'translateX(12px)' : 'translateX(0)',
         transition: 'color 0.28s ease, transform 0.28s ease',
       }}

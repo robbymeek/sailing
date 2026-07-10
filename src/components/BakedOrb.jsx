@@ -12,7 +12,7 @@ const BASE = import.meta.env.BASE_URL
 //  identical; because it's opaque H.264/VP9 video, it's bulletproof and light.
 //
 //  The clips are recorded over the REAL rest backdrop — the sailing photo under
-//  the desktop's flat 0.88 rest scrim (see bakeMain.js) — so the orb's interior
+//  the desktop's flat 0.42 rest scrim (see bakeMain.js) — so the orb's interior
 //  refraction and rim glow are the genuine desktop pixels, no blend-mode faking.
 //  At rest the clip shows through a feathered circular MASK just past the orb's
 //  rim; outside it, MainView's BakedOrbBackdrop draws the same photo with the
@@ -55,16 +55,18 @@ const HOVER_INFLUENCE_PX = 360
 const HOVER_EASE = 0.12
 
 // ---------- baked-clip geometry (tap hotspot + rest mask) ----------
-// The orb sits dead-centred in the 1080×1920 recordings with a ~130px radius, and
-// the clips render objectFit:cover, so on-screen radius = 130 × max(w/1080, h/1920)
-// (same cover math as MainView's BakedOrbBackdrop, which keeps the DOM photo
-// pixel-aligned with the clip's baked backdrop).
+// The orb sits dead-centred in the 1080×1920 recordings with a ~143px radius (baked at
+// the expanded rest scale 1.1 × the 130px scale-1 radius), and the clips render
+// objectFit:cover, so on-screen radius = BAKE_ORB_R × max(w/1080, h/1920) (same cover
+// math as MainView's BakedOrbBackdrop, which keeps the DOM photo pixel-aligned with the
+// clip's baked backdrop). BAKE_ORB_R sits a hair past the rim so the mask's solid disc
+// clears the orb and the feather lands on backdrop — bumped 130→166 with the 1.1 bake.
 // Only the orb + CLICK_HALO_PX around it is tappable (mirrors the desktop live
 // orb's clickHaloPx); on phones only the orb navigates — the LA 2028 OLYMPICS
-// headline above it (MainView's MobileOrbHud) is non-interactive.
+// headline in the top sticky bar is non-interactive.
 const BAKE_W = 1080
 const BAKE_H = 1920
-const BAKE_ORB_R = 130
+const BAKE_ORB_R = 166
 const CLICK_HALO_PX = 52
 // Rest-clip mask: solid past the orb's rim (room for edge AA + dispersion
 // speckle), feathered out a little further. Beyond the rim the clip contains the
