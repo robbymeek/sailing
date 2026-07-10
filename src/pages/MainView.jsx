@@ -49,9 +49,16 @@ const HOME_SIDE = 'clamp(24px, 4vw, 56px)' // left/right inset: nav, sponsors, b
 // Width of each sponsor lockup (top nav bar + bottom-left). Shrinks on narrow windows so
 // the top bar (lockup · CTA · Menu) keeps fitting on one line down to the 700px mobile cutover.
 const HOME_SPONSOR_W = 'clamp(178px, 22vw, 330px)'
-// One shared size for the desktop top links AND the Donate and Support CTA — a touch larger
-// than the CTA's previous size at full width, shrinking on narrow windows so the row fits.
-const HOME_LINK_SIZE = 'clamp(13px, 1.15vw, 17px)'
+// Desktop top-right cluster — the Donate and Support CTA + hamburger/Menu. These scale with the
+// viewport (house clamp() idiom) so the cluster keeps proper weight against the sponsor box at
+// every width: at ~1024px they sit near the floors (≈ the old fixed sizes, so the one-line row
+// still fits down to the 700px cutover); by ~1440–1920px they grow, capped so ultrawide can't
+// bloat. Only the desktop home consumes these — mobile keeps DonateLockup's fixed defaults.
+const HOME_CTA_SUPPORT = 'clamp(15px, 1.45vw, 22px)' // "SUPPORT" word (drives the chevron width)
+const HOME_CTA_CURSIVE = 'clamp(13px, 1.25vw, 19px)' // cursive "Donate / and"
+const HOME_CTA_ARROW = 'clamp(7px, 0.62vw, 10px)'    // chevron band height
+const HOME_MENU_SIZE = 'clamp(14px, 1.15vw, 18px)'   // "MENU" label (floor = the old fixed 14px)
+const HOME_MENU_LINE_W = 'clamp(30px, 2.2vw, 44px)'  // hamburger line width (floor = old 30px; X-cross math is width-independent)
 
 // Shared config for the home on-page controls. Pages are reached via the top links
 // (Biography / The Team / Contact), the orb (The Road), and the Support CTA; on
@@ -778,8 +785,16 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
             }}
           >
             <SponsorRect pair={SPONSOR_PAIRS[0]} style={{ width: HOME_SPONSOR_W, flexShrink: 0 }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(12px, 1.6vw, 22px)', flexShrink: 0 }}>
-              <DonateLockup onClick={() => onNavigate(HOME_NAV.support.route)} color="rgba(236,242,255,0.92)" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(14px, 1.75vw, 28px)', flexShrink: 0 }}>
+              <DonateLockup
+                onClick={() => onNavigate(HOME_NAV.support.route)}
+                color="rgba(236,242,255,0.92)"
+                supportSize={HOME_CTA_SUPPORT}
+                cursiveSize={HOME_CTA_CURSIVE}
+                arrowH={HOME_CTA_ARROW}
+                gap="clamp(9px, 0.95vw, 14px)"
+                padding="clamp(6px, 0.7vw, 10px) clamp(10px, 1.05vw, 18px)"
+              />
               <HomeHamburger open={menuOpen} onToggle={() => setMenuOpen((o) => !o)} />
             </div>
           </nav>
@@ -944,8 +959,10 @@ function BakedOrbBackdrop({ embedded }) {
 // X when the menu is open.
 function HomeHamburger({ open, onToggle }) {
   const LIGHT = 'rgba(220,230,246,0.92)' // home is always dark, so a fixed light color reads
+  // Only the line WIDTH scales with the viewport; height (2.5) and inter-line gap (8) stay fixed so
+  // the open-state cross offset stays exactly (2.5 + 8) / 2 = 5.25px and the X keeps forming cleanly.
   const line = {
-    display: 'block', width: 30, height: 2.5,
+    display: 'block', width: HOME_MENU_LINE_W, height: 2.5,
     background: LIGHT, borderRadius: 2,
     transition: 'transform 0.3s ease',
   }
@@ -955,16 +972,16 @@ function HomeHamburger({ open, onToggle }) {
       aria-label={open ? 'Close menu' : 'Open menu'}
       aria-expanded={open}
       style={{
-        background: 'none', border: 'none', cursor: 'pointer', padding: 6,
-        display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0,
+        background: 'none', border: 'none', cursor: 'pointer', padding: 'clamp(6px, 0.6vw, 10px)',
+        display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 'clamp(9px, 0.9vw, 14px)', flexShrink: 0,
       }}
     >
-      <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, width: 30 }}>
+      <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, width: HOME_MENU_LINE_W }}>
         <span style={{ ...line, transform: open ? 'translateY(5.25px) rotate(45deg)' : 'none' }} />
         <span style={{ ...line, transform: open ? 'translateY(-5.25px) rotate(-45deg)' : 'none' }} />
       </span>
       <span aria-hidden="true" style={{
-        color: LIGHT, fontSize: 14, fontWeight: 600, letterSpacing: '2px',
+        color: LIGHT, fontSize: HOME_MENU_SIZE, fontWeight: 600, letterSpacing: 'clamp(2px, 0.16vw, 3px)',
         textTransform: 'uppercase', fontFamily: 'inherit', whiteSpace: 'nowrap',
         opacity: open ? 0 : 1, transition: 'opacity 0.2s ease',
       }}>Menu</span>
