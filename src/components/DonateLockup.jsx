@@ -5,15 +5,23 @@
 //
 // `color` defaults to var(--fg) (the mobile bar sets it, adapting per page); pass an explicit
 // colour where there's no --fg (e.g. the desktop home). `style` merges placement overrides.
-export default function DonateLockup({ onClick, color = 'var(--fg)', style }) {
+//
+// Size props (supportSize / cursiveSize / arrowH / gap / padding) default to the current fixed
+// values, so callers that pass none — notably the MOBILE sticky bar (App.jsx) — render exactly as
+// before. The desktop home (MainView.jsx) passes clamp() strings so the lockup scales with the
+// viewport. Each accepts a number or any CSS length string (incl. clamp()).
+export default function DonateLockup({
+  onClick, color = 'var(--fg)', style,
+  supportSize = 15, cursiveSize = 13, arrowH = 7, gap = 9, padding = '6px 12px',
+}) {
   return (
     <button
       className="donate-lockup"
       onClick={onClick}
       aria-label="Donate and Support"
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 9,
-        background: 'none', border: 'none', cursor: 'pointer', padding: '6px 12px',
+        display: 'inline-flex', alignItems: 'center', gap,
+        background: 'none', border: 'none', cursor: 'pointer', padding,
         color, fontFamily: 'inherit', whiteSpace: 'nowrap',
         ...style,
       }}
@@ -21,7 +29,7 @@ export default function DonateLockup({ onClick, color = 'var(--fg)', style }) {
       {/* Column 1: cursive Donate / and, right-aligned */}
       <span aria-hidden="true" style={{
         display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.0,
-        fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic', fontWeight: 400, fontSize: 13,
+        fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic', fontWeight: 400, fontSize: cursiveSize,
       }}>
         <span>Donate</span>
         <span>and</span>
@@ -31,8 +39,8 @@ export default function DonateLockup({ onClick, color = 'var(--fg)', style }) {
           the layout). preserveAspectRatio:none flattens/stretches the chevrons; non-scaling-
           stroke keeps the line weight even. Outer edges land under S and T. */}
       <span aria-hidden="true" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 2 }}>
-        <span style={{ fontSize: 15, fontWeight: 400, letterSpacing: '1px', textTransform: 'uppercase', lineHeight: 1, textAlign: 'center' }}>Support</span>
-        <span className="donate-arrows" style={{ position: 'relative', width: '100%', height: 7, display: 'block' }}>
+        <span style={{ fontSize: supportSize, fontWeight: 400, letterSpacing: '1px', textTransform: 'uppercase', lineHeight: 1, textAlign: 'center' }}>Support</span>
+        <span className="donate-arrows" style={{ position: 'relative', width: '100%', height: arrowH, display: 'block' }}>
           <svg viewBox="0 0 100 10" preserveAspectRatio="none" fill="none"
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }}>
             <path d="M0 2 L13 8 L26 2 M37 2 L50 8 L63 2 M74 2 L87 8 L100 2"
