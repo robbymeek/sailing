@@ -230,6 +230,21 @@ button {
   border-radius: 2px;
 }
 
+/* Donate lockup: the flat chevrons under SUPPORT nudge DOWN on hover (desktop) and
+   :active (mobile press). */
+.donate-arrows {
+  transition: transform 0.28s ease;
+}
+.donate-lockup:hover .donate-arrows,
+.donate-lockup:active .donate-arrows {
+  transform: translateY(3px);
+}
+.donate-lockup:focus-visible {
+  outline: 2px solid #1E40FF;
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
 /* Baked orb clips: never show a native play glyph (iOS paints one on a video
    whose autoplay was refused, e.g. Low Power Mode). BakedOrb also swaps to the
    poster frame when playback stalls — this is the belt-and-braces layer. */
