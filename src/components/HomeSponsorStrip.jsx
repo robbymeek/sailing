@@ -46,8 +46,11 @@ export function SponsorRect({ pair, style }) {
         boxShadow: PANEL_SHADOW,
         display: 'flex',
         alignItems: 'stretch',
-        minHeight: 'clamp(56px, 7.5vh, 74px)',
-        padding: '8px',
+        // Taller than before so the logos can grow — each fills its cell as much as
+        // possible while the equal-AREA sizing keeps the pair at equal visual weight
+        // (so the wide marks fill the cell WIDTH and the squarer ones the HEIGHT).
+        minHeight: 'clamp(66px, 9vh, 92px)',
+        padding: '7px',
         boxSizing: 'border-box',
         pointerEvents: 'none',
         ...style,
@@ -56,16 +59,18 @@ export function SponsorRect({ pair, style }) {
       {pair.map((s) => (
         <div
           key={s.logo}
-          style={{ flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 clamp(5px, 0.9vw, 13px)' }}
+          style={{ flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 clamp(3px, 0.45vw, 7px)' }}
         >
           <img
             src={`${BASE}${s.logo}`}
             alt={s.name}
             style={{
-              height: scaledClamp(26, 2.2, 40, shortMul(s)),
+              // Equal-AREA target height pushed up to (nearly) fill the cell; maxWidth/
+              // maxHeight 100% then cap each logo to its cell so nothing overflows.
+              height: scaledClamp(52, 5.2, 80, shortMul(s)),
               width: 'auto',
               maxWidth: '100%',
-              maxHeight: 'clamp(32px, 4.4vh, 46px)',
+              maxHeight: '100%',
               objectFit: 'contain',
               display: 'block',
             }}
