@@ -48,6 +48,27 @@ button {
   animation: chromeShimmer 6s ease infinite;
 }
 
+/* Light-background companion to .chrome-text — a blue→navy metallic sheen that stays
+   legible on the near-white Contact/Support navs (the light-blue .chrome-text washes
+   out there). Reuses the chromeShimmer keyframes. */
+.chrome-text-ink {
+  background: linear-gradient(
+    90deg,
+    rgba(10,60,180,0.95) 0%,
+    rgba(30,64,255,1) 18%,
+    rgba(70,110,210,0.85) 36%,
+    rgba(12,40,120,0.95) 54%,
+    rgba(40,90,230,1) 72%,
+    rgba(20,70,190,0.9) 90%,
+    rgba(10,60,180,0.95) 100%
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: chromeShimmer 6s ease infinite;
+}
+
 /* The Team roll-call plate: one slow chrome glint sweeping the brushed steel.
    Long off-screen rest between passes so it reads as an occasional catch of
    light, not a constant shimmer. Sits inside the plate, under the names. */

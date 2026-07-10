@@ -31,6 +31,12 @@ const scaledClamp = (min, vw, max, mul) =>
 const PANEL_BG = '#ffffff'
 const PANEL_SHADOW = '0 6px 30px rgba(0,0,0,0.32)'
 
+// The mobile sponsor banner's height — shared as a CSS clamp for the banner itself and as
+// a px estimate for App's sticky menu bar, which rests just below the banner on home.
+const MOBILE_BANNER_H = 'clamp(58px, 9vh, 70px)'
+export const mobileBannerHeightPx = () =>
+  Math.min(70, Math.max(58, 0.09 * (typeof window !== 'undefined' ? window.innerHeight : 800)))
+
 // The four sponsors split into two pairs — one lockup each on desktop.
 export const SPONSOR_PAIRS = [SPONSORS.slice(0, 2), SPONSORS.slice(2, 4)]
 
@@ -86,17 +92,17 @@ export default function HomeSponsorStrip({ embedded = false, uiVisible = true, t
   const opacity = (uiVisible ? 1 : 0) * (1 - textOut)
 
   if (embedded) {
-    // MOBILE: full-width horizontal white bar across the top — FOUR EQUAL COLUMNS, one logo
-    // centered in each. Sits BELOW the hamburger so the auto-colored menu icon stays legible
-    // on the dark field above; position:absolute so it scrolls off with the hero.
+    // MOBILE: full-width horizontal white bar at the VERY TOP — FOUR EQUAL COLUMNS, one logo
+    // centered in each. The hamburger + "Menu" bar rests just BELOW it (App's sticky bar) and
+    // pins to the top on scroll; position:absolute so the banner scrolls off with the hero.
     return (
       <div
         style={{
           position: 'absolute',
-          top: 'clamp(56px, 8vh, 76px)',
+          top: 0,
           left: 0,
           right: 0,
-          minHeight: 'clamp(58px, 9vh, 70px)',
+          minHeight: MOBILE_BANNER_H,
           background: PANEL_BG,
           boxShadow: PANEL_SHADOW,
           display: 'flex',
