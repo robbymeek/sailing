@@ -33,7 +33,7 @@ const PANEL_SHADOW = '0 6px 30px rgba(0,0,0,0.32)'
 
 // The mobile sponsor banner's height — shared as a CSS clamp for the banner itself and as
 // a px estimate for App's sticky menu bar, which rests just below the banner on home.
-const MOBILE_BANNER_H = 'clamp(58px, 9vh, 70px)'
+export const MOBILE_BANNER_H = 'clamp(58px, 9vh, 70px)'
 export const mobileBannerHeightPx = () =>
   Math.min(70, Math.max(58, 0.09 * (typeof window !== 'undefined' ? window.innerHeight : 800)))
 

@@ -10,7 +10,7 @@ import hikingBg from '../assets/home-intro/img-5957.jpg'
 // background — the full-res photo is only needed for the desktop orb's refraction.
 import hikingBgMobile from '../assets/home-intro/img-5957-mobile.jpg'
 import BakedOrb, { BAKED_ORB_READY } from '../components/BakedOrb'
-import HomeSponsorStrip, { SponsorRect, SPONSOR_PAIRS } from '../components/HomeSponsorStrip'
+import HomeSponsorStrip, { SponsorRect, SPONSOR_PAIRS, MOBILE_BANNER_H } from '../components/HomeSponsorStrip'
 import blackBridge from '../lib/blackBridge'
 
 const BASE = import.meta.env.BASE_URL
@@ -742,7 +742,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
             maxWidth: 'min(88vw, 420px)',
             bottom: 'clamp(56px, 9vh, 84px)', // raised a touch to clear the scroll cue below
             display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
-            gap: 'clamp(8px, 1.2vh, 14px)',
+            gap: 'clamp(16px, 2.4vh, 24px)',
             opacity: (uiVisible ? 1 : 0) * (1 - textOut),
             transform: `translateX(${-28 * textOut}px)`,
             transition: `opacity 0.6s ease${bakedMorphOut ? ', transform 0.6s ease' : ''}`,
@@ -750,7 +750,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
             zIndex: 20,
           }}
         >
-          {/* Same refined bordered CTA as desktop. */}
+          {/* Same editorial text CTA as desktop (no box). */}
           <SupportCTA onClick={() => onNavigate(HOME_NAV.support.route)} />
           <p style={{
             color: HOME_NAV.footerBlurbColor, fontSize: HOME_NAV.footerBlurbClamp,
@@ -903,41 +903,40 @@ const BAKE_W = 1080
 const BAKE_H = 1920
 const BAKE_ORB_R = 130 // matches BakedOrb: orb radius in the 1080×1920 baked source
 
-// ---------- mobile in-orb-style HUD ----------
-// Mobile uses the baked-VIDEO orb (no live shader), so the LA 2028 OLYMPICS headline
-// + countdown live in the DOM just above the orb. mix-blend-mode: difference gives the
-// same self-adapting contrast as the desktop shader (white over dark areas, dark over
-// light) and it fades in on mount. Non-interactive — only the orb navigates to The Road.
-// (The desktop live orb centers this HUD over the boat; on mobile it stays above.)
+// ---------- mobile LA 2028 HUD ----------
+// Mobile uses the baked-VIDEO orb (no live shader), so the LA 2028 OLYMPICS headline +
+// countdown live in the DOM. Placed TOP-RIGHT, right-aligned, just under the sponsor
+// banner (over the dark hero — white + a soft text-shadow for contrast). Fades in on
+// mount; non-interactive (only the orb navigates to The Road).
 function MobileOrbHud({ target }) {
   const { days, hrs, mins, secs } = useCountdown(target)
-  const [vp, setVp] = useState(() => ({
-    w: typeof window !== 'undefined' ? window.innerWidth : 390,
-    h: typeof window !== 'undefined' ? window.innerHeight : 844,
-  }))
   const [shown, setShown] = useState(false)
   useEffect(() => {
-    const h = () => setVp({ w: window.innerWidth, h: window.innerHeight })
-    window.addEventListener('resize', h)
     const t = setTimeout(() => setShown(true), 60)
-    return () => { window.removeEventListener('resize', h); clearTimeout(t) }
+    return () => clearTimeout(t)
   }, [])
-  const orbR = BAKE_ORB_R * Math.max(vp.w / BAKE_W, vp.h / BAKE_H)
   const countdown = `${days} : ${String(hrs).padStart(2, '0')} : ${String(mins).padStart(2, '0')} : ${String(secs).padStart(2, '0')}`
   return (
     <div
       aria-hidden="true"
       style={{
-        position: 'absolute', left: '50%', bottom: `calc(50% + ${Math.round(orbR + 24)}px)`,
-        transform: 'translateX(-50%)', textAlign: 'center',
+        position: 'absolute',
+        top: MOBILE_BANNER_H,   // the MENU bar's band, right up against the sponsor banner
+        left: '50%', transform: 'translateX(-50%)',
+        height: 52,             // small enough that both lines fit inside the bar's height
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        textAlign: 'center',
         pointerEvents: 'none', zIndex: 5, whiteSpace: 'nowrap',
-        mixBlendMode: 'difference', color: '#fff',
+        color: '#fff', textShadow: '0 1px 6px rgba(0,0,0,0.5)',
         fontFamily: 'system-ui, -apple-system, sans-serif',
         opacity: shown ? 1 : 0, transition: 'opacity 1s ease',
       }}
     >
-      <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: '2.5px' }}>LA 2028 OLYMPICS</div>
-      <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '1px', marginTop: 7, fontVariantNumeric: 'tabular-nums' }}>{countdown}</div>
+      {/* Small + centred against the banner: LA 2028 OLYMPICS + timer fit inside the MENU
+          bar's band — but this lives in the hero, so it scrolls away (not pinned). */}
+      <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '2px' }}>LA 2028 OLYMPICS</div>
+      <div style={{ marginTop: 2, fontSize: 10, fontWeight: 500, letterSpacing: '0.8px',
+        fontVariantNumeric: 'tabular-nums' }}>{countdown}</div>
     </div>
   )
 }
@@ -974,44 +973,64 @@ function BakedOrbBackdrop({ embedded }) {
   )
 }
 
-// The campaign's single call to action. A refined hairline-outlined button kept
-// near the top-link size, but brighter/heavier and with an arrow so it still reads
-// as THE action rather than another nav link. Hover lifts the border + label to the
-// campaign accent, tints a whisper of fill, and nudges the arrow forward.
+// The campaign's single call to action — a boxless editorial text treatment (à la the
+// Jannik Sinner Foundation nav): "Donate and" in a light italic serif, "Support" in
+// letter-spaced uppercase. DESKTOP (`big`): larger label sitting IN-LINE with the MENU
+// text, with three chevrons hanging just below it (absolute, so they don't push the label
+// off the row's centre line). MOBILE: a larger label with the three chevrons to the RIGHT,
+// pointing right. White on the dark home; hover brightens the label + nudges the chevrons.
 function SupportCTA({ onClick, big }) {
   const [hover, setHover] = useState(false)
+  const handlers = {
+    onClick,
+    onMouseEnter: () => setHover(true), onMouseLeave: () => setHover(false),
+    onFocus: () => setHover(true), onBlur: () => setHover(false),
+  }
+  const common = {
+    background: 'none', border: 'none', cursor: 'pointer',
+    color: hover ? '#ffffff' : 'rgba(236,242,255,0.90)',
+    fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'color 0.3s ease',
+  }
+  const label = (
+    <span style={{ fontSize: big ? 'clamp(18px, 1.5vw, 23px)' : 'clamp(17px, 4.6vw, 22px)', lineHeight: 1.05 }}>
+      <span style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic', fontWeight: 400, letterSpacing: '0.2px' }}>Donate and </span>
+      <span style={{ textTransform: 'uppercase', fontWeight: 600, letterSpacing: '2.5px' }}>Support</span>
+    </span>
+  )
+  const chevrons = (
+    <span aria-hidden="true" style={{
+      display: 'inline-flex', gap: 6, color: 'inherit',
+      opacity: hover ? 1 : (big ? 0.55 : 0.6),
+      transform: hover ? (big ? 'translateY(2px)' : 'translateX(3px)') : 'none',
+      transition: 'opacity 0.35s ease, transform 0.35s ease',
+    }}>
+      {[0, 1, 2].map((i) => (big ? (
+        <svg key={i} width="12" height="6" viewBox="0 0 12 6" fill="none">
+          <path d="M1.2 1 L6 4.6 L10.8 1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : (
+        <svg key={i} width="6" height="12" viewBox="0 0 6 12" fill="none">
+          <path d="M1 1.2 L5 6 L1 10.8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )))}
+    </span>
+  )
+  if (big) {
+    return (
+      <button className="home-nav-link" {...handlers}
+        style={{ ...common, position: 'relative', display: 'inline-flex', alignItems: 'center', padding: '2px 4px' }}>
+        {label}
+        <span style={{ position: 'absolute', left: '50%', top: '100%', transform: 'translateX(-50%)', marginTop: 3 }}>
+          {chevrons}
+        </span>
+      </button>
+    )
+  }
   return (
-    <button
-      className="home-nav-link"
-      onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      onFocus={() => setHover(true)}
-      onBlur={() => setHover(false)}
-      style={{
-        display: 'inline-flex', alignItems: 'center', gap: 12,
-        background: hover ? 'rgba(30,64,255,0.10)' : 'rgba(255,255,255,0.015)',
-        border: `1px solid ${hover ? 'rgba(30,64,255,0.72)' : 'rgba(200,214,236,0.38)'}`,
-        borderRadius: 2,
-        cursor: 'pointer',
-        padding: big ? '13px 22px' : '14px 24px',
-        color: hover ? HOME_NAV.hoverColor : 'rgba(228,236,248,0.94)',
-        // `big` matches the desktop top links (HOME_LINK_SIZE).
-        fontSize: big ? HOME_LINK_SIZE : 'clamp(12.5px, 1vw, 15px)',
-        fontWeight: 600,
-        letterSpacing: '2.4px',
-        textTransform: 'uppercase',
-        fontFamily: 'inherit',
-        whiteSpace: 'nowrap',
-        transition: 'color 0.3s ease, border-color 0.3s ease, background 0.3s ease',
-      }}
-    >
-      <span>Donate and Support</span>
-      <span aria-hidden="true" style={{
-        fontSize: '1.15em', lineHeight: 1,
-        transform: hover ? 'translateX(3px)' : 'translateX(0)',
-        transition: 'transform 0.3s ease',
-      }}>→</span>
+    <button className="home-nav-link" {...handlers}
+      style={{ ...common, display: 'inline-flex', alignItems: 'center', gap: 12, padding: '4px 6px' }}>
+      {label}
+      {chevrons}
     </button>
   )
 }
