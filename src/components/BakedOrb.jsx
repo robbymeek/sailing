@@ -44,10 +44,18 @@ const BASE = import.meta.env.BASE_URL
 // public/orb/ (see BAKE.md). MainView reads this to decide the phone path.
 export const BAKED_ORB_READY = true
 
+// Cache-bust token for the baked clips. They ship under FIXED filenames, so a
+// returning visitor's browser (and the Pages CDN edge) would keep serving a STALE
+// cached clip against newer mask/backdrop code — the rim then reveals the old clip's
+// darker baked backdrop as a dark halo. Bump this string every time public/orb/* is
+// re-baked so the URL changes and every client re-fetches.
+const ORB_V = '2'
+const q = (url) => `${url}?v=${ORB_V}`
+
 // Assets produced by the bake (npm run bake:encode → public/orb/).
 const REST = `${BASE}orb/orb-rest` //   .webm + .mp4 (idle loop)
 const MORPH = `${BASE}orb/orb-morph` // .webm + .mp4 (one-shot orb→globe)
-const REST_POSTER = `${BASE}orb/orb-rest-poster.jpg` // first rest frame (instant paint)
+const REST_POSTER = q(`${BASE}orb/orb-rest-poster.jpg`) // first rest frame (instant paint)
 
 // Proximity scale for the rare desktop-baked path (mirrors glassOrbScene tunables).
 const HOVER_MAX_SCALE = 1.3
@@ -379,8 +387,8 @@ const BakedOrb = forwardRef(function BakedOrb(
         autoPlay muted loop playsInline preload="auto" poster={REST_POSTER}
         style={layer({ opacity: morphing || restFrozen ? 0 : 1, transition: 'opacity 150ms linear', ...restMask })}
       >
-        <source src={`${REST}.webm`} type="video/webm" />
-        <source src={`${REST}.mp4`} type="video/mp4" />
+        <source src={q(`${REST}.webm`)} type="video/webm" />
+        <source src={q(`${REST}.mp4`)} type="video/mp4" />
       </video>
       {restFrozen && !morphing && (
         <img src={REST_POSTER} alt="" aria-hidden="true" style={layer(restMask)} />
@@ -398,8 +406,8 @@ const BakedOrb = forwardRef(function BakedOrb(
         onEnded={finish}
         style={layer({ opacity: morphing ? 1 : 0, transition: 'opacity 150ms linear' })}
       >
-        <source src={`${MORPH}.webm`} type="video/webm" />
-        <source src={`${MORPH}.mp4`} type="video/mp4" />
+        <source src={q(`${MORPH}.webm`)} type="video/webm" />
+        <source src={q(`${MORPH}.mp4`)} type="video/mp4" />
       </video>
 
       {hotspot}
