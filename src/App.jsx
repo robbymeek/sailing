@@ -13,6 +13,8 @@ import Contact from './pages/Contact'
 import ErrorBoundary from './components/ErrorBoundary'
 import { applyRouteMeta } from './lib/seo'
 import { mobileBannerHeightPx } from './components/HomeSponsorStrip'
+import useCountdown from './hooks/useCountdown'
+import DonateLockup from './components/DonateLockup'
 
 // Retry a dynamic import once (after a short beat) before giving up — smooths
 // over a transient network blip; a persistent failure (a stale chunk hash
@@ -174,6 +176,27 @@ function DesktopHome({ onNavigate, hoverNavOpen, bioSectionRef }) {
         <Biography onNavigate={onNavigate} scrollOffsetRef={bioSectionRef} />
       </div>
     </div>
+  )
+}
+
+// LA 2028 countdown, shown FADED in the centre of the mobile sticky bar (home only, a child
+// of the bar so it pins). Absolutely centred so MENU (left) + Donate (right) don't shift it.
+// Colour tracks --fg like MENU; non-interactive.
+const OLYMPICS_TARGET = Date.parse('2028-07-14T00:00:00')
+function BarCountdown() {
+  const { days, hrs, mins, secs } = useCountdown(OLYMPICS_TARGET)
+  const timer = `${days} : ${String(hrs).padStart(2, '0')} : ${String(mins).padStart(2, '0')} : ${String(secs).padStart(2, '0')}`
+  return (
+    <span aria-hidden="true" style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+      lineHeight: 1.2, whiteSpace: 'nowrap', pointerEvents: 'none',
+      color: 'var(--fg)', opacity: 0.5,
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+    }}>
+      <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: '1.5px' }}>LA 2028</span>
+      <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: '1.5px' }}>OLYMPICS</span>
+      <span style={{ fontSize: 8, fontWeight: 500, letterSpacing: '0.2px', fontVariantNumeric: 'tabular-nums' }}>{timer}</span>
+    </span>
   )
 }
 
@@ -615,6 +638,24 @@ export default function App() {
               opacity: navMenuOpen ? 0 : 1, transition: 'opacity 0.2s ease, color 0.3s ease',
             }}>Menu</span>
           </button>
+          {homeShown && (
+            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', minWidth: 0 }}>
+              <BarCountdown />
+            </div>
+          )}
+          {/* Donate lockup — right side of the home bar (pins with it, home only). Colour
+              tracks --fg like MENU; hidden while the menu is open. */}
+          {homeShown && (
+            <DonateLockup
+              onClick={() => go('Support')}
+              style={{
+                marginRight: 18, // mirror the MENU hamburger's edge inset (18 + 12px pad)
+                opacity: navMenuOpen ? 0 : 1,
+                pointerEvents: navMenuOpen ? 'none' : 'auto',
+                transition: 'opacity 0.2s ease, color 0.3s ease',
+              }}
+            />
+          )}
         </div>
       )}
 
