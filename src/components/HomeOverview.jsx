@@ -99,6 +99,10 @@ function Reveal({ children, delay = 0, style }) {
   )
 }
 
+// Horizontal inset matching WRAP's padding — for indenting content that sits
+// inside a full-bleed (unpadded) mobile section.
+const LANE_PAD = '0 clamp(24px, 5vw, 64px)'
+
 // A route action: label + arrow over the extending accent underline
 // (.ho-action::after in index.css). The arrow is decoration — the accessible
 // name is just the label.
@@ -126,7 +130,10 @@ function RouteAction({ label, onClick, dark = false, style }) {
 // before play() — visibility pause), plus a quiet pause/play chip on the
 // white margin below the frame, never over the footage. `userPausedRef`
 // keeps the visitor's explicit pause authoritative over the auto-resumes.
-function FilmBlock({ isMobile }) {
+// `bleed` (mobile): the frame is a full-width edge-to-edge banner — the
+// parent section carries no side padding — so only the chip row indents
+// itself back into the content lane.
+function FilmBlock({ isMobile, bleed = false }) {
   const videoRef = useRef(null)
   const frameRef = useRef(null)
   const [lite, setLite] = useState(false) // reduced-motion / save-data / slow net → poster only
@@ -245,9 +252,10 @@ function FilmBlock({ isMobile }) {
     position: 'relative',
     // Matched to the clip's CONTENT box (see SailingBanner): the master has
     // ~41px letterbox bars baked top+bottom; this aspect + cover always
-    // crops the bars.
+    // crops the bars. No minHeight on the mobile banner — forcing one against
+    // the aspect box blows the footage up past its frame on narrow screens.
     aspectRatio: '1920 / 804',
-    minHeight: isMobile ? 200 : 260,
+    minHeight: isMobile ? 0 : 260,
     overflow: 'hidden',
     lineHeight: 0,
     background: FRAME_BG,
@@ -290,7 +298,7 @@ function FilmBlock({ isMobile }) {
           style={media}
         />
       </div>
-      <div style={{ marginTop: 12 }}>
+      <div style={{ marginTop: 12, ...(bleed ? { padding: LANE_PAD } : null) }}>
         <button
           type="button"
           className="ho-film-chip"
@@ -342,18 +350,23 @@ export default function HomeOverview({
         </Reveal>
       </header>
 
-      {/* 1 — The film. Video dominant, copy in a narrow adjoining column. */}
-      <section aria-label="Biography" style={{
-        ...WRAP, paddingBottom: SECTION_PAD,
-        ...(isMobile ? null : {
-          display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px',
-          columnGap: GAP_COL, alignItems: 'end',
-        }),
-      }}>
+      {/* 1 — The film. Desktop: video dominant, copy in a narrow adjoining
+          column. Mobile: the film is a full-bleed edge-to-edge banner (the
+          section drops its side padding; chip + copy indent back into the
+          content lane). */}
+      <section aria-label="Biography" style={
+        isMobile
+          ? { paddingBottom: SECTION_PAD }
+          : {
+            ...WRAP, paddingBottom: SECTION_PAD,
+            display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px',
+            columnGap: GAP_COL, alignItems: 'end',
+          }
+      }>
         <Reveal>
-          <FilmBlock isMobile={isMobile} />
+          <FilmBlock isMobile={isMobile} bleed={isMobile} />
         </Reveal>
-        <Reveal delay={120} style={isMobile ? { paddingTop: 24 } : { paddingBottom: 2 }}>
+        <Reveal delay={120} style={isMobile ? { padding: LANE_PAD, paddingTop: 24 } : { paddingBottom: 2 }}>
           <h3 style={sectionHeading}>Biography</h3>
           <p style={bodyCopy}>Racing since nine. Now working toward LA 2028 in the ILCA 7.</p>
           {/* Nowrap per phrase so the narrow column breaks at the separator,
