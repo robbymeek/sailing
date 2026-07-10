@@ -826,7 +826,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
       {/* "Back to Biography" — only when arriving from the Biography page. Sits below
           the nav at the top, docks up with a little padding once scrolled, and fades
           out at the finale so the LA 2028 headline arrives on a clean top edge. */}
-      {fromBiography && <BackButton onNavigate={onNavigate} docked={docked} finaleT={finaleT} />}
+      {fromBiography && <BackButton onNavigate={onNavigate} docked={docked} finaleT={finaleT} isMobile={isMobile} />}
 
       {/* DESKTOP leg frame — the PERSISTENT scaffolding. Title/tracker pinned at
           TITLE_TOP, Play + NM controls pinned at CTRL_BOTTOM, the stop list
@@ -1220,7 +1220,7 @@ function NmToLa({ prog }) {
 
 // "Back to Biography" pill — centered at the top (below the nav), docks up with a
 // little padding once scrolled, fades out as the LA 2028 finale headline arrives.
-function BackButton({ onNavigate, docked, finaleT }) {
+function BackButton({ onNavigate, docked, finaleT, isMobile }) {
   const [hover, setHover] = useState(false)
   return (
     <button
@@ -1228,7 +1228,8 @@ function BackButton({ onNavigate, docked, finaleT }) {
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        position: 'fixed', top: docked ? 20 : 74, left: '50%', transform: 'translateX(-50%)',
+        // On mobile the docked position clears the sticky menu bar (52px tall at top:0).
+        position: 'fixed', top: docked ? (isMobile ? 60 : 20) : 74, left: '50%', transform: 'translateX(-50%)',
         zIndex: 6,
         opacity: 1 - Math.min(1, finaleT * 2),
         pointerEvents: finaleT > 0.4 ? 'none' : 'auto',

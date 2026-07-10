@@ -47,8 +47,7 @@ const COUNTDOWN_TARGET = Date.parse('2028-07-14T00:00:00')
 const HOME_TOP = 'clamp(28px, 4vh, 48px)' // top inset: nav row + top-left sponsor rect
 const HOME_SIDE = 'clamp(24px, 4vw, 56px)' // left/right inset: nav, sponsors, blurb
 // Width of each sponsor lockup (top nav bar + bottom-left). Shrinks on narrow windows so
-// the top bar (lockup · links · CTA) keeps fitting on one line down to ~860px before it
-// has to wrap (the CTA then drops below, never overlapping).
+// the top bar (lockup · CTA · Menu) keeps fitting on one line down to the 700px mobile cutover.
 const HOME_SPONSOR_W = 'clamp(178px, 22vw, 330px)'
 // One shared size for the desktop top links AND the Donate and Support CTA — a touch larger
 // than the CTA's previous size at full width, shrinking on narrow windows so the row fits.
@@ -67,8 +66,9 @@ const HOME_NAV = {
 const HOME_BLURB =
   'Robby Meek is a sailor for the US Sailing Team attending Harvard University working to compete and excel at the 2028 Olympic Games.'
 
-// Desktop hamburger menu (shown once the top bar is too narrow for the full row).
-// ALWAYS includes Donate and Support, per the brief.
+// Desktop home menu — the section links live ONLY here now: at every desktop width the top
+// bar shows just the Donate and Support CTA + the hamburger, and this numbered menu holds the
+// sections. ALWAYS includes Donate and Support, per the brief.
 const HOME_MENU = [
   { label: 'Biography', route: 'Biography' },
   { label: 'The Team', route: 'The Team' },
@@ -76,11 +76,6 @@ const HOME_MENU = [
   { label: 'Contact', route: 'Contact' },
   { label: 'Donate and Support', route: 'Support' },
 ]
-// Desktop top-bar responsive breakpoints (width in px). ≥ FULL: sponsor · links · CTA
-// in one row. FULL > w ≥ COMPACT: sponsor · [CTA] [hamburger] (links in the menu).
-// COMPACT > w ≥ 700: sponsor · [hamburger] (CTA folds into the menu too). < 700 = mobile.
-const HOME_BAR_FULL = 880
-const HOME_BAR_COMPACT = 770
 
 // Module-level flag: the cinematic intro plays once per JS bundle
 // initialization (hard refresh) and is skipped on SPA navigation back
@@ -197,24 +192,14 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
     return () => window.removeEventListener('scroll', onScroll)
   }, [showOrb])
 
-  // Desktop top-bar responsive tier (see HOME_BAR_FULL/COMPACT) + hamburger menu state.
-  const [barW, setBarW] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1440))
+  // Desktop hamburger menu open/close state (the top bar is identical at every width now).
   const [menuOpen, setMenuOpen] = useState(false)
-  useEffect(() => {
-    if (embedded) return undefined
-    const onResize = () => setBarW(window.innerWidth)
-    onResize()
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [embedded])
   useEffect(() => {
     if (!menuOpen) return undefined
     const onKey = (e) => { if (e.key === 'Escape') setMenuOpen(false) }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [menuOpen])
-  // Close the menu if the window grows back to the full-row tier.
-  useEffect(() => { if (barW >= HOME_BAR_FULL && menuOpen) setMenuOpen(false) }, [barW, menuOpen])
 
   // beginMorph (orb clicked) + navTo (fired by the scene at m≈0.82). Held in refs
   // so they always see the current uiVisible/onNavigate without re-attaching.
@@ -774,13 +759,11 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
           }}>{HOME_BLURB}</p>
         </nav>
       ) : (
-        // Desktop home top bar (responsive). ≥ HOME_BAR_FULL: sponsor lockup · links · Back
-        // the Campaign, one row, space-between (equal gaps). Narrower: the links collapse into
-        // a hamburger on the RIGHT with the CTA to its left; narrower still (< HOME_BAR_COMPACT)
-        // the CTA folds into the menu too, leaving just the hamburger. The menu always lists
-        // Donate and Support. The second sponsor lockup + blurb sit bottom-left in one column.
-        // Everything is ABSOLUTE so it scrolls away with the frame into the biography below,
-        // above the orb grab circle (z45) so links over the orb's click zone still win clicks.
+        // Desktop home top bar. At EVERY width: sponsor lockup (left) · Donate and Support CTA +
+        // hamburger/Menu (right). The section links live only in the hamburger's numbered menu.
+        // The second sponsor lockup + blurb sit bottom-left in one column. Everything is ABSOLUTE
+        // so it scrolls away with the frame into the biography below, above the orb grab circle
+        // (z45) so controls over the orb's click zone still win clicks.
         <>
           <nav
             aria-label="Primary"
@@ -796,23 +779,10 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
             }}
           >
             <SponsorRect pair={SPONSOR_PAIRS[0]} style={{ width: HOME_SPONSOR_W, flexShrink: 0 }} />
-            {barW >= HOME_BAR_FULL ? (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(12px, 2.2vw, 54px)', flexShrink: 0 }}>
-                  <TopLink big label="Biography" onClick={() => onNavigate('Biography')} />
-                  <TopLink big label="The Team" onClick={() => onNavigate('The Team')} />
-                  <TopLink big label="Contact" onClick={() => onNavigate('Contact')} />
-                </div>
-                <SupportCTA big onClick={() => onNavigate(HOME_NAV.support.route)} />
-              </>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(12px, 1.6vw, 22px)', flexShrink: 0 }}>
-                {barW >= HOME_BAR_COMPACT && (
-                  <SupportCTA big onClick={() => onNavigate(HOME_NAV.support.route)} />
-                )}
-                <HomeHamburger open={menuOpen} onToggle={() => setMenuOpen((o) => !o)} />
-              </div>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(12px, 1.6vw, 22px)', flexShrink: 0 }}>
+              <SupportCTA big onClick={() => onNavigate(HOME_NAV.support.route)} />
+              <HomeHamburger open={menuOpen} onToggle={() => setMenuOpen((o) => !o)} />
+            </div>
           </nav>
 
           {/* Bottom-left: the second sponsor lockup with the blurb beneath it, one column so
@@ -1004,37 +974,6 @@ function BakedOrbBackdrop({ embedded }) {
   )
 }
 
-// Desktop home top link, stfyc.com vibe: uppercase, wide letter-spacing, small,
-// cool-white; hover/focus → the campaign accent.
-function TopLink({ label, onClick, big }) {
-  const [hover, setHover] = useState(false)
-  return (
-    <button
-      className="home-nav-link"
-      onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      onFocus={() => setHover(true)}
-      onBlur={() => setHover(false)}
-      style={{
-        background: 'none', border: 'none', cursor: 'pointer',
-        padding: '10px 8px', margin: '-10px -8px', // padded hitbox, pulled back out
-        color: hover ? HOME_NAV.hoverColor : 'rgba(214,226,244,0.82)',
-        // `big` shares one size with the Donate and Support CTA (HOME_LINK_SIZE).
-        fontSize: big ? HOME_LINK_SIZE : 'clamp(12px, 1.05vw, 15px)',
-        fontWeight: 500,
-        letterSpacing: '3px',
-        textTransform: 'uppercase',
-        fontFamily: 'inherit',
-        whiteSpace: 'nowrap',
-        transition: 'color 0.3s ease',
-      }}
-    >
-      {label}
-    </button>
-  )
-}
-
 // The campaign's single call to action. A refined hairline-outlined button kept
 // near the top-link size, but brighter/heavier and with an arrow so it still reads
 // as THE action rather than another nav link. Hover lifts the border + label to the
@@ -1080,9 +1019,10 @@ function SupportCTA({ onClick, big }) {
 // Desktop compact-mode hamburger (top-right). Two cool-white lines that cross into an
 // X when the menu is open.
 function HomeHamburger({ open, onToggle }) {
+  const LIGHT = 'rgba(220,230,246,0.92)' // home is always dark, so a fixed light color reads
   const line = {
     display: 'block', width: 30, height: 2.5,
-    background: 'rgba(220,230,246,0.92)', borderRadius: 2,
+    background: LIGHT, borderRadius: 2,
     transition: 'transform 0.3s ease',
   }
   return (
@@ -1092,12 +1032,18 @@ function HomeHamburger({ open, onToggle }) {
       aria-expanded={open}
       style={{
         background: 'none', border: 'none', cursor: 'pointer', padding: 6,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        width: 46, height: 36, gap: 8, flexShrink: 0,
+        display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0,
       }}
     >
-      <span style={{ ...line, transform: open ? 'translateY(5.25px) rotate(45deg)' : 'none' }} />
-      <span style={{ ...line, transform: open ? 'translateY(-5.25px) rotate(-45deg)' : 'none' }} />
+      <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, width: 30 }}>
+        <span style={{ ...line, transform: open ? 'translateY(5.25px) rotate(45deg)' : 'none' }} />
+        <span style={{ ...line, transform: open ? 'translateY(-5.25px) rotate(-45deg)' : 'none' }} />
+      </span>
+      <span aria-hidden="true" style={{
+        color: LIGHT, fontSize: 14, fontWeight: 600, letterSpacing: '2px',
+        textTransform: 'uppercase', fontFamily: 'inherit', whiteSpace: 'nowrap',
+        opacity: open ? 0 : 1, transition: 'opacity 0.2s ease',
+      }}>Menu</span>
     </button>
   )
 }

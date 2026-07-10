@@ -12,6 +12,7 @@ import Biography from './pages/Biography'
 import Contact from './pages/Contact'
 import ErrorBoundary from './components/ErrorBoundary'
 import { applyRouteMeta } from './lib/seo'
+import { mobileBannerHeightPx } from './components/HomeSponsorStrip'
 
 // Retry a dynamic import once (after a short beat) before giving up — smooths
 // over a transient network blip; a persistent failure (a stale chunk hash
@@ -68,6 +69,45 @@ const VARIANT_MAP = {
   '/contact': 'light',
   '/support': 'light',
   '/the-road': 'dark',
+}
+
+// Solid backgrounds for the mobile sticky menu bar, matched to each page's TOP hero
+// (NOT getBg — /biography's body is light but its top is the dark video hero). The bar
+// fades from transparent to this as it pins on scroll.
+const MOBILE_BAR_BG = {
+  '/': 'rgb(0,0,0)',
+  '/biography': 'rgb(14,16,20)',
+  '/team': 'rgb(12,14,18)',
+  '/the-road': 'rgb(0,0,0)',
+  '/contact': 'rgb(255,255,255)',
+  '/support': 'rgb(240,240,240)',
+}
+const withAlpha = (rgb, a) => rgb.replace('rgb(', 'rgba(').replace(')', `, ${a})`)
+
+// Peak opacity of the pinned bar — kept translucent (frosted via backdrop-blur) so the
+// page shows through behind the Menu rather than a solid slab.
+const BAR_MAX_ALPHA = 0.5
+const BAR_MAX_BLUR = 12
+// Mobile menu-bar geometry as a closed form of scroll: on home it rests just below the
+// sponsor banner (restOffset) and pins to top:0 on scroll; on inner pages it's pinned
+// (restOffset 0). `t` runs 0 (floating over the orb) → 1 (pinned): the bar fades to a
+// translucent frosted panel as it pins. Reversible — scrolling to the top of home restores
+// the clean float.
+function computeMobileBar(navPath, barBg, fgPinned) {
+  if (typeof window === 'undefined') {
+    return { topPx: 0, bg: withAlpha(barBg, BAR_MAX_ALPHA), fg: fgPinned, blur: BAR_MAX_BLUR }
+  }
+  const restOffset = navPath === '/' ? mobileBannerHeightPx() : 0
+  const y = window.scrollY
+  const topPx = Math.max(0, restOffset - y)
+  const t = restOffset > 0 ? Math.max(0, Math.min(1, y / restOffset)) : 1
+  const floating = restOffset > 0 && t < 0.5
+  return {
+    topPx,
+    bg: withAlpha(barBg, t * BAR_MAX_ALPHA),
+    fg: floating ? 'rgba(255,255,255,0.92)' : fgPinned,
+    blur: t * BAR_MAX_BLUR,
+  }
 }
 
 const CURRENT_MAP = {
@@ -444,69 +484,42 @@ export default function App() {
 
   const navVariant = getVariant(location.pathname)
 
-  // Dynamic hamburger color: sample the background behind the button and
-  // pick black or white for maximum contrast. Polls on scroll + resize so
-  // it reacts to scrolling through light/dark sections.
-  const hamburgerRef = useRef(null)
-  const [triggerColor, setTriggerColor] = useState('rgba(255,255,255,0.7)')
+  // Mobile sticky menu bar: fixed bar carrying the hamburger + "Menu". Driven by a
+  // single rAF scroll loop writing to barRef so the app root never re-renders on
+  // scroll. Deterministic per-route color (no luminance sampling): --fg tints the
+  // bars and the label, the background fades in as it pins.
+  const barRef = useRef(null)
+  const barBg = MOBILE_BAR_BG[navPath] || 'rgb(0,0,0)'
+  const barFgPinned = VARIANT_MAP[navPath] === 'light' ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.92)'
+  const initialBar = computeMobileBar(navPath, barBg, barFgPinned)
 
   useEffect(() => {
-    if (!compactNav) return // only sample when the hamburger is actually shown
-
-    function updateTriggerColor() {
-      const btn = hamburgerRef.current
-      if (!btn) return
-      const rect = btn.getBoundingClientRect()
-      const x = Math.round(rect.left + rect.width / 2)
-      const y = Math.round(rect.top + rect.height / 2)
-      // Hide the button so elementFromPoint hits the background
-      btn.style.visibility = 'hidden'
-      let el = document.elementFromPoint(x, y)
-      btn.style.visibility = ''
-      // Walk up the tree to find the first element with an opaque background
-      let r = 0, g = 0, b = 0, found = false
-      while (el && el !== document.documentElement) {
-        const bg = getComputedStyle(el).backgroundColor
-        const m = bg.match(/rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\)/)
-        if (m) {
-          const alpha = m[4] !== undefined ? parseFloat(m[4]) : 1
-          if (alpha > 0.4) {
-            r = +m[1]; g = +m[2]; b = +m[3]
-            found = true
-            break
-          }
-        }
-        el = el.parentElement
-      }
-      if (!found) {
-        // Fallback: use variant map
-        const v = VARIANT_MAP[location.pathname]
-        setTriggerColor(v === 'light' ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)')
-        return
-      }
-      const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-      setTriggerColor(lum > 0.45 ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)')
+    if (!compactNav) return undefined
+    const apply = () => {
+      const el = barRef.current
+      if (!el) return
+      const { topPx, bg, fg, blur } = computeMobileBar(navPath, barBg, barFgPinned)
+      const filt = blur > 0.1 ? `blur(${blur}px)` : 'none'
+      el.style.top = `${topPx}px`
+      el.style.background = bg
+      el.style.backdropFilter = filt
+      el.style.setProperty('-webkit-backdrop-filter', filt)
+      el.style.setProperty('--fg', fg)
     }
-
-    updateTriggerColor()
-    // Coalesce scroll sampling to one measurement per frame — updateTriggerColor
-    // does an elementFromPoint + getComputedStyle walk (a forced layout flush),
-    // so running it on every raw scroll event thrashes layout on touch scroll.
+    apply()
     let rafId = null
     const onScroll = () => {
       if (rafId != null) return
-      rafId = requestAnimationFrame(() => { rafId = null; updateTriggerColor() })
+      rafId = requestAnimationFrame(() => { rafId = null; apply() })
     }
     window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', updateTriggerColor)
-    const interval = setInterval(updateTriggerColor, 400)
+    window.addEventListener('resize', apply)
     return () => {
       window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', updateTriggerColor)
-      clearInterval(interval)
+      window.removeEventListener('resize', apply)
       if (rafId != null) cancelAnimationFrame(rafId)
     }
-  }, [compactNav, location.pathname])
+  }, [compactNav, navPath, barBg, barFgPinned])
 
   return (
     <div
@@ -552,42 +565,57 @@ export default function App() {
         </div>
       )}
 
-      {/* Compact-mode hamburger trigger: fixed top-left, two horizontal lines,
-          animates to an X when the overlay is open. Lives outside any transform
-          or opacity wrapper so it stays put on scroll. Shown in compact mode —
-          on home that's exactly the mobile layout (isMobile, via compactNav) so
-          it swaps in precisely as the desktop top nav swaps out. */}
+      {/* Mobile sticky menu bar: a slim bar carrying the hamburger + "Menu". On the home
+          route it rests just below the sponsor banner and pins to the top on scroll; on
+          inner pages it's pinned from the start. Positioned/coloured by the rAF loop above
+          (writes top/background/--fg to barRef) — --fg tints both the bars and the label.
+          Lives outside any transform/opacity wrapper so it stays put; z80 keeps it above
+          the overlay (z70) so the X still closes the menu. */}
       {compactNav && (
-        <button
-          ref={hamburgerRef}
-          onClick={() => setNavMenuOpen((o) => !o)}
-          aria-label={navMenuOpen ? 'Close menu' : 'Open menu'}
+        <div
+          ref={barRef}
           style={{
-            position: 'fixed',
-            top: 20, left: 24,
-            zIndex: 80,
-            background: 'none', border: 'none', cursor: 'pointer',
-            padding: 6,
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            width: 44, height: 36, gap: 8,
+            position: 'fixed', left: 0, right: 0, top: initialBar.topPx,
+            height: 52, zIndex: 80,
+            background: initialBar.bg,
+            backdropFilter: initialBar.blur > 0.1 ? `blur(${initialBar.blur}px)` : undefined,
+            WebkitBackdropFilter: initialBar.blur > 0.1 ? `blur(${initialBar.blur}px)` : undefined,
+            display: 'flex', alignItems: 'center',
+            pointerEvents: navMenuOpen ? 'none' : 'auto',
+            ['--fg']: initialBar.fg,
           }}
         >
-          <span style={{
-            display: 'block', width: 30, height: 2.5, borderRadius: 2,
-            background: triggerColor,
-            transition: 'transform 0.3s ease, background 0.3s ease',
-            transform: navMenuOpen ? 'translateY(5.25px) rotate(45deg)' : 'none',
-            transformOrigin: 'center',
-          }} />
-          <span style={{
-            display: 'block', width: 30, height: 2.5, borderRadius: 2,
-            background: triggerColor,
-            transition: 'transform 0.3s ease, background 0.3s ease',
-            transform: navMenuOpen ? 'translateY(-5.25px) rotate(-45deg)' : 'none',
-            transformOrigin: 'center',
-          }} />
-        </button>
+          <button
+            onClick={() => setNavMenuOpen((o) => !o)}
+            aria-label={navMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={navMenuOpen}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 10, marginLeft: 18,
+              background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
+              pointerEvents: 'auto',
+            }}
+          >
+            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              <span style={{
+                display: 'block', width: 26, height: 2.5, borderRadius: 2, background: 'var(--fg)',
+                transition: 'transform 0.3s ease, background 0.3s ease',
+                transform: navMenuOpen ? 'translateY(5.25px) rotate(45deg)' : 'none',
+                transformOrigin: 'center',
+              }} />
+              <span style={{
+                display: 'block', width: 26, height: 2.5, borderRadius: 2, background: 'var(--fg)',
+                transition: 'transform 0.3s ease, background 0.3s ease',
+                transform: navMenuOpen ? 'translateY(-5.25px) rotate(-45deg)' : 'none',
+                transformOrigin: 'center',
+              }} />
+            </span>
+            <span aria-hidden="true" style={{
+              color: 'var(--fg)', fontSize: 13, fontWeight: 600, letterSpacing: '2.2px',
+              textTransform: 'uppercase', fontFamily: 'inherit', whiteSpace: 'nowrap',
+              opacity: navMenuOpen ? 0 : 1, transition: 'opacity 0.2s ease, color 0.3s ease',
+            }}>Menu</span>
+          </button>
+        </div>
       )}
 
       {/* Compact-mode overlay: full-viewport backdrop + vertical stack. */}
