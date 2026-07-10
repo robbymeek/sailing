@@ -570,21 +570,21 @@ export default function App() {
             padding: 6,
             display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
-            width: 34, height: 28,
+            width: 44, height: 36, gap: 8,
           }}
         >
           <span style={{
-            display: 'block', width: 22, height: 1,
+            display: 'block', width: 30, height: 2.5, borderRadius: 2,
             background: triggerColor,
             transition: 'transform 0.3s ease, background 0.3s ease',
-            transform: navMenuOpen ? 'translateY(3px) rotate(45deg)' : 'translateY(-3px)',
+            transform: navMenuOpen ? 'translateY(5.25px) rotate(45deg)' : 'none',
             transformOrigin: 'center',
           }} />
           <span style={{
-            display: 'block', width: 22, height: 1,
+            display: 'block', width: 30, height: 2.5, borderRadius: 2,
             background: triggerColor,
             transition: 'transform 0.3s ease, background 0.3s ease',
-            transform: navMenuOpen ? 'translateY(-4px) rotate(-45deg)' : 'translateY(3px)',
+            transform: navMenuOpen ? 'translateY(-5.25px) rotate(-45deg)' : 'none',
             transformOrigin: 'center',
           }} />
         </button>
@@ -629,7 +629,7 @@ export default function App() {
                     letterSpacing: '-0.6px', padding: '8px 14px',
                   }}
                 >
-                  {item === 'Support' ? 'Back the Campaign' : item}
+                  {item === 'Support' ? 'Donate and Support' : item}
                 </button>
               )
             })}

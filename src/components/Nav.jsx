@@ -5,7 +5,7 @@ const PAGES = ['Home', 'Biography', 'The Team', 'The Road', 'Contact', 'Support'
 // Display-label overrides for nav items whose page key shouldn't render
 // verbatim. The route key stays 'Support' (routing + the /support page) — only the
 // label reads clearer, so a newcomer doesn't mistake it for a help desk.
-const SHORT_LABELS = { Support: 'Back the Campaign' }
+const SHORT_LABELS = { Support: 'Donate and Support' }
 
 export default function Nav({ current, onNavigate, variant, excludeItems }) {
   const [hoveredItem, setHoveredItem] = useState(null)

@@ -50,7 +50,7 @@ const HOME_SIDE = 'clamp(24px, 4vw, 56px)' // left/right inset: nav, sponsors, b
 // the top bar (lockup · links · CTA) keeps fitting on one line down to ~860px before it
 // has to wrap (the CTA then drops below, never overlapping).
 const HOME_SPONSOR_W = 'clamp(178px, 22vw, 330px)'
-// One shared size for the desktop top links AND the Back the Campaign CTA — a touch larger
+// One shared size for the desktop top links AND the Donate and Support CTA — a touch larger
 // than the CTA's previous size at full width, shrinking on narrow windows so the row fits.
 const HOME_LINK_SIZE = 'clamp(13px, 1.15vw, 17px)'
 
@@ -68,13 +68,13 @@ const HOME_BLURB =
   'Robby Meek is a sailor for the US Sailing Team attending Harvard University working to compete and excel at the 2028 Olympic Games.'
 
 // Desktop hamburger menu (shown once the top bar is too narrow for the full row).
-// ALWAYS includes Back the Campaign, per the brief.
+// ALWAYS includes Donate and Support, per the brief.
 const HOME_MENU = [
   { label: 'Biography', route: 'Biography' },
   { label: 'The Team', route: 'The Team' },
   { label: 'The Road', route: 'The Road' },
   { label: 'Contact', route: 'Contact' },
-  { label: 'Back the Campaign', route: 'Support' },
+  { label: 'Donate and Support', route: 'Support' },
 ]
 // Desktop top-bar responsive breakpoints (width in px). ≥ FULL: sponsor · links · CTA
 // in one row. FULL > w ≥ COMPACT: sponsor · [CTA] [hamburger] (links in the menu).
@@ -778,7 +778,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
         // the Campaign, one row, space-between (equal gaps). Narrower: the links collapse into
         // a hamburger on the RIGHT with the CTA to its left; narrower still (< HOME_BAR_COMPACT)
         // the CTA folds into the menu too, leaving just the hamburger. The menu always lists
-        // Back the Campaign. The second sponsor lockup + blurb sit bottom-left in one column.
+        // Donate and Support. The second sponsor lockup + blurb sit bottom-left in one column.
         // Everything is ABSOLUTE so it scrolls away with the frame into the biography below,
         // above the orb grab circle (z45) so links over the orb's click zone still win clicks.
         <>
@@ -836,21 +836,27 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
             }}>{HOME_BLURB}</p>
           </div>
 
-          {/* Hamburger menu overlay (compact tiers) — always lists Back the Campaign. Closes
-              on link tap / backdrop / Escape / growing back to the full-width tier. */}
+          {/* Hamburger menu overlay (compact tiers) — a classy LEFT-aligned index menu,
+              vertically centered over a softly-blurred backdrop; always lists Donate and
+              Support. Closes on link tap / backdrop / Escape / growing back to full width. */}
           {menuOpen && (
             <div
               onClick={() => setMenuOpen(false)}
               role="dialog"
               aria-label="Menu"
               style={{
-                position: 'fixed', inset: 0, background: 'rgba(8,10,14,0.96)',
-                zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                position: 'fixed', inset: 0,
+                background: 'rgba(9,11,15,0.9)',
+                backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)',
+                zIndex: 80, display: 'flex', alignItems: 'center',
               }}
             >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(20px, 3.4vh, 36px)', alignItems: 'center' }}>
-                {HOME_MENU.map(({ label, route }) => (
-                  <MenuLink key={route} label={label} onClick={() => { setMenuOpen(false); onNavigate(route) }} />
+              <div style={{
+                display: 'flex', flexDirection: 'column', gap: 'clamp(12px, 2.4vh, 24px)',
+                alignItems: 'flex-start', paddingLeft: 'clamp(40px, 9vw, 130px)',
+              }}>
+                {HOME_MENU.map(({ label, route }, i) => (
+                  <MenuLink key={route} index={i + 1} label={label} onClick={() => { setMenuOpen(false); onNavigate(route) }} />
                 ))}
               </div>
             </div>
@@ -1014,7 +1020,7 @@ function TopLink({ label, onClick, big }) {
         background: 'none', border: 'none', cursor: 'pointer',
         padding: '10px 8px', margin: '-10px -8px', // padded hitbox, pulled back out
         color: hover ? HOME_NAV.hoverColor : 'rgba(214,226,244,0.82)',
-        // `big` shares one size with the Back the Campaign CTA (HOME_LINK_SIZE).
+        // `big` shares one size with the Donate and Support CTA (HOME_LINK_SIZE).
         fontSize: big ? HOME_LINK_SIZE : 'clamp(12px, 1.05vw, 15px)',
         fontWeight: 500,
         letterSpacing: '3px',
@@ -1061,7 +1067,7 @@ function SupportCTA({ onClick, big }) {
         transition: 'color 0.3s ease, border-color 0.3s ease, background 0.3s ease',
       }}
     >
-      <span>Back the Campaign</span>
+      <span>Donate and Support</span>
       <span aria-hidden="true" style={{
         fontSize: '1.15em', lineHeight: 1,
         transform: hover ? 'translateX(3px)' : 'translateX(0)',
@@ -1075,7 +1081,7 @@ function SupportCTA({ onClick, big }) {
 // X when the menu is open.
 function HomeHamburger({ open, onToggle }) {
   const line = {
-    display: 'block', width: 24, height: 1.5,
+    display: 'block', width: 30, height: 2.5,
     background: 'rgba(220,230,246,0.92)', borderRadius: 2,
     transition: 'transform 0.3s ease',
   }
@@ -1087,17 +1093,19 @@ function HomeHamburger({ open, onToggle }) {
       style={{
         background: 'none', border: 'none', cursor: 'pointer', padding: 6,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        width: 38, height: 30, gap: 7, flexShrink: 0,
+        width: 46, height: 36, gap: 8, flexShrink: 0,
       }}
     >
-      <span style={{ ...line, transform: open ? 'translateY(4.25px) rotate(45deg)' : 'none' }} />
-      <span style={{ ...line, transform: open ? 'translateY(-4.25px) rotate(-45deg)' : 'none' }} />
+      <span style={{ ...line, transform: open ? 'translateY(5.25px) rotate(45deg)' : 'none' }} />
+      <span style={{ ...line, transform: open ? 'translateY(-5.25px) rotate(-45deg)' : 'none' }} />
     </button>
   )
 }
 
-// A link in the desktop hamburger menu overlay — larger, uppercase, cool-white.
-function MenuLink({ label, onClick }) {
+// A link in the desktop hamburger menu overlay — a classy LEFT-aligned index item:
+// a small muted ordinal, then a large uppercase label; hover shifts it right into
+// the campaign accent (the ordinal lights up too).
+function MenuLink({ label, onClick, index }) {
   const [hover, setHover] = useState(false)
   return (
     <button
@@ -1108,14 +1116,27 @@ function MenuLink({ label, onClick }) {
       onFocus={() => setHover(true)}
       onBlur={() => setHover(false)}
       style={{
-        background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
-        color: hover ? HOME_NAV.hoverColor : 'rgba(224,232,246,0.9)',
-        fontSize: 'clamp(20px, 3.2vw, 28px)',
-        fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase',
-        fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'color 0.25s ease',
+        background: 'none', border: 'none', cursor: 'pointer',
+        display: 'inline-flex', alignItems: 'baseline', gap: 'clamp(14px, 1.6vw, 22px)',
+        padding: '6px 0', textAlign: 'left', fontFamily: 'inherit',
+        color: hover ? HOME_NAV.hoverColor : 'rgba(228,235,247,0.92)',
+        transform: hover ? 'translateX(12px)' : 'translateX(0)',
+        transition: 'color 0.28s ease, transform 0.28s ease',
       }}
     >
-      {label}
+      {index != null && (
+        <span aria-hidden="true" style={{
+          fontSize: 'clamp(11px, 0.85vw, 13px)', fontWeight: 500,
+          letterSpacing: '1.5px', fontVariantNumeric: 'tabular-nums',
+          color: hover ? HOME_NAV.hoverColor : 'rgba(150,166,192,0.55)',
+          transition: 'color 0.28s ease',
+        }}>{String(index).padStart(2, '0')}</span>
+      )}
+      <span style={{
+        fontSize: 'clamp(26px, 4.4vw, 42px)', fontWeight: 500,
+        letterSpacing: '0.5px', textTransform: 'uppercase', lineHeight: 1.04,
+        whiteSpace: 'nowrap',
+      }}>{label}</span>
     </button>
   )
 }
