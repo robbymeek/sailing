@@ -81,19 +81,19 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-  // Embedded exit fade — as the home frame scrolls off toward the film bridge,
-  // fade the WHOLE frame (photo, orb, text) to pure black, so the cut onto the
-  // bridge's black title card lands black-on-black instead of photo-on-black.
+  // Exit fade — as the home frame scrolls off toward the white overview,
+  // fade the WHOLE frame (photo, orb, text) to pure white, so the hand-off
+  // onto HomeOverview lands white-on-white instead of photo-on-white.
   // Pure closed form of scroll (opacity = f(rect.top) — reverse scroll replays
   // exactly, same invariant as Biography's parallax, which uses this same rAF +
-  // getBoundingClientRect pattern on this very page). The veil is pointer-
-  // events: none throughout, so the orb hotspot and nav links stay live while
-  // it is still translucent.
+  // getBoundingClientRect pattern). The veil is pointer-events: none
+  // throughout, so the orb hotspot and nav links stay live while it is still
+  // translucent.
   const homeRootRef = useRef(null)
   const exitVeilRef = useRef(null)
   useEffect(() => {
-    // Runs on both mobile and desktop — the desktop home scrolls into the biography
-    // too, so its frame fades to black the same way, and the live orb is stuck to the
+    // Runs on both mobile and desktop — both scroll into the overview below,
+    // so the frame fades to white the same way, and the live orb is stuck to the
     // page (translated up + faded with the veil) rather than fading early.
     let rafId
     let orbTouched = false
@@ -101,8 +101,8 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
       const root = homeRootRef.current
       if (root) {
         const rect = root.getBoundingClientRect()
-        // Fully black once 62% of the frame has scrolled away — the remaining
-        // 38% exits as pure black flush with the bridge below.
+        // Fully white once 62% of the frame has scrolled away — the remaining
+        // 38% exits as pure white flush with the overview below.
         const gone = Math.min(1, Math.max(0, -rect.top / (rect.height * 0.62)))
         const veil = exitVeilRef.current
         if (veil) veil.style.opacity = gone
@@ -536,15 +536,13 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
       {/* Accessible page heading — the home's visual identity is the orb + the
           in-orb LOS ANGELES render (canvas, not DOM), so carry the document's
           <h1> here for screen readers and crawlers without changing the withheld
-          look. Skipped in the mobile embed, where Biography supplies the heading. */}
-      {!embedded && (
-        <h1 style={{
-          position: 'absolute', width: 1, height: 1, padding: 0, margin: -1,
-          overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0,
-        }}>
-          Robby Meek — sailing for LA 2028
-        </h1>
-      )}
+          look. Both layouts: the overview below heads its sections at h2/h3. */}
+      <h1 style={{
+        position: 'absolute', width: 1, height: 1, padding: 0, margin: -1,
+        overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0,
+      }}>
+        Robby Meek — sailing for LA 2028
+      </h1>
 
       {/* Rest-state background — hiking shot, sits under everything and shows
           through the light 0.42 rest scrim once the intro settles. Toggled
@@ -745,8 +743,8 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
         <>
           {/* Bottom-left: the blurb with the second sponsor lockup flush in the very
               bottom-left corner beneath it — the white box butts against the screen's
-              left edge and the black ROBBY MEEK bridge below (no corner inset). One
-              column so the blurb + lockup share a width and adapt together on resize. */}
+              left edge and bottom (no corner inset). One column so the blurb +
+              lockup share a width and adapt together on resize. */}
           <div
             style={{
               position: 'absolute', left: 0, bottom: 0,
@@ -808,17 +806,17 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
 
 
       {/* Exit veil — topmost layer of the home frame; the scroll-linked effect
-          above drives its opacity 0→1 as the frame scrolls off, sinking everything
-          (photo, nav, sponsors) into the film bridge's black. On desktop the live
-          orb is a separate body-level overlay, faded in lockstep via scrolledAway.
-          Never interactive; invisible at rest. Now on desktop too (it scrolls). */}
+          above drives its opacity 0→1 as the frame scrolls off, dissolving
+          everything (photo, nav, sponsors) into the white overview below. On
+          desktop the live orb is a separate body-level overlay, faded in
+          lockstep via setScrollFade. Never interactive; invisible at rest. */}
       {(
         <div
           ref={exitVeilRef}
           aria-hidden="true"
           style={{
             position: 'absolute', inset: 0,
-            background: 'rgb(0,0,0)',
+            background: 'rgb(255,255,255)', // must match HomeOverview's white
             opacity: 0,
             pointerEvents: 'none',
             zIndex: 60,

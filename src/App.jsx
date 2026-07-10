@@ -8,7 +8,7 @@ import blackBridge from './lib/blackBridge'
 // (which the desktop banner's Donate CTA owns) — derived so the two can't drift.
 const COMPACT_PAGES = [...MENU_PAGES, 'Support']
 import MainView from './pages/MainView'
-import HomeFilmBridge from './components/HomeFilmBridge'
+import HomeOverview from './components/HomeOverview'
 import Biography from './pages/Biography'
 import Contact from './pages/Contact'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -118,35 +118,19 @@ const CURRENT_MAP = {
   '/the-road': 'The Road',
 }
 
-// On mobile, the home route renders MainView + Biography as one scrollable page.
-// HomeFilmBridge sits between them: a black title-card beat so the dark home
-// frame hands off to the biography's film strip instead of hard-cutting into it
-// (MainView's embedded exit fade lands on the same black).
-function MobileHome({ onNavigate, bioSectionRef }) {
+// Home route (both layouts): the cinematic MainView frame, then the white
+// editorial overview. MainView's exit veil fades the frame to pure white on
+// scroll so the hand-off lands white-on-white; the live orb still morphs →
+// The Road on click. MainView is KEYED to the layout mode: `embedded` gates
+// mount-time state (the useOrb lazy init, the orbOverlay attach effect) that
+// a prop flip alone would not rebuild — the key forces the same full remount
+// the old MobileHome/DesktopHome type-swap produced during the ~250ms window
+// before App's home breakpoint-cross reload (below) lands.
+function HomeShell({ onNavigate, isMobile }) {
   return (
     <div>
-      <MainView onNavigate={onNavigate} embedded />
-      <HomeFilmBridge />
-      <div ref={bioSectionRef}>
-        <Biography onNavigate={onNavigate} scrollOffsetRef={bioSectionRef} />
-      </div>
-    </div>
-  )
-}
-
-// Desktop home mirrors MobileHome: MainView + HomeFilmBridge (the ROBBY MEEK
-// wordmark beat) + Biography as one scrollable page. MainView's exit-veil fades
-// the frame (photo, orb, nav, sponsors) to black on scroll so the hand-off into
-// the bridge matches, exactly like mobile. The live orb still morphs → The Road
-// on click; scrolling reveals the biography below.
-function DesktopHome({ onNavigate, bioSectionRef }) {
-  return (
-    <div>
-      <MainView onNavigate={onNavigate} />
-      <HomeFilmBridge />
-      <div ref={bioSectionRef}>
-        <Biography onNavigate={onNavigate} scrollOffsetRef={bioSectionRef} />
-      </div>
+      <MainView key={isMobile ? 'mobile' : 'desktop'} onNavigate={onNavigate} embedded={isMobile} />
+      <HomeOverview onNavigate={onNavigate} isMobile={isMobile} />
     </div>
   )
 }
@@ -180,8 +164,6 @@ export default function App() {
     if (pathname === '/') return 'rgb(0,0,0)' // pure black for the cinematic home
     return INNER_BG[pathname] || 'rgb(19,23,31)'
   }
-
-  const mobileBioRef = useRef(null)
 
   const go = (page, state) => {
     // On the home route (one long scrollable page on BOTH layouts), "Home" scrolls to top
@@ -567,13 +549,7 @@ export default function App() {
         onTransitionEnd={handleExitComplete}
       >
         <Routes location={displayLocation}>
-          <Route path="/" element={
-            isMobile ? (
-              <MobileHome onNavigate={go} bioSectionRef={mobileBioRef} />
-            ) : (
-              <DesktopHome onNavigate={go} bioSectionRef={mobileBioRef} />
-            )
-          } />
+          <Route path="/" element={<HomeShell onNavigate={go} isMobile={isMobile} />} />
           <Route path="/biography" element={<Biography onNavigate={go} />} />
           <Route path="/team" element={
             <Suspense fallback={<div style={{ height: '100dvh', background: 'rgb(12,14,18)' }} />}>

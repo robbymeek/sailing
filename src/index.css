@@ -258,9 +258,48 @@ button {
 .sailing-banner-video::-webkit-media-controls,
 .sailing-banner-video::-webkit-media-controls-start-playback-button,
 .sailing-banner-video::-webkit-media-controls-overlay-play-button,
-.sailing-banner-video::-webkit-media-controls-panel {
+.sailing-banner-video::-webkit-media-controls-panel,
+/* Home overview film: same guard — its own chip is the only visible control. */
+.ho-film-video::-webkit-media-controls,
+.ho-film-video::-webkit-media-controls-start-playback-button,
+.ho-film-video::-webkit-media-controls-overlay-play-button,
+.ho-film-video::-webkit-media-controls-panel {
   display: none !important;
   -webkit-appearance: none !important;
   opacity: 0 !important;
   pointer-events: none !important;
+}
+
+/* ============ HomeOverview (home editorial index) ============ */
+
+/* Route action: thin accent underline that extends toward the arrow on
+   hover/focus. The 24px inset ≈ gap + arrow width, so at rest the line
+   stops at the label. */
+.ho-action::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 24px; bottom: 0;
+  height: 2px;
+  background: rgb(10,85,235);
+  transition: right 0.25s ease;
+}
+.ho-action:hover::after,
+.ho-action:focus-visible::after { right: 0; }
+.ho-action:focus-visible {
+  outline: 2px solid #1E40FF;
+  outline-offset: 3px;
+}
+
+/* Team photo: subtle zoom, clipped by its sharp-cornered frame. */
+.ho-media-zoom { transition: transform 0.6s cubic-bezier(0.2, 0.6, 0.2, 1); }
+.ho-zoom-frame:hover .ho-media-zoom { transform: scale(1.03); }
+
+/* Film pause/play chip (sits on the white margin under the frame). */
+.ho-film-chip { transition: border-color 0.2s ease, color 0.2s ease; }
+.ho-film-chip:hover { border-color: rgb(10,85,235); color: rgb(10,85,235); }
+.ho-film-chip:focus-visible { outline: 2px solid #1E40FF; outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ho-action::after, .ho-media-zoom, .ho-film-chip { transition: none; }
+  .ho-zoom-frame:hover .ho-media-zoom { transform: none; }
 }
