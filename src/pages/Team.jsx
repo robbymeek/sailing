@@ -2,8 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import usePageEntrance from '../hooks/usePageEntrance'
 import Footer from '../components/Footer'
 import SailboatIcon from '../components/SailboatIcon'
-import ExitNav from '../components/ExitNav'
-import { EXIT_CARDS } from '../components/exitCards'
 // Opening statement + era photos that live in src/assets (the rest come from public/)
 import teamPhoto from '../assets/exit-cards/exit-path.jpg'
 import usstPhoto from '../assets/home-intro/p1177244.jpeg'
@@ -1477,15 +1475,6 @@ export default function Team({ onNavigate }) {
             </p>
           </div>
         </div>
-      </div>
-
-      {/* Where to next — Support stays LAST in the stack (house rule). */}
-      <div style={{ padding: isMobile ? '20px 0 52px' : '32px 0 84px' }}>
-        <ExitNav
-          links={[EXIT_CARDS.home, EXIT_CARDS.road, EXIT_CARDS.biography, EXIT_CARDS.support]}
-          onNavigate={onNavigate}
-          isMobile={isMobile}
-        />
       </div>
 
       <Footer variant="dark" onNavigate={onNavigate} />

@@ -10,19 +10,26 @@
 // values, so callers that pass none — notably the MOBILE sticky bar (App.jsx) — render exactly as
 // before. The desktop home (MainView.jsx) passes clamp() strings so the lockup scales with the
 // viewport. Each accepts a number or any CSS length string (incl. clamp()).
+// `disabled` (optional) marks the current-page state on /support: it drops the button
+// from the tab order and keyboard activation, not just pointer clicks.
 export default function DonateLockup({
-  onClick, color = 'var(--fg)', style,
+  onClick, color = 'var(--fg)', style, disabled,
   supportSize = 15, cursiveSize = 13, arrowH = 7, gap = 9, padding = '6px 12px',
 }) {
   return (
     <button
       className="donate-lockup"
       onClick={onClick}
+      disabled={disabled}
+      aria-disabled={disabled || undefined}
       aria-label="Donate and Support"
       style={{
         display: 'inline-flex', alignItems: 'center', gap,
         background: 'none', border: 'none', cursor: 'pointer', padding,
         color, fontFamily: 'inherit', whiteSpace: 'nowrap',
+        // Ease colour flips in step with the bars' hamburger/Menu siblings (they
+        // already transition color/background 0.3s when --fg changes per route).
+        transition: 'color 0.3s ease',
         ...style,
       }}
     >

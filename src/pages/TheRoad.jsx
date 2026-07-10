@@ -4,12 +4,10 @@ import CHAPTERS, { formatVenues, TOUR_STATS } from '../data/tourChapters'
 import createGlobeScene from '../lib/globeScene'
 import { hasWebGL2 } from '../lib/webglSupport'
 import Footer from '../components/Footer'
-import ExitNav from '../components/ExitNav'
+import { DESKTOP_BANNER_H } from '../components/HomeSponsorStrip'
 import useCountdown from '../hooks/useCountdown'
 import usePageEntrance from '../hooks/usePageEntrance'
 import useTextSpray from '../hooks/useTextSpray'
-// Exit-banner cards — canonical definitions shared by every page's ExitNav.
-import { EXIT_CARDS } from '../components/exitCards'
 
 const BASE = import.meta.env.BASE_URL
 
@@ -882,7 +880,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
           zoomed globe (transparent lead-in), then everything scrolls through the top —
           the headline dissolving into spray as it crosses (see EndBlock). */}
       <div style={{ position: 'relative', zIndex: 2 }}>
-        <EndBlock onNavigate={onNavigate} isMobile={isMobile} />
+        <EndBlock onNavigate={onNavigate} />
       </div>
     </div>
   )
@@ -1228,8 +1226,13 @@ function BackButton({ onNavigate, docked, finaleT, isMobile }) {
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        // On mobile the docked position clears the sticky menu bar (52px tall at top:0).
-        position: 'fixed', top: docked ? (isMobile ? 60 : 20) : 74, left: '50%', transform: 'translateX(-50%)',
+        // Clears the sticky nav bars: mobile's 52px menu bar, desktop's sponsor banner
+        // (DESKTOP_BANNER_H tall, always visible) — in both docked and floating states.
+        position: 'fixed',
+        top: docked
+          ? (isMobile ? 60 : `calc(${DESKTOP_BANNER_H} + 12px)`)
+          : (isMobile ? 74 : `calc(${DESKTOP_BANNER_H} + 26px)`),
+        left: '50%', transform: 'translateX(-50%)',
         zIndex: 6,
         opacity: 1 - Math.min(1, finaleT * 2),
         pointerEvents: finaleT > 0.4 ? 'none' : 'auto',
@@ -1338,12 +1341,7 @@ function TourControls({ tour, playing }) {
   )
 }
 
-// Fancy image-backed exit cards for the end of the tour — richer than the flat
-// Biography "explore" cards: a sailing photo per destination, dark scrim, and a
-// lift + zoom + royal-blue glow on hover.
-const EXIT_LINKS = [EXIT_CARDS.home, EXIT_CARDS.biography, EXIT_CARDS.team, EXIT_CARDS.support]
-
-function EndBlock({ onNavigate, isMobile }) {
+function EndBlock({ onNavigate }) {
   const { days, hrs, mins, secs } = useCountdown(new Date('2028-07-14T00:00:00'))
   const blockRef = useRef(null)
   const h1Ref = useRef(null)
@@ -1412,13 +1410,12 @@ function EndBlock({ onNavigate, isMobile }) {
           </p>
         </div>
 
-        {/* exit nav on solid black (keeps the fixed globe canvas covered) */}
+        {/* back-to-top on solid black (keeps the fixed globe canvas covered) */}
         <div style={{
           background: 'rgb(0,0,0)',
-          padding: '72px 0 90px',
+          padding: '48px 0 72px',
         }}>
-          <ExitNav links={EXIT_LINKS} onNavigate={onNavigate} isMobile={isMobile} />
-          <div style={{ textAlign: 'center', marginTop: 44 }}>
+          <div style={{ textAlign: 'center' }}>
             <BackToTop />
           </div>
         </div>

@@ -4,15 +4,10 @@ import useCountdown from '../hooks/useCountdown'
 import useTextSpray from '../hooks/useTextSpray'
 import RESULT_GROUPS from '../data/events'
 import { ResultRow, GroupHeader, EventModal } from '../components/eventUI'
-import ExitNav from '../components/ExitNav'
 import SailingBanner from '../components/SailingBanner'
-import { EXIT_CARDS } from '../components/exitCards'
 import ctaBg from '../assets/home-intro/img-8856.jpg'
 
 const BASE = import.meta.env.BASE_URL
-
-// Support stays LAST in the stack on every page (bottom on mobile, far right on desktop).
-const BIO_EXIT_LINKS = [EXIT_CARDS.home, EXIT_CARDS.team, EXIT_CARDS.road, EXIT_CARDS.support]
 
 const REGATTAS = [
   {
@@ -589,11 +584,6 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
           </div>
         </div>
 
-      </div>
-
-      {/* ===== WHERE TO NEXT — parallelogram nav (between events and press) ===== */}
-      <div style={{ background: '#000', padding: isMobile ? '40px 0 52px' : '64px 0 84px' }}>
-        <ExitNav links={BIO_EXIT_LINKS} onNavigate={onNavigate} isMobile={isMobile} />
       </div>
 
       {/* ===== PRESS + FOOTER — black section ===== */}
