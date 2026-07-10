@@ -14,7 +14,7 @@ export default function Footer({ variant, onNavigate }) {
           ['Biography', 'Biography'],
           ['The Team', 'The Team'],
           ['Contact', 'Contact'],
-          ['Support', 'Back the Campaign'],
+          ['Support', 'Donate and Support'],
         ].map(([key, label], i, arr) => (
           <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button

@@ -21,5 +21,5 @@ export const EXIT_CARDS = {
   biography: { label: 'Biography', page: 'Biography', img: exitBio },
   team: { label: 'The Team', page: 'The Team', img: exitPath },
   road: { label: 'The Road', page: 'The Road', img: exitRoad },
-  support: { label: 'Back the Campaign', page: 'Support', light: true },
+  support: { label: 'Donate and Support', page: 'Support', light: true },
 }
