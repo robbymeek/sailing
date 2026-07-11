@@ -104,16 +104,15 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
         const rect = root.getBoundingClientRect()
         // Fully black once 62% of the frame has scrolled away — the remaining
         // 38% exits as pure black flush with the helm section below. The
-        // blackout is a top-down gradient: solid above `edge`, clear 44%
-        // further down, so it starts at the top of the page and sweeps down
-        // as the panel rises. At gone=0 the edge sits at -44% → fully clear;
-        // at gone=1 it reaches 100% → fully black. One style write per frame.
+        // blackout is a top-down sweep: the veil is a 144%-tall black sheet
+        // whose bottom 44% feathers to clear (static gradient), slid down
+        // from above the frame by a composited transform — same engine path
+        // as the old opacity write, no per-frame repaint. At gone=0 the sheet
+        // sits fully above the frame (translateY(-100%) of itself → clear);
+        // at gone=1 its solid body covers the whole frame → fully black.
         const gone = Math.min(1, Math.max(0, -rect.top / (rect.height * 0.62)))
         const veil = exitVeilRef.current
-        if (veil) {
-          const edge = gone * 144 - 44
-          veil.style.background = `linear-gradient(to bottom, rgb(0,0,0) ${edge}%, rgba(0,0,0,0) ${edge + 44}%)`
-        }
+        if (veil) veil.style.transform = `translate3d(0, ${(gone - 1) * 100}%, 0)`
         // Desktop live orb: stick it to the page. It lives in a fixed body-level
         // overlay (survives the morph route-swap), so translate it UP by the scroll
         // and fade it in lockstep with the veil — the whole centerpiece scrolls away
@@ -814,19 +813,24 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
 
 
       {/* Exit veil — topmost layer of the home frame; the scroll-linked effect
-          above sweeps a top-down BLACK gradient over it as the frame scrolls
-          off, blacking out everything (photo, nav, sponsors) from the top of
-          the page while the helm panel rises from the bottom. On desktop the
-          live orb is a separate body-level overlay, faded in lockstep via
-          setScrollFade. Never interactive; invisible at rest (edge parked
-          above the frame — must match the initial edge math in the effect). */}
+          above slides this black sheet down over the frame as it scrolls off,
+          blacking everything out (photo, nav, sponsors) from the top of the
+          page while the helm panel rises from the bottom. The sheet is 144%
+          of the frame tall with its bottom 44% feathering to clear, driven by
+          transform only (composited — no per-frame repaint); the hero root's
+          overflow:hidden clips it while it is parked above the frame. On
+          desktop the live orb is a separate body-level overlay, faded in
+          lockstep via setScrollFade. Never interactive; invisible at rest
+          (transform parked at -100% — must match the effect's gone=0 write). */}
       {(
         <div
           ref={exitVeilRef}
           aria-hidden="true"
           style={{
-            position: 'absolute', inset: 0,
-            background: 'linear-gradient(to bottom, rgb(0,0,0) -44%, rgba(0,0,0,0) 0%)',
+            position: 'absolute', left: 0, right: 0, top: 0,
+            height: '144%',
+            background: 'linear-gradient(to bottom, rgb(0,0,0) 69.44%, rgba(0,0,0,0) 100%)',
+            transform: 'translate3d(0, -100%, 0)',
             pointerEvents: 'none',
             zIndex: 60,
           }}
