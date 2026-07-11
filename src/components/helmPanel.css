@@ -226,12 +226,19 @@
 }
 
 /* --- radar ------------------------------------------------------- */
+/* The scope must be a TRUE square (border-radius:50% + %-positioned blips
+   go elliptical otherwise, and `height:100% + aspect-ratio + max-width`
+   breaks whenever the module body is taller than wide — max constraints
+   don't transfer back through an explicit height). The body is a size
+   container so the wrap can inscribe against BOTH axes. */
+.hp-mod--radar .hp-mod-body {
+  container-type: size;
+}
 .hp-scope-wrap {
   position: relative;
-  height: 100%;
+  width: min(100cqw, 100cqh);
   aspect-ratio: 1;
-  max-width: 100%;
-  margin: 0 auto;
+  margin: auto;
 }
 .hp-scope {
   position: absolute;

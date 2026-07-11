@@ -13,7 +13,7 @@ const DEG = Math.PI / 180
 const NM_PER_RAD = 3440.065 // Earth mean radius in nautical miles (matches TheRoad)
 
 // Great-circle central angle (radians, 0..π) between two {lat,lng} points.
-export function centralAngle(a, b) {
+function centralAngle(a, b) {
   const la1 = a.lat * DEG
   const la2 = b.lat * DEG
   const dLa = (b.lat - a.lat) * DEG

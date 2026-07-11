@@ -105,7 +105,9 @@ function SegDisplay({ text, color = 'var(--hp-ember)', glow = 'rgba(255, 122, 47
       x += 50
     }
   }
-  const w = x - 10 + 6
+  // +2 covers the group's translate(8,3) so the last digit's skewed corner
+  // is never clipped at the right edge of the viewBox.
+  const w = x + 2
   const h = labels ? 100 : 86
   return (
     <svg
@@ -136,6 +138,7 @@ function SegDisplay({ text, color = 'var(--hp-ember)', glow = 'rgba(255, 122, 47
           labels.map((l) => {
             const a = glyphs[l.from]
             const b = glyphs[l.to]
+            if (!a || !b) return null // a label span outside the glyphs is a bug upstream — never throw in render
             const cx = (a.x + b.x + 40) / 2
             return (
               <text
@@ -158,11 +161,14 @@ function SegDisplay({ text, color = 'var(--hp-ember)', glow = 'rgba(255, 122, 47
 }
 
 // The ticking T-MINUS clock, isolated so the 1s tick re-renders only this.
+// Days are padded to 3 digits so the glyph count never changes — the label
+// spans below index into the glyph list, and a 12→11 glyph shift at the
+// 100-day mark would misalign them (a bare '099' also reads instrument-true).
 function CountdownSeg() {
   const { days, hrs, mins, secs } = useCountdown(LA_TARGET)
   return (
     <SegDisplay
-      text={`${days}:${p2(hrs)}:${p2(mins)}:${p2(secs)}`}
+      text={`${p3(days)}:${p2(hrs)}:${p2(mins)}:${p2(secs)}`}
       labels={[
         { text: 'DAYS', from: 0, to: 2 },
         { text: 'HRS', from: 4, to: 5 },
@@ -465,8 +471,18 @@ function HeelArc({ value = 12, max = 35 }) {
 // Next-event LCD — green mono text block, same fact as Biography's chrome.
 // --------------------------------------------------------------------------
 function NextEventLCD() {
-  const days = Math.max(0, Math.ceil((NEXT_EVENT.ms - Date.now()) / 864e5))
-  const line = { fontFamily: 'var(--hp-mono)', color: 'var(--hp-phos)' }
+  // Live via the shared hook (isolated here, so the 1s tick re-renders only
+  // this small block) — a mount-time Date.now() would go stale across
+  // midnight in a long-lived tab while the T-MINUS clock keeps ticking.
+  const { days } = useCountdown(NEXT_EVENT.ms)
+  const line = {
+    fontFamily: 'var(--hp-mono)',
+    color: 'var(--hp-phos)',
+    minWidth: 0,
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  }
   return (
     <div className="hp-screen" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 5, padding: '10px 14px' }}>
       <div style={{ ...line, fontSize: 9, opacity: 0.55, letterSpacing: '0.2em' }}>NEXT EVENT</div>
@@ -537,7 +553,7 @@ export default function HelmPanel() {
     <div
       className="hp-root"
       role="img"
-      aria-label="Helm station: campaign instruments — radar scope sweeping the 2026 venues, the 2026 to 2028 voyage plan, wind and heading gauges, and the countdown to the LA 2028 Olympics."
+      aria-label="Helm station: campaign instruments. Radar scope sweeping the 2026 venues, the 2026 to 2028 voyage plan, wind and heading gauges, and the countdown to the LA 2028 Olympics."
     >
       <Screws inset={9} />
       <div className="hp-face">

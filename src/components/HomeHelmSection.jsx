@@ -30,27 +30,37 @@ export default function HomeHelmSection({ isMobile = false }) {
     ? '64px 14px 16px' // 52px pinned menu bar + breathing room
     : `calc(${DESKTOP_BANNER_H} + 14px) clamp(18px, 2.8vw, 44px) clamp(16px, 2.8vh, 36px)`
   return (
-    <section
-      aria-label="Helm station"
-      style={{
-        position: 'relative',
-        height: `calc(${stageH} + ${DWELL_VH}vh)`,
-        background: '#000', // the void the panel floats in — matches the hero's blacked-out exit
-      }}
-    >
-      <div
+    <>
+      <section
+        aria-label="Helm station"
         style={{
-          position: 'sticky',
-          top: 0,
-          height: stageH,
-          overflow: 'hidden',
-          boxSizing: 'border-box',
-          padding: pad,
-          display: 'flex',
+          position: 'relative',
+          height: `calc(${stageH} + ${DWELL_VH}vh)`,
+          background: '#000', // the void the panel floats in — matches the hero's blacked-out exit
         }}
       >
-        <HelmPanel />
-      </div>
-    </section>
+        <div
+          style={{
+            position: 'sticky',
+            top: 0,
+            height: stageH,
+            overflow: 'hidden',
+            boxSizing: 'border-box',
+            padding: pad,
+            display: 'flex',
+          }}
+        >
+          <HelmPanel />
+        </div>
+      </section>
+      {/* Mobile only: with the URL bar collapsed the viewport is 100lvh but
+          the stage is 100svh, so for the last (lvh−svh) px before the sticky
+          releases, whatever follows the section peeks up under the seated
+          panel. This black shim fills exactly that window so the hard
+          black→white cut lands only once the panel is actually moving. */}
+      {isMobile && (
+        <div aria-hidden="true" style={{ height: 'calc(100lvh - 100svh)', background: '#000' }} />
+      )}
+    </>
   )
 }
