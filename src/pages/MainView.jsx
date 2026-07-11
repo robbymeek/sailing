@@ -81,31 +81,39 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-  // Exit fade — as the home frame scrolls off toward the white overview,
-  // fade the WHOLE frame (photo, orb, text) to pure white, so the hand-off
-  // onto HomeOverview lands white-on-white instead of photo-on-white.
-  // Pure closed form of scroll (opacity = f(rect.top) — reverse scroll replays
-  // exactly, same invariant as Biography's parallax, which uses this same rAF +
-  // getBoundingClientRect pattern). The veil is pointer-events: none
-  // throughout, so the orb hotspot and nav links stay live while it is still
-  // translucent.
+  // Exit fade — as the home frame scrolls off toward the helm station below,
+  // black out the WHOLE frame (photo, orb, text) from the TOP DOWN: a black
+  // gradient veil whose edge sweeps down the frame while the control panel
+  // rides up from the bottom of the viewport (HomeHelmSection, next in flow).
+  // Pure closed form of scroll (gradient edge = f(rect.top) — reverse scroll
+  // replays exactly, same invariant as Biography's parallax, which uses this
+  // same rAF + getBoundingClientRect pattern). The veil is pointer-events:
+  // none throughout, so the orb hotspot and nav links stay live while it is
+  // still translucent.
   const homeRootRef = useRef(null)
   const exitVeilRef = useRef(null)
   useEffect(() => {
-    // Runs on both mobile and desktop — both scroll into the overview below,
-    // so the frame fades to white the same way, and the live orb is stuck to the
-    // page (translated up + faded with the veil) rather than fading early.
+    // Runs on both mobile and desktop — both scroll into the helm section
+    // below, so the frame blacks out the same way, and the live orb is stuck
+    // to the page (translated up + faded with the veil) rather than fading early.
     let rafId
     let orbTouched = false
     const update = () => {
       const root = homeRootRef.current
       if (root) {
         const rect = root.getBoundingClientRect()
-        // Fully white once 62% of the frame has scrolled away — the remaining
-        // 38% exits as pure white flush with the overview below.
+        // Fully black once 62% of the frame has scrolled away — the remaining
+        // 38% exits as pure black flush with the helm section below. The
+        // blackout is a top-down gradient: solid above `edge`, clear 44%
+        // further down, so it starts at the top of the page and sweeps down
+        // as the panel rises. At gone=0 the edge sits at -44% → fully clear;
+        // at gone=1 it reaches 100% → fully black. One style write per frame.
         const gone = Math.min(1, Math.max(0, -rect.top / (rect.height * 0.62)))
         const veil = exitVeilRef.current
-        if (veil) veil.style.opacity = gone
+        if (veil) {
+          const edge = gone * 144 - 44
+          veil.style.background = `linear-gradient(to bottom, rgb(0,0,0) ${edge}%, rgba(0,0,0,0) ${edge + 44}%)`
+        }
         // Desktop live orb: stick it to the page. It lives in a fixed body-level
         // overlay (survives the morph route-swap), so translate it UP by the scroll
         // and fade it in lockstep with the veil — the whole centerpiece scrolls away
@@ -806,18 +814,19 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
 
 
       {/* Exit veil — topmost layer of the home frame; the scroll-linked effect
-          above drives its opacity 0→1 as the frame scrolls off, dissolving
-          everything (photo, nav, sponsors) into the white overview below. On
-          desktop the live orb is a separate body-level overlay, faded in
-          lockstep via setScrollFade. Never interactive; invisible at rest. */}
+          above sweeps a top-down BLACK gradient over it as the frame scrolls
+          off, blacking out everything (photo, nav, sponsors) from the top of
+          the page while the helm panel rises from the bottom. On desktop the
+          live orb is a separate body-level overlay, faded in lockstep via
+          setScrollFade. Never interactive; invisible at rest (edge parked
+          above the frame — must match the initial edge math in the effect). */}
       {(
         <div
           ref={exitVeilRef}
           aria-hidden="true"
           style={{
             position: 'absolute', inset: 0,
-            background: 'rgb(255,255,255)', // must match HomeOverview's white
-            opacity: 0,
+            background: 'linear-gradient(to bottom, rgb(0,0,0) -44%, rgba(0,0,0,0) 0%)',
             pointerEvents: 'none',
             zIndex: 60,
           }}

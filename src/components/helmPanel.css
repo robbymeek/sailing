@@ -1,0 +1,565 @@
+/* ------------------------------------------------------------------ */
+/* HELM STATION — the home control panel (HelmPanel.jsx)               */
+/* Dark nautical instrument console: steel casing, brushed navy panel, */
+/* phosphor-green screens, ember LED readouts, white-needle gauges.    */
+/* All motion here is cosmetic CSS animation (sweep, blips, lamps,     */
+/* needle idle wobble) — the scroll entrance is pure document flow in  */
+/* HomeHelmSection. Reduced motion parks everything.                   */
+/* ------------------------------------------------------------------ */
+
+.hp-root {
+  --hp-abyss: #020409;      /* void / black bars around the panel      */
+  --hp-navy: #020b2d;       /* site Night Water — glow + gradient tint */
+  --hp-case: #0b1626;       /* outer casing steel                      */
+  --hp-panel: #101e31;      /* panel face                              */
+  --hp-bezel: #05090f;      /* instrument bezels                       */
+  --hp-phos: #4de690;       /* radar / LCD phosphor green              */
+  --hp-ember: #ff7a2f;      /* LED seven-seg + heel arc                */
+  --hp-red: #ff4b36;        /* warning lamp / horn plate               */
+  --hp-bone: #e9eff8;       /* needles + stencil labels                */
+  --hp-steel: #93a2b8;      /* screws, rims                            */
+  --hp-mono: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+  --hp-sweep-s: 4.4s;       /* radar beam period — blips sync to this  */
+
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  background: linear-gradient(178deg, #101d30 0%, #0b1626 46%, #071020 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(210, 226, 248, 0.09),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.65),
+    inset 2px 0 6px rgba(0, 0, 0, 0.35),
+    inset -2px 0 6px rgba(0, 0, 0, 0.35),
+    0 24px 90px rgba(0, 0, 0, 0.85);
+  padding: clamp(10px, 1.4vw, 20px);
+  overflow: hidden;
+}
+
+/* cold top light falling on the console, like the reference photo */
+.hp-root::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background:
+    radial-gradient(120% 85% at 50% -12%, rgba(132, 168, 214, 0.11), transparent 58%),
+    radial-gradient(90% 60% at 50% 115%, rgba(0, 0, 0, 0.5), transparent 60%);
+}
+
+/* brushed metal grain on the face */
+.hp-face {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  background:
+    repeating-linear-gradient(
+      92deg,
+      rgba(255, 255, 255, 0.014) 0 1px,
+      rgba(0, 0, 0, 0.02) 1px 3px
+    ),
+    linear-gradient(180deg, #13223a 0%, #0f1d31 55%, #0b1728 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(190, 212, 240, 0.07),
+    inset 0 0 34px rgba(0, 0, 0, 0.45);
+  padding: clamp(8px, 1.1vw, 16px);
+}
+
+/* ------------------------------------------------------------------ */
+/* Screws                                                              */
+/* ------------------------------------------------------------------ */
+.hp-screw {
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #7e8da0 0%, #55606f 34%, #232b36 78%, #10151c 100%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.35),
+    0 1px 2px rgba(0, 0, 0, 0.8);
+  z-index: 3;
+}
+.hp-screw::after {
+  content: '';
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: calc(50% - 1px);
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(180deg, #0a0e14, #2c3542);
+  transform: rotate(var(--slot, 0deg));
+}
+.hp-screw--sm { width: 9px; height: 9px; }
+.hp-screw--sm::after { height: 1.5px; top: calc(50% - 0.75px); }
+
+/* ------------------------------------------------------------------ */
+/* Header strip — engraved station plates                              */
+/* ------------------------------------------------------------------ */
+.hp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px clamp(24px, 2.6vw, 40px) clamp(8px, 1vh, 14px);
+  flex: none;
+}
+.hp-plate {
+  display: inline-block;
+  padding: 5px 14px 4px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #16233a, #0c1727);
+  box-shadow:
+    inset 0 1px 0 rgba(200, 218, 244, 0.1),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.7),
+    0 1px 0 rgba(160, 190, 230, 0.05);
+  color: rgba(233, 239, 248, 0.82);
+  font-size: clamp(10px, 1vw, 13px);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.9), 0 1px 0 rgba(190, 214, 244, 0.08);
+  white-space: nowrap;
+}
+.hp-plate--sub {
+  letter-spacing: 0.3em;
+  color: rgba(233, 239, 248, 0.55);
+}
+
+/* ------------------------------------------------------------------ */
+/* Instrument grid                                                     */
+/* ------------------------------------------------------------------ */
+.hp-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  gap: clamp(8px, 1vw, 15px);
+  grid-template-columns: minmax(0, 4.4fr) minmax(0, 3fr) minmax(0, 3fr) minmax(0, 2.7fr);
+  grid-template-rows: minmax(0, 2.6fr) minmax(0, 2.6fr) minmax(0, 2.1fr);
+  grid-template-areas:
+    'radar chart chart wind'
+    'radar chart chart hdg'
+    'days  nm    heel  next';
+}
+.hp-mod--radar { grid-area: radar; }
+.hp-mod--chart { grid-area: chart; }
+.hp-mod--wind  { grid-area: wind; }
+.hp-mod--hdg   { grid-area: hdg; }
+.hp-mod--days  { grid-area: days; }
+.hp-mod--nm    { grid-area: nm; }
+.hp-mod--heel  { grid-area: heel; }
+.hp-mod--next  { grid-area: next; }
+
+/* every instrument sits in its own bolted module */
+.hp-mod {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 9px;
+  background: linear-gradient(180deg, #0d1727 0%, #091220 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(190, 212, 240, 0.08),
+    inset 0 -1px 3px rgba(0, 0, 0, 0.7),
+    0 6px 18px rgba(0, 0, 0, 0.5);
+  padding: clamp(6px, 0.8vw, 12px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.hp-mod-label {
+  flex: none;
+  font-size: clamp(8px, 0.72vw, 10.5px);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(233, 239, 248, 0.5);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 1px 12px 0;
+}
+.hp-mod-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ------------------------------------------------------------------ */
+/* Screens (radar + chartplotter + next-event LCD)                     */
+/* ------------------------------------------------------------------ */
+.hp-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 7px;
+  background: #010604;
+  box-shadow:
+    inset 0 0 0 1px rgba(147, 162, 184, 0.14),
+    inset 0 2px 10px rgba(0, 0, 0, 0.9),
+    inset 0 0 40px rgba(2, 11, 45, 0.55);
+  overflow: hidden;
+}
+/* glass sheen */
+.hp-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    118deg,
+    rgba(190, 214, 244, 0.075) 0%,
+    rgba(190, 214, 244, 0.02) 22%,
+    transparent 42%
+  );
+}
+
+/* --- radar ------------------------------------------------------- */
+.hp-scope-wrap {
+  position: relative;
+  height: 100%;
+  aspect-ratio: 1;
+  max-width: 100%;
+  margin: 0 auto;
+}
+.hp-scope {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(18, 76, 47, 0.5) 0%, rgba(4, 26, 16, 0.85) 55%, #010604 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(77, 230, 144, 0.12),
+    inset 0 0 30px rgba(0, 0, 0, 0.85);
+  overflow: hidden;
+}
+/* the rotating beam — bright leading edge at 12 o'clock, afterglow
+   trailing counter-clockwise BEHIND the clockwise rotation */
+.hp-sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 258deg,
+    rgba(77, 230, 144, 0.04) 284deg,
+    rgba(77, 230, 144, 0.16) 330deg,
+    rgba(77, 230, 144, 0.5) 357deg,
+    rgba(140, 255, 190, 0.85) 360deg
+  );
+  animation: hp-sweep var(--hp-sweep-s) linear infinite;
+  transform-origin: 50% 50%;
+}
+.hp-sweep::before {
+  content: '';
+  position: absolute;
+  left: calc(50% - 0.75px);
+  top: 0;
+  width: 1.5px;
+  height: 50%;
+  background: linear-gradient(
+    to top,
+    rgba(77, 230, 144, 0.25),
+    rgba(140, 255, 190, 0.95)
+  );
+}
+@keyframes hp-sweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* venue blips — flash as the beam passes (delay = bearing/360 × period) */
+.hp-blip {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  background: var(--hp-phos);
+  box-shadow: 0 0 6px 1px rgba(77, 230, 144, 0.7);
+  opacity: 0.25;
+  animation: hp-blip var(--hp-sweep-s) linear infinite;
+  animation-delay: var(--blip-delay, 0s);
+}
+@keyframes hp-blip {
+  0% { opacity: 1; }
+  14% { opacity: 0.8; }
+  55% { opacity: 0.32; }
+  92% { opacity: 0.16; }
+  100% { opacity: 1; }
+}
+.hp-blip-tag {
+  position: absolute;
+  left: 7px;
+  top: -4px;
+  font-family: var(--hp-mono);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: rgba(77, 230, 144, 0.6);
+  white-space: nowrap;
+}
+
+/* --- LCD text ------------------------------------------------------ */
+.hp-lcd-line {
+  font-family: var(--hp-mono);
+  fill: var(--hp-phos);
+  color: var(--hp-phos);
+}
+.hp-lcd-glow { text-shadow: 0 0 5px rgba(77, 230, 144, 0.55); }
+
+/* the active leg on the voyage plan crawls like a chartplotter track */
+.hp-active-leg {
+  stroke-dasharray: 5 4;
+  animation: hp-leg-crawl 2.6s linear infinite;
+}
+@keyframes hp-leg-crawl {
+  from { stroke-dashoffset: 18; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Gauges                                                              */
+/* ------------------------------------------------------------------ */
+.hp-needle {
+  transform-origin: var(--pivot, 50% 50%);
+  transform: rotate(var(--angle, 0deg));
+  animation: hp-wobble 3.4s ease-in-out infinite alternate;
+  animation-delay: var(--wobble-delay, 0s);
+}
+@keyframes hp-wobble {
+  from { transform: rotate(calc(var(--angle, 0deg) - 0.7deg)); }
+  to { transform: rotate(calc(var(--angle, 0deg) + 0.7deg)); }
+}
+
+/* ------------------------------------------------------------------ */
+/* Seven-segment LED readouts                                          */
+/* ------------------------------------------------------------------ */
+.hp-seg-on {
+  fill: var(--seg-color, var(--hp-ember));
+  filter: drop-shadow(0 0 3px var(--seg-glow, rgba(255, 122, 47, 0.55)));
+}
+.hp-seg-off { fill: var(--seg-color, var(--hp-ember)); opacity: 0.07; }
+
+/* ------------------------------------------------------------------ */
+/* Utility bar — knobs, toggles, lamps, horn                           */
+/* ------------------------------------------------------------------ */
+.hp-utility {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(8px, 1.4vw, 26px);
+  padding: clamp(8px, 1vh, 14px) clamp(14px, 1.6vw, 26px) 2px;
+}
+.hp-util-group {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 1.3vw, 24px);
+}
+
+.hp-knob-unit,
+.hp-toggle-unit,
+.hp-lamp-unit,
+.hp-horn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.hp-knob {
+  position: relative;
+  width: clamp(34px, 3.4vw, 52px);
+  height: clamp(34px, 3.4vw, 52px);
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 30%, #38465a 0%, #1c2635 46%, #0a111c 100%);
+  box-shadow:
+    inset 0 1px 1px rgba(220, 234, 252, 0.28),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.75),
+    0 3px 8px rgba(0, 0, 0, 0.7);
+}
+/* knurled rim */
+.hp-knob::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    rgba(255, 255, 255, 0.07) 0deg 4deg,
+    transparent 4deg 10deg
+  );
+  -webkit-mask: radial-gradient(circle, transparent 62%, #000 66%);
+  mask: radial-gradient(circle, transparent 62%, #000 66%);
+}
+/* pointer line — rotates around the knob centre */
+.hp-knob::after {
+  content: '';
+  position: absolute;
+  left: calc(50% - 1.25px);
+  top: 12%;
+  width: 2.5px;
+  height: 30%;
+  border-radius: 2px;
+  background: var(--hp-bone);
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.9);
+  /* line spans 12%–42% of knob height; the knob centre (50%) sits at
+     (50−12)/30 ≈ 127% of the line's own height */
+  transform-origin: 50% 126.7%;
+  transform: rotate(var(--knob-angle, 0deg));
+}
+.hp-util-label {
+  font-size: clamp(7px, 0.62vw, 9px);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(233, 239, 248, 0.48);
+  white-space: nowrap;
+}
+
+.hp-toggle {
+  position: relative;
+  width: clamp(16px, 1.5vw, 22px);
+  height: clamp(30px, 2.9vw, 44px);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #060b13, #101a29);
+  box-shadow:
+    inset 0 1px 4px rgba(0, 0, 0, 0.9),
+    0 1px 0 rgba(190, 212, 240, 0.08);
+}
+.hp-toggle::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 58%;
+  aspect-ratio: 1 / 2.1;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #cdd8e6 0%, #77879b 42%, #313d4d 100%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -78%);
+}
+.hp-toggle--off::after {
+  transform: translate(-50%, -22%) scaleY(-1);
+}
+
+.hp-lamp {
+  width: clamp(10px, 1vw, 14px);
+  height: clamp(10px, 1vw, 14px);
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, var(--lamp-hi), var(--lamp-lo) 70%);
+  box-shadow:
+    0 0 0 3px #0a121e,
+    0 0 0 4px rgba(147, 162, 184, 0.28),
+    0 0 var(--lamp-glow, 0px) var(--lamp-glow-c, transparent),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.5);
+}
+.hp-lamp--green {
+  --lamp-hi: #8affc2;
+  --lamp-lo: #17aa5e;
+  --lamp-glow: 9px;
+  --lamp-glow-c: rgba(77, 230, 144, 0.55);
+}
+.hp-lamp--amber {
+  --lamp-hi: #ffd9a3;
+  --lamp-lo: #cc7818;
+  animation: hp-lamp-blink 2.6s steps(1) infinite;
+}
+@keyframes hp-lamp-blink {
+  0%, 62% {
+    box-shadow: 0 0 0 3px #0a121e, 0 0 0 4px rgba(147, 162, 184, 0.28), 0 0 9px rgba(255, 170, 60, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.5);
+    filter: none;
+  }
+  62.1%, 100% {
+    box-shadow: 0 0 0 3px #0a121e, 0 0 0 4px rgba(147, 162, 184, 0.28), inset 0 -1px 2px rgba(0, 0, 0, 0.5);
+    filter: brightness(0.45);
+  }
+}
+.hp-lamp--red {
+  --lamp-hi: #5c1913;
+  --lamp-lo: #2a0906;
+}
+
+/* guarded start-horn button */
+.hp-horn-plate {
+  padding: 3px 10px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #7e1810, #4d0d08);
+  box-shadow: inset 0 1px 0 rgba(255, 200, 190, 0.25), 0 1px 3px rgba(0, 0, 0, 0.8);
+  color: rgba(255, 233, 226, 0.92);
+  font-size: clamp(7px, 0.62vw, 9px);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.hp-horn-btn {
+  width: clamp(26px, 2.4vw, 36px);
+  height: clamp(26px, 2.4vw, 36px);
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 30%, #ff8d7e 0%, #c2231a 46%, #5e0f08 88%);
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.35),
+    inset 0 -3px 5px rgba(0, 0, 0, 0.6),
+    0 0 0 4px #0a121e,
+    0 0 0 5px rgba(147, 162, 184, 0.3),
+    0 3px 8px rgba(0, 0, 0, 0.7);
+}
+
+/* ------------------------------------------------------------------ */
+/* Mobile (< 700px, site breakpoint): compact stacked variant          */
+/* ------------------------------------------------------------------ */
+@media (max-width: 699px) {
+  .hp-root { border-radius: 12px; }
+  .hp-header { padding: 2px 18px 8px; }
+  .hp-plate { letter-spacing: 0.14em; }
+  .hp-plate--stats { display: none; }
+  .hp-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 5fr) minmax(0, 3.4fr) minmax(0, 2fr);
+    grid-template-areas:
+      'radar radar'
+      'chart chart'
+      'days  nm';
+  }
+  .hp-mod--wind,
+  .hp-mod--hdg,
+  .hp-mod--heel,
+  .hp-mod--next { display: none; }
+  .hp-utility { padding: 8px 10px 2px; gap: 8px; }
+  .hp-util-group--toggles { display: none; }
+  .hp-horn { display: none; }
+}
+
+/* very short landscape viewports: drop the readout row + utility bar */
+@media (max-height: 560px) and (min-width: 700px) {
+  .hp-grid {
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'radar chart chart wind'
+      'radar chart chart hdg';
+  }
+  .hp-mod--days, .hp-mod--nm, .hp-mod--heel, .hp-mod--next { display: none; }
+  .hp-utility { display: none; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Reduced motion: park the beam, still the needles, steady lamps      */
+/* ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .hp-sweep { animation: none; transform: rotate(215deg); }
+  .hp-blip { animation: none; opacity: 0.75; }
+  .hp-needle { animation: none; }
+  .hp-lamp--amber { animation: none; }
+  .hp-active-leg { animation: none; }
+}

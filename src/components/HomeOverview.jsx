@@ -8,11 +8,13 @@ const BASE = import.meta.env.BASE_URL
 // ============================================================================
 //  HomeOverview — the white editorial index below the home prologue.
 // ============================================================================
-//  MainView's exit veil fades the dark orb frame to pure white and lands
-//  here: a quiet index of the campaign in three editorial moments — the film
-//  (Biography), the crew (The Team), and the world (The Road, the page's one
-//  dark interruption) — closed by a personal campaign note and the light
-//  footer. Mostly white, hairline rules, sharp corners, a single accent.
+//  MainView's exit veil blacks the orb frame out top-down and the helm
+//  station (HomeHelmSection) seats over the void; scrolling on from the
+//  seated panel lands here — the black bars cut hard to this white index of
+//  the campaign in three editorial moments: the film (Biography), the crew
+//  (The Team), and the world (The Road, the page's one dark interruption) —
+//  closed by a personal campaign note and the light footer. Mostly white,
+//  hairline rules, sharp corners, a single accent.
 //
 //  The interaction signature is the route action: a thin electric-blue rule
 //  under each action that extends toward the arrow on hover/focus

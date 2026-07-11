@@ -8,6 +8,7 @@ import blackBridge from './lib/blackBridge'
 // (which the desktop banner's Donate CTA owns) — derived so the two can't drift.
 const COMPACT_PAGES = [...MENU_PAGES, 'Support']
 import MainView from './pages/MainView'
+import HomeHelmSection from './components/HomeHelmSection'
 import HomeOverview from './components/HomeOverview'
 import Biography from './pages/Biography'
 import Contact from './pages/Contact'
@@ -118,10 +119,12 @@ const CURRENT_MAP = {
   '/the-road': 'The Road',
 }
 
-// Home route (both layouts): the cinematic MainView frame, then the white
-// editorial overview. MainView's exit veil fades the frame to pure white on
-// scroll so the hand-off lands white-on-white; the live orb still morphs →
-// The Road on click. MainView is KEYED to the layout mode: `embedded` gates
+// Home route (both layouts): the cinematic MainView frame; then the helm
+// station — on scroll, MainView's exit veil blacks the frame out from the
+// top down while the nautical control panel scrolls up from the bottom,
+// seats with black bars around it, holds, and releases (HomeHelmSection);
+// then the white editorial overview. The live orb still morphs → The Road
+// on click. MainView is KEYED to the layout mode: `embedded` gates
 // mount-time state (the useOrb lazy init, the orbOverlay attach effect) that
 // a prop flip alone would not rebuild — the key forces the same full remount
 // the old MobileHome/DesktopHome type-swap produced during the ~250ms window
@@ -130,6 +133,7 @@ function HomeShell({ onNavigate, isMobile }) {
   return (
     <div>
       <MainView key={isMobile ? 'mobile' : 'desktop'} onNavigate={onNavigate} embedded={isMobile} />
+      <HomeHelmSection isMobile={isMobile} />
       <HomeOverview onNavigate={onNavigate} isMobile={isMobile} />
     </div>
   )
