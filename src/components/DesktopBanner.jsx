@@ -59,13 +59,24 @@ const MENU_HOVER = '#1E40FF' // campaign accent — hover/focus on any menu link
 // overlay's COMPACT_PAGES from this list so the two menus can't drift.
 export const MENU_PAGES = ['Home', 'Biography', 'The Team', 'The Road', 'Contact']
 
+// The sponsor lockup's box colour as it pins: a plain white sticker (sd 0) melting to a
+// black box (sd 1). Greyscale lerp so it reads as the box "darkening" with the bar.
+const sponsorBg = (sd) => {
+  const v = Math.round(255 * (1 - sd))
+  return `rgb(${v}, ${v}, ${v})`
+}
+
 // Banner geometry/colour as a closed form of scroll (mirrors computeMobileBar).
-// t runs 0 (floating at the home rest insets) → 1 (pinned, frosted).
-function computeDesktopBar(navPath, barBg, fgPinned) {
+// t runs 0 (floating at the home rest insets) → 1 (pinned, frosted). `dark` (the four dark
+// routes) also drives the sponsor box: sponsorDark = dark ? t : 0, so the box only blackens
+// on the dark pages and stays white on the light ones (contact/support) even when pinned.
+function computeDesktopBar(navPath, barBg, fgPinned, dark) {
   if (typeof window === 'undefined') {
+    const sd = dark ? 1 : 0
     return {
       topPx: 0, padL: 0, padR: PIN_RIGHT_PAD,
       bg: withAlpha(barBg, BAR_MAX_ALPHA), blur: BAR_MAX_BLUR, fg: fgPinned, fade: 1,
+      sponsorDark: sd, sponsorBoxBg: sponsorBg(sd),
     }
   }
   const restTop = navPath === '/' ? homeTopPx() : 0
@@ -74,6 +85,7 @@ function computeDesktopBar(navPath, barBg, fgPinned) {
   const t = restTop > 0 ? Math.max(0, Math.min(1, y / restTop)) : 1
   const floating = restTop > 0 && t < 0.5
   const side = homeSidePx()
+  const sponsorDark = dark ? t : 0
   return {
     topPx,
     padL: side * (1 - t),
@@ -82,11 +94,13 @@ function computeDesktopBar(navPath, barBg, fgPinned) {
     blur: t * BAR_MAX_BLUR,
     fg: floating ? HOME_FG : fgPinned,
     fade: navPath === '/' ? homeChrome.fade : 1,
+    sponsorDark,
+    sponsorBoxBg: sponsorBg(sponsorDark),
   }
 }
 
 export default function DesktopBanner({
-  navPath, barBg, fgPinned, menuOpen, onMenuToggle, onNavigate,
+  navPath, barBg, fgPinned, dark, menuOpen, onMenuToggle, onNavigate,
 }) {
   const isSupport = navPath === '/support' // faded Donate CTA = "you are here"
   const barRef = useRef(null)
@@ -97,7 +111,7 @@ export default function DesktopBanner({
   // before first paint and on every change, so re-renders (menu toggles, App
   // state) never churn the banner's inline styles.
   const initialRef = useRef(null)
-  if (initialRef.current === null) initialRef.current = computeDesktopBar(navPath, barBg, fgPinned)
+  if (initialRef.current === null) initialRef.current = computeDesktopBar(navPath, barBg, fgPinned, dark)
   const initial = initialRef.current
 
   // Drive loop: writes styles straight to the refs so the app root never re-renders
@@ -107,8 +121,8 @@ export default function DesktopBanner({
     const apply = () => {
       const el = barRef.current
       if (!el) return
-      const { topPx, padL, padR, bg, blur, fg, fade } = computeDesktopBar(navPath, barBg, fgPinned)
-      const key = `${topPx}|${padL}|${padR}|${bg}|${blur}|${fg}|${fade}`
+      const { topPx, padL, padR, bg, blur, fg, fade, sponsorDark, sponsorBoxBg } = computeDesktopBar(navPath, barBg, fgPinned, dark)
+      const key = `${topPx}|${padL}|${padR}|${bg}|${blur}|${fg}|${fade}|${sponsorDark}`
       if (key === lastKeyRef.current) return
       lastKeyRef.current = key
       const filt = blur > 0.1 ? `blur(${blur}px)` : 'none'
@@ -119,6 +133,8 @@ export default function DesktopBanner({
       el.style.backdropFilter = filt
       el.style.setProperty('-webkit-backdrop-filter', filt)
       el.style.setProperty('--fg', fg)
+      el.style.setProperty('--sponsor-dark', sponsorDark)
+      el.style.setProperty('--sponsor-box-bg', sponsorBoxBg)
       el.style.opacity = fade
       // Interactive ONLY at (near) full visibility — mirrors the old top bar's
       // pointerEvents: uiVisible && textOut < 0.05 gate, so the cluster goes inert
@@ -160,7 +176,7 @@ export default function DesktopBanner({
     // Inner routes: every output is a constant (pinned, t = 1, fade 1) — one
     // write-through above suffices; no scroll/resize listeners needed.
     return undefined
-  }, [navPath, barBg, fgPinned])
+  }, [navPath, barBg, fgPinned, dark])
 
   return (
     <nav
@@ -188,10 +204,13 @@ export default function DesktopBanner({
         // only the right cluster is interactive.
         pointerEvents: 'none',
         ['--fg']: initial.fg,
+        ['--sponsor-dark']: initial.sponsorDark,
+        ['--sponsor-box-bg']: initial.sponsorBoxBg,
       }}
     >
       <SponsorRect
         pair={SPONSOR_PAIRS[0]}
+        darkAware
         style={{ width: HOME_SPONSOR_W, flexShrink: 0, alignSelf: 'stretch' }}
       />
       <div
