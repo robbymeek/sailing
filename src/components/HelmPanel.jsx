@@ -23,8 +23,57 @@ import { TOUR_STATS } from '../data/tourChapters'
 import { ROUTE_NM, ROUTE_WAYPOINTS, distanceNm, bearingDeg } from '../data/routeStats'
 import './helmPanel.css'
 
-const PHOS = 'rgba(77, 230, 144,'
-const BONE = 'rgba(233, 239, 248,'
+// --------------------------------------------------------------------------
+// Color themes — the owner is comparing three consoles. Resolved ONCE at
+// module scope from ?helm=photo|blend (dev-only, same idiom as the orb's
+// ?key= TUNE overrides in glassOrbScene); prod always renders classic.
+// CSS surfaces theme via the .hp-root--<variant> token blocks in
+// helmPanel.css; the values here cover SVG presentation attributes, which
+// cannot read var(). Instrument colors stay classic in "photo" per the
+// owner (green phosphor, ember LEDs, red horn); "blend" wears the site's
+// electric blue with white T-MINUS digits.
+// --------------------------------------------------------------------------
+const VARIANT = (() => {
+  if (import.meta.env.DEV && typeof location !== 'undefined') {
+    const v = new URLSearchParams(location.search).get('helm')
+    if (v === 'photo' || v === 'blend') return v
+  }
+  return 'classic'
+})()
+
+const THEMES = {
+  classic: {
+    phos: 'rgba(77, 230, 144,',
+    bone: 'rgba(233, 239, 248,',
+    gaugeFace: '#0a0f16',
+    gaugeBezel: '#05090f',
+    segDays: null, // css ember defaults
+    segNm: { color: 'var(--hp-phos)', glow: 'rgba(77, 230, 144, 0.5)' },
+    heel: null, // css ember defaults
+  },
+  photo: {
+    phos: 'rgba(77, 230, 144,',
+    bone: 'rgba(242, 239, 231,', // warm cream, from the sail/spray
+    gaugeFace: '#0e1112',
+    gaugeBezel: '#08090b',
+    segDays: null,
+    segNm: { color: 'var(--hp-phos)', glow: 'rgba(77, 230, 144, 0.5)' },
+    heel: null,
+  },
+  blend: {
+    phos: 'rgba(61, 116, 255,',
+    bone: 'rgba(234, 240, 250,',
+    gaugeFace: '#070d20',
+    gaugeBezel: '#03071a',
+    segDays: { color: '#eaf0fa', glow: 'rgba(90, 140, 255, 0.5)' },
+    segNm: { color: '#4d7dff', glow: 'rgba(61, 116, 255, 0.55)' },
+    heel: { color: '#4d7dff', glow: 'rgba(61, 116, 255, 0.55)' },
+  },
+}
+const T = THEMES[VARIANT]
+
+const PHOS = T.phos
+const BONE = T.bone
 
 // Same literal as App.jsx / MainView.jsx / TheRoad.jsx — local midnight.
 const LA_TARGET = Date.parse('2028-07-14T00:00:00')
@@ -169,6 +218,7 @@ function CountdownSeg() {
   return (
     <SegDisplay
       text={`${p3(days)}:${p2(hrs)}:${p2(mins)}:${p2(secs)}`}
+      {...(T.segDays ?? {})}
       labels={[
         { text: 'DAYS', from: 0, to: 2 },
         { text: 'HRS', from: 4, to: 5 },
@@ -387,8 +437,8 @@ function RoundGauge({ value, min = 0, max = 40, step = 10, minor = 5, redFrom = 
   }
   return (
     <svg viewBox="0 0 200 200" style={{ width: '100%', height: '100%' }}>
-      <circle cx="100" cy="100" r="97" fill="#05090f" />
-      <circle cx="100" cy="100" r="94" fill="#0a0f16" stroke="rgba(147,162,184,0.22)" strokeWidth="1" />
+      <circle cx="100" cy="100" r="97" fill={T.gaugeBezel} />
+      <circle cx="100" cy="100" r="94" fill={T.gaugeFace} stroke="rgba(147,162,184,0.22)" strokeWidth="1" />
       {redFrom !== null && (
         <path d={arc(angle(redFrom), angle(max), 87)} fill="none" stroke="rgba(255,75,54,0.85)" strokeWidth="4" />
       )}
@@ -446,7 +496,14 @@ function HeelArc({ value = 12, max = 35 }) {
     segs.push({ pts: `${ox1},${oy1} ${ox2},${oy2} ${ix2},${iy2} ${ix1},${iy1}`, lit })
   }
   return (
-    <svg viewBox="0 0 220 120" style={{ width: '100%', height: '100%' }}>
+    <svg
+      viewBox="0 0 220 120"
+      style={{
+        width: '100%',
+        height: '100%',
+        ...(T.heel ? { '--seg-color': T.heel.color, '--seg-glow': T.heel.glow } : {}),
+      }}
+    >
       {segs.map((s, i) => (
         <polygon key={i} points={s.pts} className={s.lit ? 'hp-seg-on' : 'hp-seg-off'} />
       ))}
@@ -460,7 +517,7 @@ function HeelArc({ value = 12, max = 35 }) {
       })}
       <text x="24" y="114" fontSize="8" letterSpacing="1.5" fill={BONE + '0.45)'}>PORT</text>
       <text x="196" y="114" textAnchor="end" fontSize="8" letterSpacing="1.5" fill={BONE + '0.45)'}>STBD</text>
-      <text x="110" y="112" textAnchor="middle" fontSize="13" fontWeight="700" fill="var(--hp-ember)" style={{ fontFamily: 'var(--hp-mono)' }} className="hp-lcd-glow">
+      <text x="110" y="112" textAnchor="middle" fontSize="13" fontWeight="700" fill={T.heel ? T.heel.color : 'var(--hp-ember)'} style={{ fontFamily: 'var(--hp-mono)' }} className="hp-lcd-glow">
         {`STBD ${value}°`}
       </text>
     </svg>
@@ -551,7 +608,7 @@ function Lamp({ label, tone }) {
 export default function HelmPanel() {
   return (
     <div
-      className="hp-root"
+      className={`hp-root hp-root--${VARIANT}`}
       role="img"
       aria-label="Helm station: campaign instruments. Radar scope sweeping the 2026 venues, the 2026 to 2028 voyage plan, wind and heading gauges, and the countdown to the LA 2028 Olympics."
     >
@@ -581,7 +638,7 @@ export default function HelmPanel() {
             <CountdownSeg />
           </Module>
           <Module area="nm" label="CAMPAIGN ROUTE · NM">
-            <SegDisplay text={String(ROUTE_NM)} color="var(--hp-phos)" glow="rgba(77, 230, 144, 0.5)" />
+            <SegDisplay text={String(ROUTE_NM)} color={T.segNm.color} glow={T.segNm.glow} />
           </Module>
           <Module area="heel" label="HEEL · DEG">
             <HeelArc value={12} />

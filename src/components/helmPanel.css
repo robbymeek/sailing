@@ -21,13 +21,28 @@
   --hp-mono: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
   --hp-sweep-s: 4.4s;       /* radar beam period — blips sync to this  */
 
+  /* theme surface tokens (defaults = the classic deep-navy console;
+     overridden by the .hp-root--photo / .hp-root--blend blocks below) */
+  --hp-case-hi: #101d30;  --hp-case-mid: #0b1626;  --hp-case-lo: #071020;
+  --hp-face-hi: #13223a;  --hp-face-mid: #0f1d31;  --hp-face-lo: #0b1728;
+  --hp-mod-hi: #0d1727;   --hp-mod-lo: #091220;
+  --hp-plate-hi: #16233a; --hp-plate-lo: #0c1727;
+  --hp-knob-hi: #38465a;  --hp-knob-mid: #1c2635;  --hp-knob-lo: #0a111c;
+  /* alpha-composed accents as rgb triplets, for gradients/shadows */
+  --hp-bone-rgb: 233, 239, 248;
+  --hp-phos-rgb: 77, 230, 144;
+  --hp-phos-hi-rgb: 140, 255, 190;   /* the sweep's bright leading edge */
+  --hp-scope-rgb: 18, 76, 47;        /* scope phosphor bloom            */
+  --hp-scope-deep-rgb: 4, 26, 16;    /* scope mid falloff               */
+  --hp-scope-edge: #010604;          /* scope rim black                 */
+
   position: relative;
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
   border-radius: 22px; /* card-object rounding — the panel floats solo on the black page */
-  background: linear-gradient(178deg, #101d30 0%, #0b1626 46%, #071020 100%);
+  background: linear-gradient(178deg, var(--hp-case-hi) 0%, var(--hp-case-mid) 46%, var(--hp-case-lo) 100%);
   box-shadow:
     inset 0 1px 0 rgba(210, 226, 248, 0.09),
     inset 0 -2px 8px rgba(0, 0, 0, 0.65),
@@ -36,6 +51,46 @@
     0 24px 90px rgba(0, 0, 0, 0.85);
   padding: clamp(10px, 1.4vw, 20px);
   overflow: hidden;
+}
+
+/* ------------------------------------------------------------------ */
+/* THEMES — resolved by HelmPanel.jsx from ?helm= (dev-only, TUNE idiom).*/
+/* classic = the token defaults above. Screws, toggles, lamps, the horn */
+/* and the screen blacks deliberately stay classic in EVERY theme.      */
+/* ------------------------------------------------------------------ */
+
+/* "photo" — surfaces pulled from the hero rest photo (img-5957 under its
+   0.42 scrim): warm backlit silver / weathered aluminum, charcoal knobs,
+   cream labels. Instruments keep the classic phosphor/ember/red. */
+.hp-root--photo {
+  --hp-case-hi: #3c4140;  --hp-case-mid: #2c3132;  --hp-case-lo: #1f2425;
+  --hp-face-hi: #454b49;  --hp-face-mid: #383e3d;  --hp-face-lo: #2b3130;
+  --hp-mod-hi: #31373a;   --hp-mod-lo: #262c2f;
+  --hp-plate-hi: #40484c; --hp-plate-lo: #2b3236;
+  --hp-knob-hi: #3a3f42;  --hp-knob-mid: #22282a;  --hp-knob-lo: #101314;
+  --hp-bone: #f2efe7;
+  --hp-bone-rgb: 242, 239, 231;
+  --hp-steel: #b3bcb9;
+}
+/* the one photo micro-accent: rope-gold on the stats sub-plate */
+.hp-root--photo .hp-plate--stats {
+  color: rgba(201, 180, 69, 0.78);
+}
+
+/* "blend" — the site's wardrobe on the same hardware: Night Water
+   surfaces, The Road's electric blue replacing the phosphor green. */
+.hp-root--blend {
+  --hp-case-hi: #0a1233;  --hp-case-mid: #050b26;  --hp-case-lo: #02071c;
+  --hp-face-hi: #0d1740;  --hp-face-mid: #081130;  --hp-face-lo: #050b26;
+  --hp-mod-hi: #071030;   --hp-mod-lo: #040a22;
+  --hp-plate-hi: #0b1748; --hp-plate-lo: #051033;
+  --hp-knob-hi: #2b3a66;  --hp-knob-mid: #162040;  --hp-knob-lo: #080d20;
+  --hp-phos: #3d74ff;
+  --hp-phos-rgb: 61, 116, 255;
+  --hp-phos-hi-rgb: 140, 180, 255;
+  --hp-scope-rgb: 10, 40, 120;
+  --hp-scope-deep-rgb: 3, 12, 45;
+  --hp-scope-edge: #01030f;
 }
 
 /* cold top light falling on the console, like the reference photo */
@@ -64,7 +119,7 @@
       rgba(255, 255, 255, 0.014) 0 1px,
       rgba(0, 0, 0, 0.02) 1px 3px
     ),
-    linear-gradient(180deg, #13223a 0%, #0f1d31 55%, #0b1728 100%);
+    linear-gradient(180deg, var(--hp-face-hi) 0%, var(--hp-face-mid) 55%, var(--hp-face-lo) 100%);
   box-shadow:
     inset 0 1px 0 rgba(190, 212, 240, 0.07),
     inset 0 0 34px rgba(0, 0, 0, 0.45);
@@ -114,12 +169,12 @@
   display: inline-block;
   padding: 5px 14px 4px;
   border-radius: 4px;
-  background: linear-gradient(180deg, #16233a, #0c1727);
+  background: linear-gradient(180deg, var(--hp-plate-hi), var(--hp-plate-lo));
   box-shadow:
     inset 0 1px 0 rgba(200, 218, 244, 0.1),
     inset 0 -1px 2px rgba(0, 0, 0, 0.7),
     0 1px 0 rgba(160, 190, 230, 0.05);
-  color: rgba(233, 239, 248, 0.82);
+  color: rgba(var(--hp-bone-rgb), 0.82);
   font-size: clamp(10px, 1vw, 13px);
   font-weight: 700;
   letter-spacing: 0.22em;
@@ -129,7 +184,7 @@
 }
 .hp-plate--sub {
   letter-spacing: 0.3em;
-  color: rgba(233, 239, 248, 0.55);
+  color: rgba(var(--hp-bone-rgb), 0.55);
 }
 
 /* ------------------------------------------------------------------ */
@@ -162,7 +217,7 @@
   min-width: 0;
   min-height: 0;
   border-radius: 9px;
-  background: linear-gradient(180deg, #0d1727 0%, #091220 100%);
+  background: linear-gradient(180deg, var(--hp-mod-hi) 0%, var(--hp-mod-lo) 100%);
   box-shadow:
     inset 0 1px 0 rgba(190, 212, 240, 0.08),
     inset 0 -1px 3px rgba(0, 0, 0, 0.7),
@@ -180,7 +235,7 @@
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: rgba(233, 239, 248, 0.5);
+  color: rgba(var(--hp-bone-rgb), 0.5);
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
@@ -245,9 +300,9 @@
   inset: 0;
   border-radius: 50%;
   background:
-    radial-gradient(circle at 50% 50%, rgba(18, 76, 47, 0.5) 0%, rgba(4, 26, 16, 0.85) 55%, #010604 100%);
+    radial-gradient(circle at 50% 50%, rgba(var(--hp-scope-rgb), 0.5) 0%, rgba(var(--hp-scope-deep-rgb), 0.85) 55%, var(--hp-scope-edge) 100%);
   box-shadow:
-    inset 0 0 0 1px rgba(77, 230, 144, 0.12),
+    inset 0 0 0 1px rgba(var(--hp-phos-rgb), 0.12),
     inset 0 0 30px rgba(0, 0, 0, 0.85);
   overflow: hidden;
 }
@@ -261,10 +316,10 @@
     from 0deg,
     transparent 0deg,
     transparent 258deg,
-    rgba(77, 230, 144, 0.04) 284deg,
-    rgba(77, 230, 144, 0.16) 330deg,
-    rgba(77, 230, 144, 0.5) 357deg,
-    rgba(140, 255, 190, 0.85) 360deg
+    rgba(var(--hp-phos-rgb), 0.04) 284deg,
+    rgba(var(--hp-phos-rgb), 0.16) 330deg,
+    rgba(var(--hp-phos-rgb), 0.5) 357deg,
+    rgba(var(--hp-phos-hi-rgb), 0.85) 360deg
   );
   animation: hp-sweep var(--hp-sweep-s) linear infinite;
   transform-origin: 50% 50%;
@@ -278,8 +333,8 @@
   height: 50%;
   background: linear-gradient(
     to top,
-    rgba(77, 230, 144, 0.25),
-    rgba(140, 255, 190, 0.95)
+    rgba(var(--hp-phos-rgb), 0.25),
+    rgba(var(--hp-phos-hi-rgb), 0.95)
   );
 }
 @keyframes hp-sweep {
@@ -295,7 +350,7 @@
   margin: -2.5px 0 0 -2.5px;
   border-radius: 50%;
   background: var(--hp-phos);
-  box-shadow: 0 0 6px 1px rgba(77, 230, 144, 0.7);
+  box-shadow: 0 0 6px 1px rgba(var(--hp-phos-rgb), 0.7);
   opacity: 0.25;
   animation: hp-blip var(--hp-sweep-s) linear infinite;
   animation-delay: var(--blip-delay, 0s);
@@ -314,7 +369,7 @@
   font-family: var(--hp-mono);
   font-size: 8px;
   letter-spacing: 0.08em;
-  color: rgba(77, 230, 144, 0.6);
+  color: rgba(var(--hp-phos-rgb), 0.6);
   white-space: nowrap;
 }
 
@@ -324,7 +379,7 @@
   fill: var(--hp-phos);
   color: var(--hp-phos);
 }
-.hp-lcd-glow { text-shadow: 0 0 5px rgba(77, 230, 144, 0.55); }
+.hp-lcd-glow { text-shadow: 0 0 5px rgba(var(--hp-phos-rgb), 0.55); }
 
 /* the active leg on the voyage plan crawls like a chartplotter track */
 .hp-active-leg {
@@ -390,7 +445,7 @@
   width: clamp(34px, 3.4vw, 52px);
   height: clamp(34px, 3.4vw, 52px);
   border-radius: 50%;
-  background: radial-gradient(circle at 36% 30%, #38465a 0%, #1c2635 46%, #0a111c 100%);
+  background: radial-gradient(circle at 36% 30%, var(--hp-knob-hi) 0%, var(--hp-knob-mid) 46%, var(--hp-knob-lo) 100%);
   box-shadow:
     inset 0 1px 1px rgba(220, 234, 252, 0.28),
     inset 0 -2px 4px rgba(0, 0, 0, 0.75),
@@ -430,7 +485,7 @@
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(233, 239, 248, 0.48);
+  color: rgba(var(--hp-bone-rgb), 0.48);
   white-space: nowrap;
 }
 
