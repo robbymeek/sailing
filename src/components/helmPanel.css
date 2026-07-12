@@ -77,20 +77,108 @@
   color: rgba(201, 180, 69, 0.78);
 }
 
-/* "blend" — the site's wardrobe on the same hardware: Night Water
-   surfaces, The Road's electric blue replacing the phosphor green. */
-.hp-root--blend {
-  --hp-case-hi: #0a1233;  --hp-case-mid: #050b26;  --hp-case-lo: #02071c;
-  --hp-face-hi: #0d1740;  --hp-face-mid: #081130;  --hp-face-lo: #050b26;
-  --hp-mod-hi: #071030;   --hp-mod-lo: #040a22;
-  --hp-plate-hi: #0b1748; --hp-plate-lo: #051033;
-  --hp-knob-hi: #2b3a66;  --hp-knob-mid: #162040;  --hp-knob-lo: #080d20;
-  --hp-phos: #3d74ff;
-  --hp-phos-rgb: 61, 116, 255;
-  --hp-phos-hi-rgb: 140, 180, 255;
-  --hp-scope-rgb: 10, 40, 120;
-  --hp-scope-deep-rgb: 3, 12, 45;
-  --hp-scope-edge: #01030f;
+/* "blend" v2 — the white editorial instrument sheet: the site's own language
+   (white, ink, hairlines, ONE electric-blue accent, sharp corners, no
+   hardware skeuomorphism) applied to the same instrument layout. v1's
+   "screens stay black" exclusion is deliberately waived here; only the
+   meaningful reds survive (gauge red zone, start horn). */
+/* doubled class = specificity (0,2,0): beats the base .hp-root rules AND
+   the mobile media block's .hp-root radius, regardless of file order */
+.hp-root.hp-root--blend {
+  --hp-phos: rgb(10, 85, 235);      /* the site accent carries the data    */
+  --hp-phos-rgb: 10, 85, 235;
+  --hp-phos-hi-rgb: 10, 85, 235;
+  --hp-bone: rgb(20, 28, 54);       /* HomeOverview's INK                  */
+  --hp-bone-rgb: 20, 28, 54;
+  --hp-ember: rgb(10, 85, 235);     /* seven-seg CSS fallback → blue       */
+
+  background: #ffffff;
+  border-radius: 0;
+  box-shadow: none;
+}
+.hp-root.hp-root--blend::before { background: none; }
+.hp-root--blend .hp-face {
+  background: none;
+  box-shadow: none;
+}
+.hp-root--blend .hp-screw { display: none; }
+.hp-root--blend .hp-plate {
+  background: none;
+  box-shadow: none;
+  text-shadow: none;
+}
+.hp-root--blend .hp-mod {
+  background: #ffffff;
+  border: 1px solid rgba(20, 28, 54, 0.14);
+  border-radius: 0;
+  box-shadow: none;
+}
+.hp-root--blend .hp-mod-label {
+  text-align: left;
+  color: rgba(20, 28, 54, 0.55);
+}
+.hp-root--blend .hp-screen {
+  background: #ffffff;
+  border: 1px solid rgba(20, 28, 54, 0.14);
+  border-radius: 0;
+  box-shadow: none;
+}
+.hp-root--blend .hp-screen::after { background: none; }
+.hp-root--blend .hp-scope {
+  background: radial-gradient(circle at 50% 50%, rgba(10, 85, 235, 0.06) 0%, rgba(10, 85, 235, 0.02) 55%, #ffffff 100%);
+  box-shadow: inset 0 0 0 1px rgba(20, 28, 54, 0.2);
+}
+.hp-root--blend .hp-blip { box-shadow: none; }
+.hp-root--blend .hp-lcd-glow { text-shadow: none; }
+.hp-root--blend .hp-seg-on { filter: none; }
+.hp-root--blend .hp-knob {
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(20, 28, 54, 0.35);
+}
+.hp-root--blend .hp-knob::before { background: none; }
+.hp-root--blend .hp-knob::after {
+  background: rgb(10, 85, 235);
+  box-shadow: none;
+}
+.hp-root--blend .hp-toggle {
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(20, 28, 54, 0.3);
+}
+.hp-root--blend .hp-toggle::after {
+  background: rgb(10, 85, 235);
+  box-shadow: none;
+}
+.hp-root--blend .hp-toggle--off::after {
+  background: rgba(20, 28, 54, 0.35);
+}
+.hp-root--blend .hp-lamp { box-shadow: none; }
+.hp-root--blend .hp-lamp--green {
+  --lamp-hi: rgb(10, 85, 235);
+  --lamp-lo: rgb(10, 85, 235);
+}
+.hp-root--blend .hp-lamp--amber {
+  --lamp-hi: rgb(10, 85, 235);
+  --lamp-lo: rgb(10, 85, 235);
+  animation: hp-lamp-blink-flat 2.6s steps(1) infinite;
+}
+@keyframes hp-lamp-blink-flat {
+  0%, 62% { opacity: 1; }
+  62.1%, 100% { opacity: 0.25; }
+}
+.hp-root--blend .hp-lamp--red {
+  --lamp-hi: #d9271e;
+  --lamp-lo: #d9271e;
+  opacity: 0.85;
+}
+.hp-root--blend .hp-horn-btn {
+  background: #d9271e;
+  box-shadow: inset 0 0 0 1px rgba(20, 28, 54, 0.15);
+}
+.hp-root--blend .hp-horn-plate {
+  background: #ffffff;
+  border: 1px solid #d9271e;
+  box-shadow: none;
+  color: #d9271e;
 }
 
 /* cold top light falling on the console, like the reference photo */

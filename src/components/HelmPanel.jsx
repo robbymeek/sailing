@@ -44,36 +44,74 @@ const VARIANT = (() => {
 const THEMES = {
   classic: {
     phos: 'rgba(77, 230, 144,',
+    grid: 'rgba(77, 230, 144,', // scope rings / chart graticule ride the phosphor
     bone: 'rgba(233, 239, 248,',
     gaugeFace: '#0a0f16',
     gaugeBezel: '#05090f',
+    gaugeRim: 'rgba(147,162,184,0.22)',
     segDays: null, // css ember defaults
     segNm: { color: 'var(--hp-phos)', glow: 'rgba(77, 230, 144, 0.5)' },
     heel: null, // css ember defaults
   },
   photo: {
     phos: 'rgba(77, 230, 144,',
+    grid: 'rgba(77, 230, 144,',
     bone: 'rgba(242, 239, 231,', // warm cream, from the sail/spray
     gaugeFace: '#0e1112',
     gaugeBezel: '#08090b',
+    gaugeRim: 'rgba(147,162,184,0.22)',
     segDays: null,
     segNm: { color: 'var(--hp-phos)', glow: 'rgba(77, 230, 144, 0.5)' },
     heel: null,
   },
+  // v2 "editorial sheet": white card, ink structure, ONE electric-blue accent
+  // carrying the live data (sweep, route, countdown). Glows die on white —
+  // helmPanel.css kills them; 'transparent' keeps the inline vars inert.
   blend: {
-    phos: 'rgba(61, 116, 255,',
-    bone: 'rgba(234, 240, 250,',
-    gaugeFace: '#070d20',
-    gaugeBezel: '#03071a',
-    segDays: { color: '#eaf0fa', glow: 'rgba(90, 140, 255, 0.5)' },
-    segNm: { color: '#4d7dff', glow: 'rgba(61, 116, 255, 0.55)' },
-    heel: { color: '#4d7dff', glow: 'rgba(61, 116, 255, 0.55)' },
+    phos: 'rgba(10, 85, 235,',
+    grid: 'rgba(20, 28, 54,', // ink hairline structure on white
+    bone: 'rgba(20, 28, 54,',
+    gaugeFace: '#ffffff',
+    gaugeBezel: '#ffffff',
+    gaugeRim: 'rgba(20, 28, 54, 0.25)',
+    segDays: { color: 'rgb(10, 85, 235)', glow: 'transparent' },
+    segNm: { color: 'rgba(20, 28, 54, 0.9)', glow: 'transparent' },
+    heel: { color: 'rgb(10, 85, 235)', glow: 'transparent' },
   },
 }
 const T = THEMES[VARIANT]
 
 const PHOS = T.phos
+const GRID = T.grid
 const BONE = T.bone
+
+// Module label wording — the blend sheet trades spec-plate jargon for the
+// site's tasteful editorial voice; classic/photo keep the instrument plates.
+// COMPACT is a page-load constant (App reloads on a 700px breakpoint cross),
+// trimming the two labels that share a row on phones.
+const COMPACT = typeof window !== 'undefined' && window.innerWidth < 700
+const LABELS =
+  VARIANT === 'blend'
+    ? {
+        radar: 'RADAR · THE 2026 SEASON · 8000 NM',
+        chart: 'VOYAGE PLAN · 2026-2028',
+        wind: 'APPARENT WIND · KNOTS',
+        hdg: 'HEADING · MAGNETIC',
+        days: COMPACT ? 'COUNTDOWN' : 'COUNTDOWN · LA 2028',
+        nm: COMPACT ? 'THE ROUTE · NM' : 'THE ROUTE · NAUTICAL MILES',
+        heel: 'HEEL · DEGREES',
+        next: 'NEXT EVENT',
+      }
+    : {
+        radar: 'RADAR · RANGE 8000 NM · RINGS 2000',
+        chart: 'VOYAGE PLAN · 2026-2028',
+        wind: 'APPARENT WIND · KN',
+        hdg: 'HEADING · DEG',
+        days: 'T-MINUS · LA 2028',
+        nm: 'CAMPAIGN ROUTE · NM',
+        heel: 'HEEL · DEG',
+        next: 'COMMS',
+      }
 
 // Same literal as App.jsx / MainView.jsx / TheRoad.jsx — local midnight.
 const LA_TARGET = Date.parse('2028-07-14T00:00:00')
@@ -241,20 +279,20 @@ function Radar() {
       <div className="hp-scope">
         <svg viewBox="0 0 200 200" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
           {rings.map((r) => (
-            <circle key={r} cx="100" cy="100" r={r} fill="none" stroke={PHOS + '0.22)'} strokeWidth="0.7" />
+            <circle key={r} cx="100" cy="100" r={r} fill="none" stroke={GRID + '0.22)'} strokeWidth="0.7" />
           ))}
           {spokes.map((a) => {
             const [x1, y1] = polar(100, 100, 10, a)
             const [x2, y2] = polar(100, 100, 94, a)
             return (
-              <line key={a} x1={x1} y1={y1} x2={x2} y2={y2} stroke={PHOS + (a % 90 === 0 ? '0.2)' : '0.12)')} strokeWidth="0.6" />
+              <line key={a} x1={x1} y1={y1} x2={x2} y2={y2} stroke={GRID + (a % 90 === 0 ? '0.2)' : '0.12)')} strokeWidth="0.6" />
             )
           })}
           {/* bearing ring labels */}
           {spokes.map((a) => {
             const [x, y] = polar(100, 100, 80, a)
             return (
-              <text key={a} x={x} y={y + 2} textAnchor="middle" fontSize="6" fill={PHOS + '0.42)'} style={{ fontFamily: 'var(--hp-mono)' }}>
+              <text key={a} x={x} y={y + 2} textAnchor="middle" fontSize="6" fill={GRID + '0.42)'} style={{ fontFamily: 'var(--hp-mono)' }}>
                 {p3(a)}
               </text>
             )
@@ -263,7 +301,7 @@ function Radar() {
           {rings.map((r, i) => {
             const [x, y] = polar(100, 100, r, 225)
             return (
-              <text key={r} x={x - 2} y={y + 4} textAnchor="end" fontSize="5.5" fill={PHOS + '0.34)'} style={{ fontFamily: 'var(--hp-mono)' }}>
+              <text key={r} x={x - 2} y={y + 4} textAnchor="end" fontSize="5.5" fill={GRID + '0.34)'} style={{ fontFamily: 'var(--hp-mono)' }}>
                 {(i + 1) * 2}k
               </text>
             )
@@ -356,19 +394,19 @@ function Chart() {
       <svg viewBox={`0 0 ${W} ${H}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} preserveAspectRatio="xMidYMid meet">
         {/* graticule */}
         {grat.lngs.map((l) => (
-          <line key={`g${l}`} x1={px(l)} y1={24} x2={px(l)} y2={H - 26} stroke={PHOS + '0.1)'} strokeWidth="0.6" />
+          <line key={`g${l}`} x1={px(l)} y1={24} x2={px(l)} y2={H - 26} stroke={GRID + '0.1)'} strokeWidth="0.6" />
         ))}
         {grat.lats.map((l) => (
-          <line key={`t${l}`} x1={8} y1={py(l)} x2={W - 8} y2={py(l)} stroke={PHOS + '0.1)'} strokeWidth="0.6" />
+          <line key={`t${l}`} x1={8} y1={py(l)} x2={W - 8} y2={py(l)} stroke={GRID + '0.1)'} strokeWidth="0.6" />
         ))}
         {grat.lngs.map((l) => (
-          <text key={`gl${l}`} x={px(l) + 2} y={H - 30} fontSize="6" fill={PHOS + '0.3)'} style={{ fontFamily: 'var(--hp-mono)' }}>
+          <text key={`gl${l}`} x={px(l) + 2} y={H - 30} fontSize="6" fill={GRID + '0.3)'} style={{ fontFamily: 'var(--hp-mono)' }}>
             {Math.abs(l)}{l < 0 ? 'W' : l > 0 ? 'E' : ''}
           </text>
         ))}
         {/* depth-contour texture, lower corner */}
-        <path d={`M 10 ${H - 40} q 30 -14 58 -4 t 52 6`} fill="none" stroke={PHOS + '0.16)'} strokeWidth="0.7" strokeDasharray="1 3" />
-        <path d={`M 10 ${H - 52} q 26 -12 50 -5 t 46 4`} fill="none" stroke={PHOS + '0.11)'} strokeWidth="0.7" strokeDasharray="1 3" />
+        <path d={`M 10 ${H - 40} q 30 -14 58 -4 t 52 6`} fill="none" stroke={GRID + '0.16)'} strokeWidth="0.7" strokeDasharray="1 3" />
+        <path d={`M 10 ${H - 52} q 26 -12 50 -5 t 46 4`} fill="none" stroke={GRID + '0.11)'} strokeWidth="0.7" strokeDasharray="1 3" />
         {/* the route */}
         {legs.map((l, i) => (
           <path
@@ -384,7 +422,7 @@ function Chart() {
           <rect key={i} x={x - 1.4} y={y - 1.4} width="2.8" height="2.8" fill={PHOS + '0.75)'} />
         ))}
         {marks.map((m) => (
-          <text key={m.name} x={m.x + m.dx} y={m.y + m.dy} textAnchor={m.anchor} fontSize="6" fill={PHOS + '0.5)'} style={{ fontFamily: 'var(--hp-mono)' }}>
+          <text key={m.name} x={m.x + m.dx} y={m.y + m.dy} textAnchor={m.anchor} fontSize="6" fill={GRID + '0.5)'} style={{ fontFamily: 'var(--hp-mono)' }}>
             {m.name}
           </text>
         ))}
@@ -438,7 +476,7 @@ function RoundGauge({ value, min = 0, max = 40, step = 10, minor = 5, redFrom = 
   return (
     <svg viewBox="0 0 200 200" style={{ width: '100%', height: '100%' }}>
       <circle cx="100" cy="100" r="97" fill={T.gaugeBezel} />
-      <circle cx="100" cy="100" r="94" fill={T.gaugeFace} stroke="rgba(147,162,184,0.22)" strokeWidth="1" />
+      <circle cx="100" cy="100" r="94" fill={T.gaugeFace} stroke={T.gaugeRim} strokeWidth="1" />
       {redFrom !== null && (
         <path d={arc(angle(redFrom), angle(max), 87)} fill="none" stroke="rgba(255,75,54,0.85)" strokeWidth="4" />
       )}
@@ -540,14 +578,18 @@ function NextEventLCD() {
     overflow: 'hidden',
     textOverflow: 'ellipsis',
   }
+  // On the blend sheet the module label already says NEXT EVENT, so the
+  // inner kicker drops and the detail rows go ink (the name keeps the blue).
+  const blend = VARIANT === 'blend'
+  const sub = blend ? { color: 'rgba(20, 28, 54, 0.75)' } : null
   return (
     <div className="hp-screen" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 3, padding: '8px 12px' }}>
-      <div style={{ ...line, fontSize: 8, opacity: 0.55, letterSpacing: '0.2em' }}>NEXT EVENT</div>
+      {!blend && <div style={{ ...line, fontSize: 8, opacity: 0.55, letterSpacing: '0.2em' }}>NEXT EVENT</div>}
       <div className="hp-lcd-glow" style={{ ...line, fontSize: 'clamp(11px, 0.95vw, 14px)', fontWeight: 700, letterSpacing: '0.06em' }}>
         {NEXT_EVENT.name}
       </div>
-      <div style={{ ...line, fontSize: 9, opacity: 0.7 }}>{`${NEXT_EVENT.where} · ${NEXT_EVENT.when}`}</div>
-      <div style={{ ...line, fontSize: 11, opacity: 0.9 }}>{`T-${days} DAYS`}</div>
+      <div style={{ ...line, ...sub, fontSize: 9, opacity: 0.7 }}>{`${NEXT_EVENT.where} · ${NEXT_EVENT.when}`}</div>
+      <div style={{ ...line, ...sub, fontSize: 11, opacity: 0.9 }}>{`T-${days} DAYS`}</div>
     </div>
   )
 }
@@ -614,36 +656,65 @@ export default function HelmPanel() {
     >
       <Screws inset={9} />
       <div className="hp-face">
-        <div className="hp-header">
-          <span className="hp-plate">R. MEEK · ILCA 7 · HELM STATION</span>
-          <span className="hp-plate hp-plate--sub hp-plate--stats">
-            {`${TOUR_STATS.stops} STOPS · ${TOUR_STATS.continents} CONTINENTS`}
-          </span>
-        </div>
+        {VARIANT === 'blend' ? (
+          /* editorial masthead — the site's eyebrow + headline + the
+             .ho-action-style 2px blue rule as the signature touch */
+          <div className="hp-header" style={{ alignItems: 'flex-end' }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '2.2px', textTransform: 'uppercase', color: 'rgb(10, 85, 235)' }}>
+                R. Meek · ILCA 7
+              </div>
+              <div
+                style={{
+                  display: 'inline-block',
+                  fontSize: 'clamp(18px, 1.7vw, 26px)',
+                  fontWeight: 700,
+                  letterSpacing: '-0.5px',
+                  lineHeight: 1.1,
+                  color: 'rgb(20, 28, 54)',
+                  paddingBottom: 4,
+                  borderBottom: '2px solid rgb(10, 85, 235)',
+                }}
+              >
+                Helm Station
+              </div>
+            </div>
+            <span className="hp-plate--stats" style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(20, 28, 54, 0.55)' }}>
+              {`${TOUR_STATS.stops} STOPS · ${TOUR_STATS.continents} CONTINENTS`}
+            </span>
+          </div>
+        ) : (
+          <div className="hp-header">
+            <span className="hp-plate">R. MEEK · ILCA 7 · HELM STATION</span>
+            <span className="hp-plate hp-plate--sub hp-plate--stats">
+              {`${TOUR_STATS.stops} STOPS · ${TOUR_STATS.continents} CONTINENTS`}
+            </span>
+          </div>
+        )}
 
         <div className="hp-grid">
-          <Module area="radar" label={`RADAR · RANGE ${RADAR_RANGE_NM} NM · RINGS 2000`} screws>
+          <Module area="radar" label={LABELS.radar} screws>
             <Radar />
           </Module>
-          <Module area="chart" label="VOYAGE PLAN · 2026-2028" screws>
+          <Module area="chart" label={LABELS.chart} screws>
             <Chart />
           </Module>
-          <Module area="wind" label="APPARENT WIND · KN">
+          <Module area="wind" label={LABELS.wind}>
             <RoundGauge value={14} min={0} max={40} step={10} minor={5} redFrom={30} unit="KNOTS" redHub />
           </Module>
-          <Module area="hdg" label="HEADING · DEG">
+          <Module area="hdg" label={LABELS.hdg}>
             <RoundGauge value={COG} compass unit="MAG" wobbleDelay="-1.7s" />
           </Module>
-          <Module area="days" label="T-MINUS · LA 2028">
+          <Module area="days" label={LABELS.days}>
             <CountdownSeg />
           </Module>
-          <Module area="nm" label="CAMPAIGN ROUTE · NM">
+          <Module area="nm" label={LABELS.nm}>
             <SegDisplay text={String(ROUTE_NM)} color={T.segNm.color} glow={T.segNm.glow} />
           </Module>
-          <Module area="heel" label="HEEL · DEG">
+          <Module area="heel" label={LABELS.heel}>
             <HeelArc value={12} />
           </Module>
-          <Module area="next" label="COMMS">
+          <Module area="next" label={LABELS.next}>
             <NextEventLCD />
           </Module>
         </div>
