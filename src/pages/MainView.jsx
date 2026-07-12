@@ -81,38 +81,47 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-  // Exit fade — as the home frame scrolls off toward the white overview,
-  // fade the WHOLE frame (photo, orb, text) to pure white, so the hand-off
-  // onto HomeOverview lands white-on-white instead of photo-on-white.
-  // Pure closed form of scroll (opacity = f(rect.top) — reverse scroll replays
-  // exactly, same invariant as Biography's parallax, which uses this same rAF +
-  // getBoundingClientRect pattern). The veil is pointer-events: none
-  // throughout, so the orb hotspot and nav links stay live while it is still
-  // translucent.
+  // Exit reveal — the hero is PINNED (sticky, above) and never scrolls away;
+  // as the white helm card rises over it, the frame BRIGHTENS to the raw
+  // photograph (owner direction, Jul 2026 — no fade-to-black): the 0.42 rest
+  // scrim lifts to 0 in lockstep with the scroll while the orb fades in
+  // place and the hero chrome (blurb, sponsor lockups, cue) fades out via
+  // the scrolledAway state below. Progress comes from window.scrollY
+  // (rect.top stays 0 while pinned). Pure closed form of scroll — reverse
+  // scroll replays exactly, same invariant as Biography's parallax, which
+  // uses this same rAF pattern.
   const homeRootRef = useRef(null)
-  const exitVeilRef = useRef(null)
+  const restScrimRef = useRef(null)
+  const bakedScrimRef = useRef(null)
   useEffect(() => {
-    // Runs on both mobile and desktop — both scroll into the overview below,
-    // so the frame fades to white the same way, and the live orb is stuck to the
-    // page (translated up + faded with the veil) rather than fading early.
+    // Runs on both mobile and desktop — the helm card covers both the same
+    // way, and the live orb (a body-level fixed canvas) fades IN PLACE in
+    // lockstep with the scrim lift — it stays centered under the rising card.
     let rafId
     let orbTouched = false
     const update = () => {
       const root = homeRootRef.current
       if (root) {
         const rect = root.getBoundingClientRect()
-        // Fully white once 62% of the frame has scrolled away — the remaining
-        // 38% exits as pure white flush with the overview below.
-        const gone = Math.min(1, Math.max(0, -rect.top / (rect.height * 0.62)))
-        const veil = exitVeilRef.current
-        if (veil) veil.style.opacity = gone
-        // Desktop live orb: stick it to the page. It lives in a fixed body-level
-        // overlay (survives the morph route-swap), so translate it UP by the scroll
-        // and fade it in lockstep with the veil — the whole centerpiece scrolls away
-        // uniformly. Only while at rest (the morph owns the orb otherwise); untouched
-        // at the very top so the intro fade-in is preserved, and reset once on return.
+        // Fully bright once the cover has risen 62% of the frame height —
+        // well before the card reaches the top of the page. scrollY, not
+        // rect.top, drives it: the sticky frame's rect.top stays 0 while
+        // pinned. Opacity is an independent channel from the scrim's
+        // phase-driven background (morph starts only at scrollY≈0, so the
+        // post-morph black snap never coexists with a lifted scrim).
+        const gone = Math.min(1, Math.max(0, window.scrollY / (rect.height * 0.62)))
+        const scrim = restScrimRef.current
+        if (scrim) scrim.style.opacity = 1 - gone
+        const bakedScrim = bakedScrimRef.current
+        if (bakedScrim) bakedScrim.style.opacity = 1 - gone
+        // Desktop live orb: it lives in a fixed body-level overlay (survives
+        // the morph route-swap) — like the pinned hero it STAYS PUT, fading
+        // in place while the card rises over it (the card's scroll layer
+        // sits at z45, above the canvas's z40). Only while at rest (the
+        // morph owns the orb otherwise); untouched at the very top so the
+        // intro fade-in is preserved, and reset once on return.
         if (showOrbRef.current && phaseRef.current === 'rest' && morphRef.current === 0) {
-          if (gone > 0.002) { orbOverlay.setScrollFade(-rect.top, 1 - gone); orbTouched = true }
+          if (gone > 0.002) { orbOverlay.setScrollFade(0, 1 - gone); orbTouched = true }
           else if (orbTouched) { orbOverlay.setScrollFade(0, 1); orbTouched = false }
         }
       }
@@ -149,14 +158,15 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
   const [morph, setMorph] = useState(0) // 0→1 morph progress, drives the text-out
   const showOrb = useOrb && !orbFailed
 
-  // The desktop live orb is stuck to the page and translated up with the scroll (see
-  // the exit-veil rAF below). This flag just disables its CLICK once the page has
-  // scrolled a little, so a tap where the orb used to be can't fire the morph while
-  // it's sliding away. Mobile's orb is a baked video inside the frame — no need there.
+  // scrolledAway does double duty on BOTH layouts now: it disables the orb's
+  // CLICK once the page has scrolled a little (a tap where the orb used to be
+  // can't fire the morph while the card rises), AND it fades the hero chrome
+  // (blurb, sponsor lockups, mobile baked-orb video) out through the elements'
+  // existing 0.5-0.8s opacity transitions — the house cueScrolled pattern —
+  // so the brightening photo is left clean under the rising card.
   const [scrolledAway, setScrolledAway] = useState(false)
   const scrolledAwayRef = useRef(false)
   useEffect(() => {
-    if (!showOrb) return undefined
     const onScroll = () => {
       const away = window.scrollY > 40
       scrolledAwayRef.current = away
@@ -165,7 +175,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
-  }, [showOrb])
+  }, [])
 
   // beginMorph (orb clicked) + navTo (fired by the scene at m≈0.82). Held in refs
   // so they always see the current uiVisible/onNavigate without re-attaching.
@@ -530,7 +540,16 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
       background: 'rgb(0,0,0)',
       height: '100dvh',
       width: '100%',
-      position: 'relative',
+      // Pinned cover (owner direction, Jul 2026): the hero stays FIXED in the
+      // viewport — it never scrolls away. On scroll it BRIGHTENS to the raw
+      // photo (rest scrim lifts, chrome fades) while the helm card + the rest
+      // of the site ride up OVER it (HomeShell's z45 scroll layer). Sticky
+      // keeps its 100dvh flow footprint so the scroll layer starts one
+      // viewport down; zIndex 0 pins the hero's whole stacking context
+      // beneath the scroll layer.
+      position: 'sticky',
+      top: 0,
+      zIndex: 0,
       overflow: 'hidden',
     }}>
       {/* Accessible page heading — the home's visual identity is the orb + the
@@ -582,8 +601,11 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
         />
       ))}
 
-      {/* Darkening overlay (solid black, alpha animates via CSS transition) */}
+      {/* Darkening overlay (solid black, alpha animates via CSS transition).
+          Its OPACITY is a second, scroll-driven channel: the exit-reveal rAF
+          lifts it 1→0 as the helm card rises, brightening the photo to full. */}
       <div
+        ref={restScrimRef}
         aria-hidden="true"
         style={{
           position: 'absolute', inset: 0,
@@ -617,14 +639,21 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
         <div style={{
           position: 'absolute', inset: 0, zIndex: 10,
           opacity: boatVisible ? 1 : 0, transition: 'opacity 0.8s ease',
-          pointerEvents: uiVisible ? 'auto' : 'none',
+          pointerEvents: uiVisible && !scrolledAway ? 'auto' : 'none',
         }}>
           {/* The sailing photo + flat 0.42 scrim behind the orb, laid out with the
               SAME cover math as the baked clips (see BakedOrbBackdrop) so the DOM
               pixels line up with the backdrop baked INTO the video — the orb's
               mask rim and the morph's first frame are then seamless. No porthole,
               no blend modes: the lit-glass interior is real shader output now. */}
-          <BakedOrbBackdrop embedded={embedded} />
+          <BakedOrbBackdrop embedded={embedded} scrimRef={bakedScrimRef} />
+          {/* The 0.42 scrim is BAKED into the clip pixels, so on scroll the
+              VIDEO fades out (backdrop stays) and the DOM photo brightens
+              through as its scrim lifts. */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            opacity: scrolledAway ? 0 : 1, transition: 'opacity 0.8s ease',
+          }}>
           <BakedOrb
             prefersReducedMotion={prefersReducedMotion}
             onMorphBegin={warmTheRoad}
@@ -646,6 +675,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
               }, 480)
             }}
           />
+          </div>
         </div>
       ) : (
         <button
@@ -719,10 +749,10 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
             bottom: 'clamp(56px, 9vh, 84px)', // raised a touch to clear the scroll cue below
             display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
             gap: 'clamp(16px, 2.4vh, 24px)',
-            opacity: (uiVisible ? 1 : 0) * (1 - textOut),
+            opacity: (uiVisible && !scrolledAway ? 1 : 0) * (1 - textOut),
             transform: `translateX(${-28 * textOut}px)`,
             transition: `opacity 0.6s ease${bakedMorphOut ? ', transform 0.6s ease' : ''}`,
-            pointerEvents: uiVisible && textOut < 0.05 ? 'auto' : 'none',
+            pointerEvents: uiVisible && !scrolledAway && textOut < 0.05 ? 'auto' : 'none',
             zIndex: 20,
           }}
         >
@@ -750,7 +780,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
               position: 'absolute', left: 0, bottom: 0,
               display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
               gap: 'clamp(12px, 1.8vh, 20px)', width: HOME_SPONSOR_W, maxWidth: '84vw',
-              opacity: (uiVisible ? 1 : 0) * (1 - textOut),
+              opacity: (uiVisible && !scrolledAway ? 1 : 0) * (1 - textOut),
               transition: 'opacity 0.6s ease',
               pointerEvents: 'none', zIndex: 46,
             }}
@@ -774,7 +804,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
           top (clears the hamburger, sits above the LA 2028 HUD, scrolls off with the
           frame). DESKTOP: a compact vertical sticker to the right of the centered orb.
           Fades in lockstep with the home nav via uiVisible*(1-textOut). */}
-      <HomeSponsorStrip embedded={embedded} uiVisible={uiVisible} textOut={textOut} />
+      <HomeSponsorStrip embedded={embedded} uiVisible={uiVisible} textOut={scrolledAway ? 1 : textOut} />
 
       {/* Scroll cue — a quiet "Explore" hint that scrolling leads on into the page
           (so it doesn't read as a dead end). Gently bounces (site scrollHint), fades
@@ -805,24 +835,6 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
       )}
 
 
-      {/* Exit veil — topmost layer of the home frame; the scroll-linked effect
-          above drives its opacity 0→1 as the frame scrolls off, dissolving
-          everything (photo, nav, sponsors) into the white overview below. On
-          desktop the live orb is a separate body-level overlay, faded in
-          lockstep via setScrollFade. Never interactive; invisible at rest. */}
-      {(
-        <div
-          ref={exitVeilRef}
-          aria-hidden="true"
-          style={{
-            position: 'absolute', inset: 0,
-            background: 'rgb(255,255,255)', // must match HomeOverview's white
-            opacity: 0,
-            pointerEvents: 'none',
-            zIndex: 60,
-          }}
-        />
-      )}
     </div>
   )
 }
@@ -839,7 +851,7 @@ const BAKE_W = 1080
 const BAKE_H = 1920
 const BAKE_ORB_R = 166 // matches BakedOrb: orb radius in the 1080×1920 baked source (expanded orb)
 
-function BakedOrbBackdrop({ embedded }) {
+function BakedOrbBackdrop({ embedded, scrimRef }) {
   const [vp, setVp] = useState(() => ({
     w: typeof window !== 'undefined' ? window.innerWidth : 390,
     h: typeof window !== 'undefined' ? window.innerHeight : 844,
@@ -865,8 +877,9 @@ function BakedOrbBackdrop({ embedded }) {
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
       </div>
-      {/* desktop rest overlay: one flat colour, no vignette */}
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.42)' }} />
+      {/* rest overlay: one flat colour, no vignette. The exit-reveal rAF lifts
+          its opacity 1→0 on scroll so the photo brightens under the card. */}
+      <div ref={scrimRef} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.42)' }} />
     </div>
   )
 }
