@@ -24,21 +24,22 @@ import { ROUTE_NM, ROUTE_WAYPOINTS, distanceNm, bearingDeg } from '../data/route
 import './helmPanel.css'
 
 // --------------------------------------------------------------------------
-// Color themes — the owner is comparing three consoles. Resolved ONCE at
-// module scope from ?helm=photo|blend (dev-only, same idiom as the orb's
-// ?key= TUNE overrides in glassOrbScene); prod always renders classic.
-// CSS surfaces theme via the .hp-root--<variant> token blocks in
-// helmPanel.css; the values here cover SVG presentation attributes, which
-// cannot read var(). Instrument colors stay classic in "photo" per the
-// owner (green phosphor, ember LEDs, red horn); "blend" wears the site's
-// electric blue with white T-MINUS digits.
+// Color themes. "blend" — the white editorial instrument sheet — is the
+// owner's pick and the DEFAULT (what production renders). The runners-up
+// stay reachable in dev via ?helm=classic|photo (same idiom as the orb's
+// ?key= TUNE overrides in glassOrbScene) for future comparison. CSS
+// surfaces theme via the .hp-root--<variant> token blocks in helmPanel.css;
+// the values here cover SVG presentation attributes, which cannot read
+// var(). Instrument colors stay classic in "classic"/"photo" (green
+// phosphor, ember LEDs); "blend" is ink structure + the site's electric
+// blue carrying the live data.
 // --------------------------------------------------------------------------
 const VARIANT = (() => {
   if (import.meta.env.DEV && typeof location !== 'undefined') {
     const v = new URLSearchParams(location.search).get('helm')
-    if (v === 'photo' || v === 'blend') return v
+    if (v === 'classic' || v === 'photo' || v === 'blend') return v
   }
-  return 'classic'
+  return 'blend'
 })()
 
 const THEMES = {
