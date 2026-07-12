@@ -1,20 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
 import Footer from './Footer'
 import { TOUR_STATS } from '../data/tourChapters'
+import { Radar } from './HelmPanel'
 import teamPhoto from '../assets/exit-cards/exit-path.jpg'
+import wordmark from '../assets/contact/robby-meek-wordmark.png'
 
 const BASE = import.meta.env.BASE_URL
 
 // ============================================================================
-//  HomeOverview — the white editorial index below the home prologue.
+//  HomeOverview — four uniform editorial rows below the helm station.
 // ============================================================================
-//  MainView's exit veil blacks the orb frame out top-down and the helm
-//  station (HomeHelmSection) seats over the void; scrolling on from the
-//  seated panel lands here — the black bars cut hard to this white index of
-//  the campaign in three editorial moments: the film (Biography), the crew
-//  (The Team), and the world (The Road, the page's one dark interruption) —
-//  closed by a personal campaign note and the light footer. Mostly white,
-//  hairline rules, sharp corners, a single accent.
+//  The pinned hero brightens to the raw photo and the white helm card rides
+//  up over it; scrolling on from the card lands here — an index of the
+//  campaign as FOUR equally-sized rows, uniformly built: media on the left,
+//  text on the right, and the route action always in the same spot at the
+//  bottom of the text column (mobile: media, then text, then the action).
+//  Biography (the film) · The Team (the crew photo) · The Road (the page's
+//  one black row — the helm station's radar, blue on black, sweeping the
+//  2026 venues) · Contact (the wordmark, the contact page's own media).
 //
 //  The interaction signature is the route action: a thin electric-blue rule
 //  under each action that extends toward the arrow on hover/focus
@@ -25,13 +28,11 @@ const BASE = import.meta.env.BASE_URL
 // ============================================================================
 
 const POSTER = `${BASE}trailer/trailer-poster.jpg`
-const GLOBE_POSTER = `${BASE}orb/orb-globe-poster.webp`
 
 // ---- page tokens ----
 const INK = 'rgb(20,28,54)' //        deep navy ink (Support's NAVY)
 const BODY = 'rgba(20,28,54,0.8)' //  body copy on white
 const MUTED = '#646262' //            proof lines (Contact/Support grey)
-const HAIR = 'rgba(20,28,54,0.14)' // hairline rules
 const FRAME_BG = 'rgb(11,14,20)' //   film-frame pre-paint fill
 // The accent lives in index.css too (.ho-action underline, chip hover) —
 // it is the site's established on-light blue (Support/Team), visually
@@ -39,9 +40,12 @@ const FRAME_BG = 'rgb(11,14,20)' //   film-frame pre-paint fill
 
 // Shared content lane + spacing rhythm (only these steps, no ad-hoc values).
 const WRAP = { maxWidth: 1200, margin: '0 auto', padding: '0 clamp(24px, 5vw, 64px)' }
-const SECTION_PAD = 'clamp(56px, 9vh, 104px)'
-const OPEN_TOP = 'clamp(96px, 15vh, 160px)'
 const GAP_COL = 'clamp(40px, 5vw, 72px)'
+// The uniform row: every row's media cell is this tall on desktop, every
+// section carries this same vertical padding — four equal beats.
+const ROW_MEDIA_H = 'clamp(380px, 56vh, 560px)'
+const ROW_PAD = 'clamp(32px, 6vh, 72px) 0'
+const ROW_MEDIA_H_MOBILE = 'min(64vw, 380px)'
 
 const FILM_ALT = "Robby Meek's ILCA 7 under sail on open water — Robby Meek, US Sailing Team."
 
@@ -56,6 +60,22 @@ const sectionHeading = {
   letterSpacing: '-0.6px', lineHeight: 1.15, color: INK, margin: '0 0 14px',
 }
 const bodyCopy = { fontSize: 17, lineHeight: 1.65, color: BODY, margin: '0 0 18px' }
+
+// The Road row hosts the helm station's Radar OUTSIDE the panel, so the CSS
+// vars its classed elements consume (.hp-scope/.hp-sweep/.hp-blip[-tag])
+// are re-provided here — blue on black, The Road's own palette. The wrapper
+// is a size container because the scope inscribes via min(100cqw, 100cqh).
+const ROAD_RADAR_VARS = {
+  '--hp-phos': 'rgb(0,80,255)',
+  '--hp-phos-rgb': '0, 80, 255',
+  '--hp-phos-hi-rgb': '90, 140, 255',
+  '--hp-scope-rgb': '6, 26, 90',
+  '--hp-scope-deep-rgb': '2, 10, 40',
+  '--hp-scope-edge': '#000208',
+  '--hp-sweep-s': '4.4s',
+  '--hp-mono': "ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace",
+}
+const ROAD_RADAR_COLORS = { phos: 'rgba(0,80,255,', grid: 'rgba(0,80,255,', bone: 'rgba(255,255,255,' }
 
 function useReducedMotion() {
   const [reduced, setReduced] = useState(() =>
@@ -129,13 +149,13 @@ function RouteAction({ label, onClick, dark = false, style }) {
 // Same field-proven wiring as SailingBanner (lite fallback, DOM-node muted,
 // early-warm IO before the play/pause IO — same-batch IntersectionObserver
 // callbacks fire in creation order, so a jump straight into view runs load()
-// before play() — visibility pause), plus a quiet pause/play chip on the
-// white margin below the frame, never over the footage. `userPausedRef`
+// before play() — visibility pause), plus a quiet pause/play chip. In `fill`
+// mode (the uniform rows) the frame covers its media cell edge-to-edge and
+// the chip sits on a small white square in the frame's bottom-left corner —
+// the one deliberate exception to "chip never over the footage", since the
+// uniform row leaves no white margin beneath the frame. `userPausedRef`
 // keeps the visitor's explicit pause authoritative over the auto-resumes.
-// `bleed` (mobile): the frame is a full-width edge-to-edge banner — the
-// parent section carries no side padding — so only the chip row indents
-// itself back into the content lane.
-function FilmBlock({ isMobile, bleed = false }) {
+function FilmBlock({ isMobile, bleed = false, fill = false }) {
   const videoRef = useRef(null)
   const frameRef = useRef(null)
   const [lite, setLite] = useState(false) // reduced-motion / save-data / slow net → poster only
@@ -250,18 +270,23 @@ function FilmBlock({ isMobile, bleed = false }) {
     }
   }
 
-  const frame = {
-    position: 'relative',
-    // Matched to the clip's CONTENT box (see SailingBanner): the master has
-    // ~41px letterbox bars baked top+bottom; this aspect + cover always
-    // crops the bars. No minHeight on the mobile banner — forcing one against
-    // the aspect box blows the footage up past its frame on narrow screens.
-    aspectRatio: '1920 / 804',
-    minHeight: isMobile ? 0 : 260,
-    overflow: 'hidden',
-    lineHeight: 0,
-    background: FRAME_BG,
-  }
+  const frame = fill
+    ? {
+      position: 'absolute', inset: 0,
+      overflow: 'hidden', lineHeight: 0, background: FRAME_BG,
+    }
+    : {
+      position: 'relative',
+      // Matched to the clip's CONTENT box (see SailingBanner): the master has
+      // ~41px letterbox bars baked top+bottom; this aspect + cover always
+      // crops the bars. No minHeight on the mobile banner — forcing one against
+      // the aspect box blows the footage up past its frame on narrow screens.
+      aspectRatio: '1920 / 804',
+      minHeight: isMobile ? 0 : 260,
+      overflow: 'hidden',
+      lineHeight: 0,
+      background: FRAME_BG,
+    }
   const media = {
     position: 'absolute', inset: 0, width: '100%', height: '100%',
     objectFit: 'cover', display: 'block',
@@ -280,52 +305,113 @@ function FilmBlock({ isMobile, bleed = false }) {
     )
   }
 
+  const chip = (
+    <button
+      type="button"
+      className="ho-film-chip"
+      aria-label={playing ? 'Pause the film' : 'Play the film'}
+      onClick={toggle}
+      style={{
+        width: 34, height: 34,
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        background: fill ? '#fff' : 'none',
+        border: fill ? 'none' : `1px solid rgba(20,28,54,0.35)`, color: INK,
+        cursor: 'pointer', padding: 0,
+        ...(fill ? { position: 'absolute', left: 0, bottom: 0, zIndex: 2 } : null),
+      }}
+    >
+      {playing ? (
+        <svg width="10" height="11" viewBox="0 0 10 11" aria-hidden="true">
+          <rect x="1" width="3" height="11" fill="currentColor" />
+          <rect x="6" width="3" height="11" fill="currentColor" />
+        </svg>
+      ) : (
+        <svg width="11" height="12" viewBox="0 0 11 12" aria-hidden="true" style={{ marginLeft: 2 }}>
+          <path d="M0 0 L11 6 L0 12 Z" fill="currentColor" />
+        </svg>
+      )}
+    </button>
+  )
+
+  const video = (
+    <video
+      ref={videoRef}
+      className="ho-film-video"
+      src={src}
+      autoPlay
+      muted
+      loop
+      playsInline
+      preload="none"
+      poster={posterOk ? POSTER : undefined}
+      disablePictureInPicture
+      onPlay={() => setPlaying(true)}
+      onPause={() => setPlaying(false)}
+      onError={() => setPosterOk(false)}
+      style={media}
+    />
+  )
+
+  if (fill) {
+    return (
+      <div style={{ position: 'absolute', inset: 0 }}>
+        <div ref={frameRef} style={frame}>{video}</div>
+        {chip}
+      </div>
+    )
+  }
+
   return (
     <div>
-      <div ref={frameRef} style={frame}>
-        <video
-          ref={videoRef}
-          className="ho-film-video"
-          src={src}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="none"
-          poster={posterOk ? POSTER : undefined}
-          disablePictureInPicture
-          onPlay={() => setPlaying(true)}
-          onPause={() => setPlaying(false)}
-          onError={() => setPosterOk(false)}
-          style={media}
-        />
-      </div>
+      <div ref={frameRef} style={frame}>{video}</div>
       <div style={{ marginTop: 12, ...(bleed ? { padding: LANE_PAD } : null) }}>
-        <button
-          type="button"
-          className="ho-film-chip"
-          aria-label={playing ? 'Pause the film' : 'Play the film'}
-          onClick={toggle}
-          style={{
-            width: 34, height: 34,
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            background: 'none', border: `1px solid rgba(20,28,54,0.35)`, color: INK,
-            cursor: 'pointer', padding: 0,
-          }}
-        >
-          {playing ? (
-            <svg width="10" height="11" viewBox="0 0 10 11" aria-hidden="true">
-              <rect x="1" width="3" height="11" fill="currentColor" />
-              <rect x="6" width="3" height="11" fill="currentColor" />
-            </svg>
-          ) : (
-            <svg width="11" height="12" viewBox="0 0 11 12" aria-hidden="true" style={{ marginLeft: 2 }}>
-              <path d="M0 0 L11 6 L0 12 Z" fill="currentColor" />
-            </svg>
-          )}
-        </button>
+        {chip}
       </div>
     </div>
+  )
+}
+
+// ---------- the uniform row ----------
+// One shape for all four beats: media left, text right, and the route action
+// anchored to the SAME spot — the bottom of the text column — on every row
+// (marginTop:auto in the stretched column). Mobile: media, text, action, in
+// flow. `dark` flips the row to the page's one black note (The Road).
+function Row({ title, body, extra, actionLabel, onAction, media, dark = false, isMobile }) {
+  const fg = dark ? '#fff' : INK
+  const bodyC = dark ? 'rgba(255,255,255,0.82)' : BODY
+  if (isMobile) {
+    return (
+      <section aria-label={title} style={{ background: dark ? '#000' : '#fff', padding: 'clamp(28px, 5vh, 48px) 0' }}>
+        <Reveal style={{ position: 'relative', overflow: 'hidden', height: ROW_MEDIA_H_MOBILE }}>
+          {media}
+        </Reveal>
+        <Reveal delay={120} style={{ padding: LANE_PAD, paddingTop: 24 }}>
+          <h3 style={{ ...sectionHeading, color: fg }}>{title}</h3>
+          <p style={{ ...bodyCopy, color: bodyC }}>{body}</p>
+          {extra}
+          <RouteAction dark={dark} label={actionLabel} onClick={onAction} />
+        </Reveal>
+      </section>
+    )
+  }
+  return (
+    <section aria-label={title} style={{ background: dark ? '#000' : '#fff', padding: ROW_PAD }}>
+      <div style={{
+        ...WRAP,
+        display: 'grid', gridTemplateColumns: 'minmax(0, 1.05fr) minmax(0, 1fr)',
+        columnGap: GAP_COL, alignItems: 'stretch',
+      }}>
+        <Reveal style={{ position: 'relative', overflow: 'hidden', minHeight: ROW_MEDIA_H }}>
+          {media}
+        </Reveal>
+        <Reveal delay={120} style={{ display: 'flex', flexDirection: 'column', padding: 'clamp(28px, 4vh, 44px) 0' }}>
+          <h3 style={{ ...sectionHeading, color: fg }}>{title}</h3>
+          <p style={{ ...bodyCopy, color: bodyC, maxWidth: 480 }}>{body}</p>
+          {extra}
+          <RouteAction dark={dark} label={actionLabel} onClick={onAction} style={{ marginTop: 'auto', alignSelf: 'flex-start' }} />
+        </Reveal>
+      </div>
+    </section>
   )
 }
 
@@ -334,45 +420,13 @@ export default function HomeOverview({
   isMobile = typeof window !== 'undefined' && window.innerWidth < 700,
 }) {
   return (
-    <div style={{ background: '#FFFFFF', color: INK }}>
+    <div style={{ background: '#FFFFFF', color: INK, paddingTop: 'clamp(40px, 7vh, 80px)' }}>
 
-      {/* Opening — generous white after the fade from the orb. Only the
-          eyebrow and the thesis; no supporting copy. */}
-      <header style={{ ...WRAP, paddingTop: OPEN_TOP, paddingBottom: 'clamp(64px, 10vh, 112px)' }}>
-        <Reveal>
-          <p style={{
-            fontSize: 12, fontWeight: 600, letterSpacing: '2.2px',
-            textTransform: 'uppercase', color: 'rgb(10,85,235)', margin: '0 0 18px',
-          }}>LA 2028</p>
-          <h2 style={{
-            fontSize: 'clamp(34px, 4.6vw, 58px)', fontWeight: 700,
-            letterSpacing: '-1.2px', lineHeight: 1.05, color: INK,
-            maxWidth: 640, margin: 0,
-          }}>The work behind the start line.</h2>
-        </Reveal>
-      </header>
-
-      {/* 1 — The film. Desktop: video dominant, copy in a narrow adjoining
-          column. Mobile: the film is a full-bleed edge-to-edge banner (the
-          section drops its side padding; chip + copy indent back into the
-          content lane). */}
-      <section aria-label="Biography" style={
-        isMobile
-          ? { paddingBottom: SECTION_PAD }
-          : {
-            ...WRAP, paddingBottom: SECTION_PAD,
-            display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px',
-            columnGap: GAP_COL, alignItems: 'end',
-          }
-      }>
-        <Reveal>
-          <FilmBlock isMobile={isMobile} bleed={isMobile} />
-        </Reveal>
-        <Reveal delay={120} style={isMobile ? { padding: LANE_PAD, paddingTop: 24 } : { paddingBottom: 2 }}>
-          <h3 style={sectionHeading}>Biography</h3>
-          <p style={bodyCopy}>Racing since nine. Now working toward LA 2028 in the ILCA 7.</p>
-          {/* Nowrap per phrase so the narrow column breaks at the separator,
-              never mid-phrase. */}
+      <Row
+        isMobile={isMobile}
+        title="Biography"
+        body="Racing since nine. Now working toward LA 2028 in the ILCA 7."
+        extra={
           <p style={{
             fontSize: 12, fontWeight: 600, letterSpacing: '1.8px',
             textTransform: 'uppercase', color: MUTED, margin: '0 0 26px',
@@ -381,149 +435,76 @@ export default function HomeOverview({
             {' · '}
             <span style={{ whiteSpace: 'nowrap' }}>3 continental titles</span>
           </p>
-          <RouteAction label="Read biography" onClick={() => onNavigate('Biography')} />
-        </Reveal>
-      </section>
+        }
+        actionLabel="Read biography"
+        onAction={() => onNavigate('Biography')}
+        media={<FilmBlock isMobile={isMobile} fill />}
+      />
 
-      <div style={WRAP}><div style={{ height: 1, background: HAIR }} /></div>
-
-      {/* 2 — The crew. Mirror of the film section: copy on white, photo
-          opposite. The people are the proof — no stats, no overlay. */}
-      <section aria-label="The Team" style={{
-        ...WRAP, paddingTop: SECTION_PAD, paddingBottom: SECTION_PAD,
-        ...(isMobile ? null : {
-          display: 'grid', gridTemplateColumns: '320px minmax(0, 1fr)',
-          columnGap: GAP_COL, alignItems: 'end',
-        }),
-      }}>
-        {isMobile ? (
-          <>
-            <Reveal>
-              <div className="ho-zoom-frame" style={{ aspectRatio: '1000 / 563', overflow: 'hidden', lineHeight: 0 }}>
-                <img
-                  src={teamPhoto}
-                  alt="Robby with the Harvard sailing team on the dock after a regatta, holding trophies and the team burgee."
-                  className="ho-media-zoom"
-                  loading="lazy"
-                  decoding="async"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                />
-              </div>
-            </Reveal>
-            <Reveal delay={120} style={{ paddingTop: 24 }}>
-              <h3 style={sectionHeading}>The Team</h3>
-              <p style={{ ...bodyCopy, margin: '0 0 26px' }}>A singlehanded boat. A team effort.</p>
-              <RouteAction label="Meet the team" onClick={() => onNavigate('The Team')} />
-            </Reveal>
-          </>
-        ) : (
-          <>
-            <Reveal delay={120} style={{ paddingBottom: 2 }}>
-              <h3 style={sectionHeading}>The Team</h3>
-              <p style={{ ...bodyCopy, margin: '0 0 26px' }}>A singlehanded boat. A team effort.</p>
-              <RouteAction label="Meet the team" onClick={() => onNavigate('The Team')} />
-            </Reveal>
-            <Reveal>
-              <div className="ho-zoom-frame" style={{ aspectRatio: '1000 / 563', overflow: 'hidden', lineHeight: 0 }}>
-                <img
-                  src={teamPhoto}
-                  alt="Robby with the Harvard sailing team on the dock after a regatta, holding trophies and the team burgee."
-                  className="ho-media-zoom"
-                  loading="lazy"
-                  decoding="async"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                />
-              </div>
-            </Reveal>
-          </>
-        )}
-      </section>
-
-      {/* 3 — The world. The page's one dark note: a sharp full-bleed black
-          panel where the globe poster sits oversized and cropped off the
-          edge (its own black surround blends into the panel — no seam). The
-          live globe stays exclusive to /the-road; this is a still. */}
-      {isMobile ? (
-        <section aria-label="The Road" style={{
-          position: 'relative', overflow: 'hidden', background: '#000',
-          marginTop: 'clamp(64px, 10vh, 120px)',
-          display: 'flex', flexDirection: 'column', padding: '64px 24px 0',
-        }}>
-          <Reveal style={{ maxWidth: 420, position: 'relative', zIndex: 1 }}>
-            <h3 style={{ ...sectionHeading, color: '#fff' }}>The Road</h3>
-            <p style={{ ...bodyCopy, color: 'rgba(255,255,255,0.82)', margin: '0 0 26px' }}>{ROAD_LINE}</p>
-            <RouteAction dark label="See the road" onClick={() => onNavigate('The Road')} />
-          </Reveal>
-          {/* Spacer reserves the globe zone: the disc peaks ~141vw above the
-              panel bottom (150vw wide image, centre 38.3% down), so copy in
-              flow above it can never collide. */}
-          <div aria-hidden="true" style={{ height: '146vw' }} />
-          <img
-            src={GLOBE_POSTER}
-            alt=""
-            aria-hidden="true"
-            loading="lazy"
-            decoding="async"
-            style={{
-              position: 'absolute', left: '50%', bottom: '-96vw',
-              width: '150vw', height: 'auto', transform: 'translateX(-50%)',
-              pointerEvents: 'none', userSelect: 'none',
-            }}
-          />
-        </section>
-      ) : (
-        <section aria-label="The Road" style={{
-          position: 'relative', overflow: 'hidden', background: '#000',
-          marginTop: 'clamp(64px, 10vh, 120px)',
-          height: 'clamp(520px, 74vh, 720px)',
-        }}>
-          {/* Oversized, cropped on the left: ~30% of the disc hangs off the
-              edge; translateY centres the disc (38.3% down its own portrait
-              image) on the panel's midline. */}
-          <img
-            src={GLOBE_POSTER}
-            alt=""
-            aria-hidden="true"
-            loading="lazy"
-            decoding="async"
-            style={{
-              position: 'absolute',
-              width: 'clamp(640px, 54vw, 920px)', height: 'auto',
-              left: 'clamp(-285px, -16.7vw, -198px)', top: '52%',
-              transform: 'translateY(-38%)',
-              pointerEvents: 'none', userSelect: 'none',
-            }}
-          />
-          <div style={{
-            ...WRAP, height: '100%', position: 'relative',
-            display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-          }}>
-            <Reveal style={{ width: 'min(420px, 100%)' }}>
-              <h3 style={{ ...sectionHeading, color: '#fff' }}>The Road</h3>
-              <p style={{ ...bodyCopy, color: 'rgba(255,255,255,0.82)', margin: '0 0 26px' }}>{ROAD_LINE}</p>
-              <RouteAction dark label="See the road" onClick={() => onNavigate('The Road')} />
-            </Reveal>
+      <Row
+        isMobile={isMobile}
+        title="The Team"
+        body="A singlehanded boat. A team effort."
+        actionLabel="Meet the team"
+        onAction={() => onNavigate('The Team')}
+        media={
+          <div className="ho-zoom-frame" style={{ position: 'absolute', inset: 0, overflow: 'hidden', lineHeight: 0 }}>
+            <img
+              src={teamPhoto}
+              alt="Robby with the Harvard sailing team on the dock after a regatta, holding trophies and the team burgee."
+              className="ho-media-zoom"
+              loading="lazy"
+              decoding="async"
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
           </div>
-        </section>
-      )}
+        }
+      />
 
-      {/* Campaign note — back to white; a fine rule, one narrow column, and
-          the personal hand-off. No Donate button here: the persistent
-          banner's Donate and Support CTA owns that job. */}
-      <section aria-label="The campaign" style={{ ...WRAP, marginTop: 'clamp(72px, 11vh, 128px)' }}>
-        <div style={{ height: 1, background: HAIR }} />
-        <Reveal style={{ padding: '40px 0 clamp(80px, 12vh, 140px)' }}>
-          <p style={{
-            fontSize: 17, lineHeight: 1.7, color: 'rgba(20,28,54,0.85)',
-            maxWidth: 560, margin: 0,
+      <Row
+        isMobile={isMobile}
+        dark
+        title="The Road"
+        body={ROAD_LINE}
+        actionLabel="See the road"
+        onAction={() => onNavigate('The Road')}
+        media={
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute', inset: '6%',
+              containerType: 'size',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              ...ROAD_RADAR_VARS,
+            }}
+          >
+            <Radar colors={ROAD_RADAR_COLORS} />
+          </div>
+        }
+      />
+
+      <Row
+        isMobile={isMobile}
+        title="Contact"
+        body="I'm campaigning to represent the United States in the ILCA 7 at LA 2028. This site follows the work, the people, and the road ahead. Every gift gives this campaign more room to train, travel, and compete at its best."
+        actionLabel="Contact Robby"
+        onAction={() => onNavigate('Contact')}
+        media={
+          <div style={{
+            position: 'absolute', inset: 0, background: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            I’m campaigning to represent the United States in the ILCA 7 at LA 2028.
-            This site follows the work, the people, and the road ahead. Every gift
-            gives this campaign more room to train, travel, and compete at its best.
-          </p>
-          <RouteAction label="Contact Robby" onClick={() => onNavigate('Contact')} style={{ marginTop: 28 }} />
-        </Reveal>
-      </section>
+            <img
+              src={wordmark}
+              alt=""
+              aria-hidden="true"
+              loading="lazy"
+              decoding="async"
+              style={{ width: 'min(70%, 480px)', height: 'auto' }}
+            />
+          </div>
+        }
+      />
 
       <Footer variant="light" onNavigate={onNavigate} />
     </div>

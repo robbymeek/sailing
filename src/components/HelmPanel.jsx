@@ -248,6 +248,70 @@ function SegDisplay({ text, color = 'var(--hp-ember)', glow = 'rgba(255, 122, 47
   )
 }
 
+// --------------------------------------------------------------------------
+// Fourteen-segment renderer — the alphanumeric sibling of SegDisplay, for
+// LETTERS (M and N are illegible on a seven-seg). Same 40×80 cell, same
+// thickness-8 language, same skew: outer segments reuse segH/segV, plus a
+// split middle bar, centre verticals, and four diagonals.
+// --------------------------------------------------------------------------
+const segHHalf = (x, y) =>
+  `${x + 1.5},${y + 4} ${x + 4},${y} ${x + 12},${y} ${x + 14.5},${y + 4} ${x + 12},${y + 8} ${x + 4},${y + 8}`
+const SEG14_POINTS = {
+  A: segH(4, 0), B: segV(32, 4), C: segV(32, 44), D: segH(4, 72), E: segV(0, 44), F: segV(0, 4),
+  G1: segHHalf(4, 36), G2: segHHalf(20, 36),
+  I: segV(16, 4), L: segV(16, 44),
+  H: '7,10 11,10 16,32 12,32',   // top-left diagonal
+  J: '29,10 33,10 28,32 24,32',  // top-right diagonal
+  K: '12,48 16,48 11,70 7,70',   // bottom-left diagonal
+  M: '24,48 28,48 33,70 29,70',  // bottom-right diagonal
+}
+const LETTER14 = {
+  H: ['F', 'E', 'B', 'C', 'G1', 'G2'],
+  E: ['A', 'D', 'F', 'E', 'G1', 'G2'],
+  L: ['F', 'E', 'D'],
+  M: ['F', 'E', 'B', 'C', 'H', 'J'],
+  S: ['A', 'F', 'G1', 'G2', 'C', 'D'],
+  T: ['A', 'I', 'L'],
+  A: ['A', 'F', 'E', 'B', 'C', 'G1', 'G2'],
+  I: ['A', 'I', 'L', 'D'],
+  O: ['A', 'B', 'C', 'D', 'E', 'F'],
+  N: ['F', 'E', 'B', 'C', 'H', 'M'],
+  ' ': [],
+}
+
+function Seg14Text({ text, color = 'var(--hp-ember)', glow = 'transparent', style }) {
+  const glyphs = []
+  let x = 6
+  for (const ch of text) {
+    if (ch === ' ') {
+      x += 28
+    } else {
+      glyphs.push({ ch, x })
+      x += 50
+    }
+  }
+  const w = x + 2
+  return (
+    <svg
+      viewBox={`0 0 ${w} 86`}
+      style={{ height: '100%', width: 'auto', display: 'block', '--seg-color': color, '--seg-glow': glow, ...style }}
+    >
+      <g transform="skewX(-4) translate(8, 3)">
+        {glyphs.map((g, i) => {
+          const lit = LETTER14[g.ch] ?? []
+          return (
+            <g key={i} transform={`translate(${g.x}, 0)`}>
+              {Object.entries(SEG14_POINTS).map(([name, pts]) => (
+                <polygon key={name} className={lit.includes(name) ? 'hp-seg-on' : 'hp-seg-off'} points={pts} />
+              ))}
+            </g>
+          )
+        })}
+      </g>
+    </svg>
+  )
+}
+
 // The ticking T-MINUS clock, isolated so the 1s tick re-renders only this.
 // Days are padded to 3 digits so the glyph count never changes — the label
 // spans below index into the glyph list, and a 12→11 glyph shift at the
@@ -271,8 +335,14 @@ function CountdownSeg() {
 // --------------------------------------------------------------------------
 // Radar scope — polar grid SVG under a CSS conic-gradient beam; blips are
 // timed to flash as the beam passes (delay = bearing/360 × period).
+// EXPORTED for reuse outside the panel (the home overview's Road row hosts
+// it blue-on-black): pass `colors` to override the theme constants, and give
+// the host a `container-type: size` wrapper that re-provides the CSS vars
+// the classed elements consume (--hp-phos[-rgb], --hp-phos-hi-rgb,
+// --hp-scope-*, --hp-sweep-s, --hp-mono) since there is no .hp-root above.
 // --------------------------------------------------------------------------
-function Radar() {
+export function Radar({ colors } = {}) {
+  const { phos = PHOS, grid = GRID, bone = BONE } = colors ?? {}
   const rings = [22, 44, 66, 88]
   const spokes = Array.from({ length: 12 }, (_, i) => i * 30)
   return (
@@ -280,20 +350,20 @@ function Radar() {
       <div className="hp-scope">
         <svg viewBox="0 0 200 200" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
           {rings.map((r) => (
-            <circle key={r} cx="100" cy="100" r={r} fill="none" stroke={GRID + '0.22)'} strokeWidth="0.7" />
+            <circle key={r} cx="100" cy="100" r={r} fill="none" stroke={grid + '0.22)'} strokeWidth="0.7" />
           ))}
           {spokes.map((a) => {
             const [x1, y1] = polar(100, 100, 10, a)
             const [x2, y2] = polar(100, 100, 94, a)
             return (
-              <line key={a} x1={x1} y1={y1} x2={x2} y2={y2} stroke={GRID + (a % 90 === 0 ? '0.2)' : '0.12)')} strokeWidth="0.6" />
+              <line key={a} x1={x1} y1={y1} x2={x2} y2={y2} stroke={grid + (a % 90 === 0 ? '0.2)' : '0.12)')} strokeWidth="0.6" />
             )
           })}
           {/* bearing ring labels */}
           {spokes.map((a) => {
             const [x, y] = polar(100, 100, 80, a)
             return (
-              <text key={a} x={x} y={y + 2} textAnchor="middle" fontSize="6" fill={GRID + '0.42)'} style={{ fontFamily: 'var(--hp-mono)' }}>
+              <text key={a} x={x} y={y + 2} textAnchor="middle" fontSize="6" fill={grid + '0.42)'} style={{ fontFamily: 'var(--hp-mono)' }}>
                 {p3(a)}
               </text>
             )
@@ -302,7 +372,7 @@ function Radar() {
           {rings.map((r, i) => {
             const [x, y] = polar(100, 100, r, 225)
             return (
-              <text key={r} x={x - 2} y={y + 4} textAnchor="end" fontSize="5.5" fill={GRID + '0.34)'} style={{ fontFamily: 'var(--hp-mono)' }}>
+              <text key={r} x={x - 2} y={y + 4} textAnchor="end" fontSize="5.5" fill={grid + '0.34)'} style={{ fontFamily: 'var(--hp-mono)' }}>
                 {(i + 1) * 2}k
               </text>
             )
@@ -310,16 +380,16 @@ function Radar() {
           {/* course line toward the next waypoint */}
           {(() => {
             const [x2, y2] = polar(100, 100, 88, COG)
-            return <line x1="100" y1="100" x2={x2} y2={y2} stroke={BONE + '0.3)'} strokeWidth="0.8" strokeDasharray="2 3" />
+            return <line x1="100" y1="100" x2={x2} y2={y2} stroke={bone + '0.3)'} strokeWidth="0.8" strokeDasharray="2 3" />
           })()}
           {/* fixed sea clutter */}
           {CLUTTER.map((c, i) => {
             const [x, y] = polar(100, 100, c.rf * 88, c.brg)
-            return <circle key={i} cx={x} cy={y} r={0.9 + (i % 2) * 0.5} fill={PHOS + `${c.o})`} />
+            return <circle key={i} cx={x} cy={y} r={0.9 + (i % 2) * 0.5} fill={phos + `${c.o})`} />
           })}
           {/* own ship */}
-          <circle cx="100" cy="100" r="2" fill={BONE + '0.9)'} />
-          <circle cx="100" cy="100" r="4.5" fill="none" stroke={PHOS + '0.4)'} strokeWidth="0.6" />
+          <circle cx="100" cy="100" r="2" fill={bone + '0.9)'} />
+          <circle cx="100" cy="100" r="4.5" fill="none" stroke={phos + '0.4)'} strokeWidth="0.6" />
         </svg>
         <div className="hp-sweep" aria-hidden="true" />
         {RADAR_BLIPS.map((b) => {
@@ -658,31 +728,12 @@ export default function HelmPanel() {
       <Screws inset={9} />
       <div className="hp-face">
         {VARIANT === 'blend' ? (
-          /* editorial masthead — the site's eyebrow + headline + the
-             .ho-action-style 2px blue rule as the signature touch */
-          <div className="hp-header" style={{ alignItems: 'flex-end' }}>
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '2.2px', textTransform: 'uppercase', color: 'rgb(10, 85, 235)' }}>
-                R. Meek · ILCA 7
-              </div>
-              <div
-                style={{
-                  display: 'inline-block',
-                  fontSize: 'clamp(18px, 1.7vw, 26px)',
-                  fontWeight: 700,
-                  letterSpacing: '-0.5px',
-                  lineHeight: 1.1,
-                  color: 'rgb(20, 28, 54)',
-                  paddingBottom: 4,
-                  borderBottom: '2px solid rgb(10, 85, 235)',
-                }}
-              >
-                Helm Station
-              </div>
+          /* masthead — just the station name, rendered in the same segment-
+             display family as the countdown (14-seg: letters need it) */
+          <div className="hp-header">
+            <div style={{ height: 'clamp(20px, 1.9vw, 30px)' }}>
+              <Seg14Text text="HELM STATION" color="rgb(10, 85, 235)" />
             </div>
-            <span className="hp-plate--stats" style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(20, 28, 54, 0.55)' }}>
-              {`${TOUR_STATS.stops} STOPS · ${TOUR_STATS.continents} CONTINENTS`}
-            </span>
           </div>
         ) : (
           <div className="hp-header">

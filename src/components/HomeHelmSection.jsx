@@ -2,14 +2,14 @@
 //  HomeHelmSection — the helm panel's scroll entrance on the home page.
 // ============================================================================
 //  Owner's choreography (Jul 2026, card-over-pinned-hero direction): the
-//  hero stays FIXED in the viewport (MainView is sticky) and fades to black
-//  in place; this section — the panel as a SOLO floating card, like the
-//  cards on rolex.com — rides up OVER it inside HomeShell's z45 scroll
-//  layer, pulling the rest of the site up behind it. The section is
-//  TRANSPARENT: while the card rises, the fading hero shows around it, and
-//  once the veil lands the same transparency reads as the solid black page.
-//  The card occupies ~2/3 of the viewport, so the white overview peeks in
-//  underneath it and the scroll affordance is obvious.
+//  hero stays FIXED in the viewport (MainView is sticky) and BRIGHTENS to
+//  the raw photograph (scrim lifts, chrome fades); this section — the panel
+//  as a SOLO floating card, like the cards on rolex.com — rides up OVER it
+//  inside HomeShell's z45 scroll layer, pulling the rest of the site up
+//  behind it. The section is TRANSPARENT: the full-brightness photo shows
+//  around the rising card. The card occupies ~2/3 of the viewport, so the
+//  white overview peeks in underneath it and the scroll affordance is
+//  obvious.
 //
 //  Zero scroll JS here — no listeners: plain document flow, so reverse
 //  scrolling replays exactly and the banner/bar pin math (closed forms of
@@ -22,9 +22,8 @@ export default function HomeHelmSection({ isMobile = false }) {
     <section
       aria-label="Helm station"
       style={{
-        // transparent — the pinned hero (fading to black) shows through
-        // around the rising card; after the veil lands it reads as the
-        // solid black page
+        // transparent — the pinned hero (brightening to the raw photo)
+        // shows through around the rising card
         padding: isMobile
           ? '68px 14px 44px' // 52px pinned menu bar + air, card margins, bottom air before the peek
           : `calc(${DESKTOP_BANNER_H} + 26px) clamp(20px, 3vw, 56px) clamp(30px, 6vh, 72px)`,
