@@ -1,66 +1,44 @@
 // ============================================================================
 //  HomeHelmSection — the helm panel's scroll entrance on the home page.
 // ============================================================================
-//  Owner's choreography (Jul 2026): on scroll, the background blacks out from
-//  the TOP of the page (MainView's exit veil, a top-down gradient) while ONE
-//  picture-frame panel in a nautical casing scrolls up from the BOTTOM. It
-//  seats with black bars on all sides — top padding clears the pinned nav
-//  banner — holds for a beat (the page "becomes" the control panel), then
-//  releases into normal scrolling toward the white overview below.
+//  Owner's choreography (Jul 11 2026, card direction — supersedes the earlier
+//  full-viewport seat-and-hold): the panel is a SOLO OBJECT, like the cards
+//  on rolex.com — a floating cased card that scrolls up in normal document
+//  flow while the hero blacks out top-down behind it (MainView's exit veil),
+//  onto a page with a solid black background. It occupies ~2/3 of the
+//  viewport, so the section below peeks in underneath the card and the
+//  scroll affordance is obvious.
 //
-//  Implementation is pure document flow — NO scroll listener, NO transforms:
-//  an in-flow black section right after the 100dvh hero, containing a sticky
-//  full-viewport stage. Riding up from below IS the entrance; the sticky pin
-//  IS the seat; the extra DWELL_VH of section height IS the hold. Reverse
-//  scrolling replays it exactly by construction, and the banner/bar pin math
-//  (closed forms of window.scrollY) stays untouched.
+//  Still zero scroll JS — no sticky, no dwell, no listeners: the section is
+//  plain flow, so reverse scrolling replays exactly and the banner/bar pin
+//  math (closed forms of window.scrollY) stays untouched.
 import HelmPanel from './HelmPanel'
 import { DESKTOP_BANNER_H } from './HomeSponsorStrip'
 
-// How long the seated panel holds (in vh of scroll) before releasing into
-// the overview. Short enough to feel like a detent, not a stop.
-const DWELL_VH = 60
-
 export default function HomeHelmSection({ isMobile = false }) {
-  // 100svh on mobile so the collapsing URL bar can't clip the seated panel
-  // (Team's pinned timeline uses the same unit); any dvh−svh sliver below the
-  // stage shows the section's own black — indistinguishable from the bars.
-  const stageH = isMobile ? '100svh' : '100dvh'
-  const pad = isMobile
-    ? '64px 14px 16px' // 52px pinned menu bar + breathing room
-    : `calc(${DESKTOP_BANNER_H} + 14px) clamp(18px, 2.8vw, 44px) clamp(16px, 2.8vh, 36px)`
   return (
-    <>
-      <section
-        aria-label="Helm station"
+    <section
+      aria-label="Helm station"
+      style={{
+        background: '#000', // the page the card floats on — matches the hero's blacked-out exit
+        padding: isMobile
+          ? '68px 14px 44px' // 52px pinned menu bar + air, card margins, bottom air before the peek
+          : `calc(${DESKTOP_BANNER_H} + 26px) clamp(20px, 3vw, 56px) clamp(30px, 6vh, 72px)`,
+      }}
+    >
+      <div
         style={{
-          position: 'relative',
-          height: `calc(${stageH} + ${DWELL_VH}vh)`,
-          background: '#000', // the void the panel floats in — matches the hero's blacked-out exit
+          // ~2/3 of the viewport: tall enough to read as the page's second
+          // beat, short enough that the white overview peeks in below it.
+          // svh on mobile so the collapsing URL bar can't jump the card.
+          height: isMobile ? '66svh' : '66dvh',
+          minHeight: 340,
+          maxWidth: 1600,
+          margin: '0 auto',
         }}
       >
-        <div
-          style={{
-            position: 'sticky',
-            top: 0,
-            height: stageH,
-            overflow: 'hidden',
-            boxSizing: 'border-box',
-            padding: pad,
-            display: 'flex',
-          }}
-        >
-          <HelmPanel />
-        </div>
-      </section>
-      {/* Mobile only: with the URL bar collapsed the viewport is 100lvh but
-          the stage is 100svh, so for the last (lvh−svh) px before the sticky
-          releases, whatever follows the section peeks up under the seated
-          panel. This black shim fills exactly that window so the hard
-          black→white cut lands only once the panel is actually moving. */}
-      {isMobile && (
-        <div aria-hidden="true" style={{ height: 'calc(100lvh - 100svh)', background: '#000' }} />
-      )}
-    </>
+        <HelmPanel />
+      </div>
+    </section>
   )
 }

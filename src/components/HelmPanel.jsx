@@ -484,13 +484,13 @@ function NextEventLCD() {
     textOverflow: 'ellipsis',
   }
   return (
-    <div className="hp-screen" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 5, padding: '10px 14px' }}>
-      <div style={{ ...line, fontSize: 9, opacity: 0.55, letterSpacing: '0.2em' }}>NEXT EVENT</div>
-      <div className="hp-lcd-glow" style={{ ...line, fontSize: 'clamp(12px, 1.05vw, 15px)', fontWeight: 700, letterSpacing: '0.06em' }}>
+    <div className="hp-screen" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 3, padding: '8px 12px' }}>
+      <div style={{ ...line, fontSize: 8, opacity: 0.55, letterSpacing: '0.2em' }}>NEXT EVENT</div>
+      <div className="hp-lcd-glow" style={{ ...line, fontSize: 'clamp(11px, 0.95vw, 14px)', fontWeight: 700, letterSpacing: '0.06em' }}>
         {NEXT_EVENT.name}
       </div>
-      <div style={{ ...line, fontSize: 10, opacity: 0.7 }}>{`${NEXT_EVENT.where} · ${NEXT_EVENT.when}`}</div>
-      <div style={{ ...line, fontSize: 12, opacity: 0.9 }}>{`T-${days} DAYS`}</div>
+      <div style={{ ...line, fontSize: 9, opacity: 0.7 }}>{`${NEXT_EVENT.where} · ${NEXT_EVENT.when}`}</div>
+      <div style={{ ...line, fontSize: 11, opacity: 0.9 }}>{`T-${days} DAYS`}</div>
     </div>
   )
 }

@@ -121,9 +121,10 @@ const CURRENT_MAP = {
 
 // Home route (both layouts): the cinematic MainView frame; then the helm
 // station — on scroll, MainView's exit veil blacks the frame out from the
-// top down while the nautical control panel scrolls up from the bottom,
-// seats with black bars around it, holds, and releases (HomeHelmSection);
-// then the white editorial overview. The live orb still morphs → The Road
+// top down while the nautical control panel scrolls up from the bottom as
+// a solo floating card onto the black page, sized ~2/3 of the viewport so
+// the overview peeks in below it (HomeHelmSection); then the white
+// editorial overview. The live orb still morphs → The Road
 // on click. MainView is KEYED to the layout mode: `embedded` gates
 // mount-time state (the useOrb lazy init, the orbOverlay attach effect) that
 // a prop flip alone would not rebuild — the key forces the same full remount
