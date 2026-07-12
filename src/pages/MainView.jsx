@@ -83,14 +83,19 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
 
   // Exit fade — the hero is PINNED (sticky, above) and never scrolls away;
   // instead, as the helm card rises over it, the WHOLE frame (photo, orb,
-  // text) blacks out IN PLACE from the TOP DOWN: a black gradient veil whose
-  // edge sweeps down the pinned frame. Progress comes from window.scrollY
-  // (rect.top stays 0 while pinned). Pure closed form of scroll — reverse
-  // scroll replays exactly, same invariant as Biography's parallax, which
-  // uses this same rAF pattern. The veil is pointer-events: none throughout,
-  // so the orb hotspot and nav links stay live while it is still translucent.
+  // text) fades to black IN PLACE, together — with the top just slightly
+  // ahead (owner: no gradient edge travelling down the page; the top is
+  // simply darker sooner, then everything darkens as one). Two layers, both
+  // opacity-only (composited): a uniform black veil at `gone`, plus a
+  // fixed-shape top-weighted gradient that ramps ~1.7× faster. Progress
+  // comes from window.scrollY (rect.top stays 0 while pinned). Pure closed
+  // form of scroll — reverse scroll replays exactly, same invariant as
+  // Biography's parallax, which uses this same rAF pattern. Both layers are
+  // pointer-events: none throughout, so the orb hotspot and nav links stay
+  // live while they are still translucent.
   const homeRootRef = useRef(null)
   const exitVeilRef = useRef(null)
+  const exitVeilTopRef = useRef(null)
   useEffect(() => {
     // Runs on both mobile and desktop — the helm card covers both the same
     // way, and the live orb (a body-level fixed canvas) fades IN PLACE in
@@ -102,17 +107,16 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
       if (root) {
         const rect = root.getBoundingClientRect()
         // Fully black once the cover has risen 62% of the frame height — well
-        // before the card reaches the top of the page. The blackout is a
-        // top-down sweep over the PINNED frame: the veil is a 144%-tall black
-        // sheet whose bottom 44% feathers to clear (static gradient), slid
-        // down by a composited transform — no per-frame repaint. At gone=0
-        // the sheet sits fully above the frame (translateY(-100%) of itself →
-        // clear); at gone=1 its solid body covers the whole frame → black.
-        // scrollY, not rect.top, drives it: the sticky frame's rect.top
-        // stays 0 while pinned.
+        // before the card reaches the top of the page. The whole PINNED frame
+        // fades together (uniform veil at `gone`) while the top-weighted
+        // layer ramps 1.7× faster, so the top simply darkens sooner — no
+        // edge travels down the page. scrollY, not rect.top, drives it: the
+        // sticky frame's rect.top stays 0 while pinned.
         const gone = Math.min(1, Math.max(0, window.scrollY / (rect.height * 0.62)))
         const veil = exitVeilRef.current
-        if (veil) veil.style.transform = `translate3d(0, ${(gone - 1) * 100}%, 0)`
+        if (veil) veil.style.opacity = gone
+        const veilTop = exitVeilTopRef.current
+        if (veilTop) veilTop.style.opacity = Math.min(1, gone * 1.7)
         // Desktop live orb: it lives in a fixed body-level overlay (survives
         // the morph route-swap) — like the pinned hero it STAYS PUT, fading
         // in place in lockstep with the veil while the card rises over it
@@ -823,29 +827,38 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
       )}
 
 
-      {/* Exit veil — topmost layer of the home frame; the scroll-linked effect
-          above slides this black sheet down over the frame as it scrolls off,
-          blacking everything out (photo, nav, sponsors) from the top of the
-          page while the helm panel rises from the bottom. The sheet is 144%
-          of the frame tall with its bottom 44% feathering to clear, driven by
-          transform only (composited — no per-frame repaint); the hero root's
-          overflow:hidden clips it while it is parked above the frame. On
-          desktop the live orb is a separate body-level overlay, faded in
-          lockstep via setScrollFade. Never interactive; invisible at rest
-          (transform parked at -100% — must match the effect's gone=0 write). */}
+      {/* Exit veil — topmost layers of the pinned home frame; the scroll-
+          linked effect above fades them in as the helm card rises over the
+          frame. Layer 1 is uniform black (the whole page darkens together);
+          layer 2 is a FIXED-SHAPE top-weighted gradient that ramps faster,
+          so the top of the page is simply darker sooner — no edge travels.
+          On desktop the live orb is a separate body-level overlay, faded in
+          lockstep via setScrollFade. Never interactive; invisible at rest. */}
       {(
-        <div
-          ref={exitVeilRef}
-          aria-hidden="true"
-          style={{
-            position: 'absolute', left: 0, right: 0, top: 0,
-            height: '144%',
-            background: 'linear-gradient(to bottom, rgb(0,0,0) 69.44%, rgba(0,0,0,0) 100%)',
-            transform: 'translate3d(0, -100%, 0)',
-            pointerEvents: 'none',
-            zIndex: 60,
-          }}
-        />
+        <>
+          <div
+            ref={exitVeilRef}
+            aria-hidden="true"
+            style={{
+              position: 'absolute', inset: 0,
+              background: 'rgb(0,0,0)',
+              opacity: 0,
+              pointerEvents: 'none',
+              zIndex: 60,
+            }}
+          />
+          <div
+            ref={exitVeilTopRef}
+            aria-hidden="true"
+            style={{
+              position: 'absolute', inset: 0,
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.55) 32%, rgba(0,0,0,0) 68%)',
+              opacity: 0,
+              pointerEvents: 'none',
+              zIndex: 60,
+            }}
+          />
+        </>
       )}
     </div>
   )
