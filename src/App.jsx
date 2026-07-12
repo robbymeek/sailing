@@ -119,23 +119,28 @@ const CURRENT_MAP = {
   '/the-road': 'The Road',
 }
 
-// Home route (both layouts): the cinematic MainView frame; then the helm
-// station — on scroll, MainView's exit veil blacks the frame out from the
-// top down while the nautical control panel scrolls up from the bottom as
-// a solo floating card onto the black page, sized ~2/3 of the viewport so
-// the overview peeks in below it (HomeHelmSection); then the white
-// editorial overview. The live orb still morphs → The Road
-// on click. MainView is KEYED to the layout mode: `embedded` gates
-// mount-time state (the useOrb lazy init, the orbOverlay attach effect) that
-// a prop flip alone would not rebuild — the key forces the same full remount
-// the old MobileHome/DesktopHome type-swap produced during the ~250ms window
+// Home route (both layouts): the cinematic MainView frame, PINNED in the
+// viewport (sticky) — on scroll it stays put and fades to black in place
+// (top-down exit veil) while the scroll layer below rides up OVER it: the
+// nautical control panel as a solo floating card (~2/3 viewport, the
+// overview peeking in beneath it — HomeHelmSection), pulling the white
+// editorial overview and the rest of the site up with it. The live orb
+// still morphs → The Road on click. The scroll layer sits at z45: above
+// the body-level orb canvas (z40, orbOverlay CANVAS_Z) so the card passes
+// over the fading orb, below the menu overlays (70) and bars (80).
+// MainView is KEYED to the layout mode: `embedded` gates mount-time state
+// (the useOrb lazy init, the orbOverlay attach effect) that a prop flip
+// alone would not rebuild — the key forces the same full remount the old
+// MobileHome/DesktopHome type-swap produced during the ~250ms window
 // before App's home breakpoint-cross reload (below) lands.
 function HomeShell({ onNavigate, isMobile }) {
   return (
     <div>
       <MainView key={isMobile ? 'mobile' : 'desktop'} onNavigate={onNavigate} embedded={isMobile} />
-      <HomeHelmSection isMobile={isMobile} />
-      <HomeOverview onNavigate={onNavigate} isMobile={isMobile} />
+      <div style={{ position: 'relative', zIndex: 45 }}>
+        <HomeHelmSection isMobile={isMobile} />
+        <HomeOverview onNavigate={onNavigate} isMobile={isMobile} />
+      </div>
     </div>
   )
 }

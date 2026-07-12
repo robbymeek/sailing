@@ -1,17 +1,19 @@
 // ============================================================================
 //  HomeHelmSection — the helm panel's scroll entrance on the home page.
 // ============================================================================
-//  Owner's choreography (Jul 11 2026, card direction — supersedes the earlier
-//  full-viewport seat-and-hold): the panel is a SOLO OBJECT, like the cards
-//  on rolex.com — a floating cased card that scrolls up in normal document
-//  flow while the hero blacks out top-down behind it (MainView's exit veil),
-//  onto a page with a solid black background. It occupies ~2/3 of the
-//  viewport, so the section below peeks in underneath the card and the
-//  scroll affordance is obvious.
+//  Owner's choreography (Jul 2026, card-over-pinned-hero direction): the
+//  hero stays FIXED in the viewport (MainView is sticky) and fades to black
+//  in place; this section — the panel as a SOLO floating card, like the
+//  cards on rolex.com — rides up OVER it inside HomeShell's z45 scroll
+//  layer, pulling the rest of the site up behind it. The section is
+//  TRANSPARENT: while the card rises, the fading hero shows around it, and
+//  once the veil lands the same transparency reads as the solid black page.
+//  The card occupies ~2/3 of the viewport, so the white overview peeks in
+//  underneath it and the scroll affordance is obvious.
 //
-//  Still zero scroll JS — no sticky, no dwell, no listeners: the section is
-//  plain flow, so reverse scrolling replays exactly and the banner/bar pin
-//  math (closed forms of window.scrollY) stays untouched.
+//  Zero scroll JS here — no listeners: plain document flow, so reverse
+//  scrolling replays exactly and the banner/bar pin math (closed forms of
+//  window.scrollY) stays untouched.
 import HelmPanel from './HelmPanel'
 import { DESKTOP_BANNER_H } from './HomeSponsorStrip'
 
@@ -20,7 +22,9 @@ export default function HomeHelmSection({ isMobile = false }) {
     <section
       aria-label="Helm station"
       style={{
-        background: '#000', // the page the card floats on — matches the hero's blacked-out exit
+        // transparent — the pinned hero (fading to black) shows through
+        // around the rising card; after the veil lands it reads as the
+        // solid black page
         padding: isMobile
           ? '68px 14px 44px' // 52px pinned menu bar + air, card margins, bottom air before the peek
           : `calc(${DESKTOP_BANNER_H} + 26px) clamp(20px, 3vw, 56px) clamp(30px, 6vh, 72px)`,

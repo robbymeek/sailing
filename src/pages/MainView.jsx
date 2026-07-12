@@ -81,45 +81,47 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-  // Exit fade — as the home frame scrolls off toward the helm station below,
-  // black out the WHOLE frame (photo, orb, text) from the TOP DOWN: a black
-  // gradient veil whose edge sweeps down the frame while the control panel
-  // rides up from the bottom of the viewport (HomeHelmSection, next in flow).
-  // Pure closed form of scroll (gradient edge = f(rect.top) — reverse scroll
-  // replays exactly, same invariant as Biography's parallax, which uses this
-  // same rAF + getBoundingClientRect pattern). The veil is pointer-events:
-  // none throughout, so the orb hotspot and nav links stay live while it is
-  // still translucent.
+  // Exit fade — the hero is PINNED (sticky, above) and never scrolls away;
+  // instead, as the helm card rises over it, the WHOLE frame (photo, orb,
+  // text) blacks out IN PLACE from the TOP DOWN: a black gradient veil whose
+  // edge sweeps down the pinned frame. Progress comes from window.scrollY
+  // (rect.top stays 0 while pinned). Pure closed form of scroll — reverse
+  // scroll replays exactly, same invariant as Biography's parallax, which
+  // uses this same rAF pattern. The veil is pointer-events: none throughout,
+  // so the orb hotspot and nav links stay live while it is still translucent.
   const homeRootRef = useRef(null)
   const exitVeilRef = useRef(null)
   useEffect(() => {
-    // Runs on both mobile and desktop — both scroll into the helm section
-    // below, so the frame blacks out the same way, and the live orb is stuck
-    // to the page (translated up + faded with the veil) rather than fading early.
+    // Runs on both mobile and desktop — the helm card covers both the same
+    // way, and the live orb (a body-level fixed canvas) fades IN PLACE in
+    // lockstep with the veil — it stays centered under the rising card.
     let rafId
     let orbTouched = false
     const update = () => {
       const root = homeRootRef.current
       if (root) {
         const rect = root.getBoundingClientRect()
-        // Fully black once 62% of the frame has scrolled away — the remaining
-        // 38% exits as pure black flush with the helm section below. The
-        // blackout is a top-down sweep: the veil is a 144%-tall black sheet
-        // whose bottom 44% feathers to clear (static gradient), slid down
-        // from above the frame by a composited transform — same engine path
-        // as the old opacity write, no per-frame repaint. At gone=0 the sheet
-        // sits fully above the frame (translateY(-100%) of itself → clear);
-        // at gone=1 its solid body covers the whole frame → fully black.
-        const gone = Math.min(1, Math.max(0, -rect.top / (rect.height * 0.62)))
+        // Fully black once the cover has risen 62% of the frame height — well
+        // before the card reaches the top of the page. The blackout is a
+        // top-down sweep over the PINNED frame: the veil is a 144%-tall black
+        // sheet whose bottom 44% feathers to clear (static gradient), slid
+        // down by a composited transform — no per-frame repaint. At gone=0
+        // the sheet sits fully above the frame (translateY(-100%) of itself →
+        // clear); at gone=1 its solid body covers the whole frame → black.
+        // scrollY, not rect.top, drives it: the sticky frame's rect.top
+        // stays 0 while pinned.
+        const gone = Math.min(1, Math.max(0, window.scrollY / (rect.height * 0.62)))
         const veil = exitVeilRef.current
         if (veil) veil.style.transform = `translate3d(0, ${(gone - 1) * 100}%, 0)`
-        // Desktop live orb: stick it to the page. It lives in a fixed body-level
-        // overlay (survives the morph route-swap), so translate it UP by the scroll
-        // and fade it in lockstep with the veil — the whole centerpiece scrolls away
-        // uniformly. Only while at rest (the morph owns the orb otherwise); untouched
-        // at the very top so the intro fade-in is preserved, and reset once on return.
+        // Desktop live orb: it lives in a fixed body-level overlay (survives
+        // the morph route-swap) — like the pinned hero it STAYS PUT, fading
+        // in place in lockstep with the veil while the card rises over it
+        // (the card's scroll layer sits at z45, above the canvas's z40).
+        // Only while at rest (the morph owns the orb otherwise); untouched
+        // at the very top so the intro fade-in is preserved, and reset once
+        // on return.
         if (showOrbRef.current && phaseRef.current === 'rest' && morphRef.current === 0) {
-          if (gone > 0.002) { orbOverlay.setScrollFade(-rect.top, 1 - gone); orbTouched = true }
+          if (gone > 0.002) { orbOverlay.setScrollFade(0, 1 - gone); orbTouched = true }
           else if (orbTouched) { orbOverlay.setScrollFade(0, 1); orbTouched = false }
         }
       }
@@ -537,7 +539,16 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
       background: 'rgb(0,0,0)',
       height: '100dvh',
       width: '100%',
-      position: 'relative',
+      // Pinned cover (owner direction, Jul 2026): the hero stays FIXED in the
+      // viewport — it never scrolls away. It fades to black in place (the
+      // exit veil below) while the helm card + the rest of the site ride up
+      // OVER it (HomeShell's z45 scroll layer). Sticky keeps its 100dvh flow
+      // footprint so the scroll layer starts one viewport down; zIndex 0
+      // pins the hero's whole stacking context (veil z60 included) beneath
+      // the scroll layer.
+      position: 'sticky',
+      top: 0,
+      zIndex: 0,
       overflow: 'hidden',
     }}>
       {/* Accessible page heading — the home's visual identity is the orb + the
