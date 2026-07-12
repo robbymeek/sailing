@@ -416,6 +416,7 @@ export default function App() {
           navPath={navPath}
           barBg={barBg}
           fgPinned={barFgPinned}
+          dark={VARIANT_MAP[navPath] !== 'light'}
           menuOpen={navMenuOpen}
           onMenuToggle={() => setNavMenuOpen((o) => !o)}
           onNavigate={go}

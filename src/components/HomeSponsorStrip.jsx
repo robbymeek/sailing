@@ -12,8 +12,8 @@ const BASE = import.meta.env.BASE_URL
 // one scaled up) so all read at the same perceived size. Non-interactive (pointerEvents:
 // 'none') so they never compete with the orb's click zone. Edit SPONSORS to change the set.
 const SPONSORS = [
-  { name: 'AA Entertainment', logo: 'AAENT-Logo.png', aspect: 354 / 329, weight: 0.93, wide: false },
-  { name: 'Charter Financial Group', logo: 'charter-logo.jpg', aspect: 652 / 143, weight: 1.0, wide: true },
+  { name: 'AA Entertainment', logo: 'AAENT-Logo.png', logoDark: 'AAENT-Logo-white.png', aspect: 354 / 329, weight: 0.93, wide: false },
+  { name: 'Charter Financial Group', logo: 'charter-logo.jpg', logoDark: 'charter-logo-white.png', aspect: 652 / 143, weight: 1.0, wide: true },
   { name: 'AYC Foundation', logo: 'ayc-logo.png', aspect: 440 / 87, weight: 0.92, wide: true },
   { name: 'Sailing Foundation of New York', logo: 'sfny-logo.png', aspect: 543 / 177, weight: 1.08, wide: true },
 ]
@@ -45,15 +45,33 @@ export const DESKTOP_BANNER_H = 'clamp(66px, 9vh, 92px)'
 // The four sponsors split into two pairs — one lockup each on desktop.
 export const SPONSOR_PAIRS = [SPONSORS.slice(0, 2), SPONSORS.slice(2, 4)]
 
-// One white sponsor rectangle carrying a PAIR of logos, upright side by side (equal-AREA
-// / equal-weight sizing). The caller positions and widths it via `style` — DesktopBanner
+// One sponsor rectangle carrying a PAIR of logos, upright side by side (equal-AREA /
+// equal-weight sizing). The caller positions and widths it via `style` — DesktopBanner
 // uses it as the sticky nav banner's left lockup, MainView as an absolute lockup
 // bottom-left. Non-interactive so it never competes with the orb's click zone.
-export function SponsorRect({ pair, style }) {
+//
+// `darkAware` (only the DesktopBanner top lockup sets it): the box follows two CSS vars the
+// banner writes as it pins — `--sponsor-box-bg` (white → black) and `--sponsor-dark` (0 → 1).
+// Each logo is a colour/white pair sharing one grid cell, cross-fading on `--sponsor-dark`,
+// so the lockup melts from a white sticker (floating over the orb / on the light pages) into
+// a black box with white marks once it pins to the dark bar — in lockstep with the banner's
+// own frosted background. Without it the lockup stays the plain white sticker (pair[1]
+// bottom-left, the mobile strip).
+export function SponsorRect({ pair, style, darkAware = false }) {
+  // Equal-AREA target height pushed up to (nearly) fill the cell; maxWidth/maxHeight 100%
+  // then cap each logo to its cell so nothing overflows.
+  const imgStyle = (s) => ({
+    height: scaledClamp(52, 5.2, 80, shortMul(s)),
+    width: 'auto',
+    maxWidth: '100%',
+    maxHeight: '100%',
+    objectFit: 'contain',
+    display: 'block',
+  })
   return (
     <div
       style={{
-        background: PANEL_BG,
+        background: darkAware ? 'var(--sponsor-box-bg, #ffffff)' : PANEL_BG,
         boxShadow: PANEL_SHADOW,
         display: 'flex',
         alignItems: 'stretch',
@@ -71,22 +89,34 @@ export function SponsorRect({ pair, style }) {
       {pair.map((s) => (
         <div
           key={s.logo}
-          style={{ flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 clamp(3px, 0.45vw, 7px)' }}
+          style={{
+            flex: '1 1 0',
+            minWidth: 0,
+            padding: '0 clamp(3px, 0.45vw, 7px)',
+            ...(darkAware
+              ? { display: 'grid', placeItems: 'center' }
+              : { display: 'flex', alignItems: 'center', justifyContent: 'center' }),
+          }}
         >
-          <img
-            src={`${BASE}${s.logo}`}
-            alt={s.name}
-            style={{
-              // Equal-AREA target height pushed up to (nearly) fill the cell; maxWidth/
-              // maxHeight 100% then cap each logo to its cell so nothing overflows.
-              height: scaledClamp(52, 5.2, 80, shortMul(s)),
-              width: 'auto',
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain',
-              display: 'block',
-            }}
-          />
+          {darkAware ? (
+            // Colour mark + its white twin stacked in one grid cell; complementary opacities
+            // so one fades in exactly as the other fades out on --sponsor-dark.
+            <>
+              <img
+                src={`${BASE}${s.logo}`}
+                alt={s.name}
+                style={{ ...imgStyle(s), gridArea: '1 / 1', opacity: 'calc(1 - var(--sponsor-dark, 0))' }}
+              />
+              <img
+                src={`${BASE}${s.logoDark || s.logo}`}
+                alt=""
+                aria-hidden="true"
+                style={{ ...imgStyle(s), gridArea: '1 / 1', opacity: 'var(--sponsor-dark, 0)' }}
+              />
+            </>
+          ) : (
+            <img src={`${BASE}${s.logo}`} alt={s.name} style={imgStyle(s)} />
+          )}
         </div>
       ))}
     </div>
