@@ -1,4 +1,5 @@
 import { useState, useRef, useLayoutEffect } from 'react'
+import useFocusTrap from '../hooks/useFocusTrap'
 import DonateLockup from './DonateLockup'
 import { SponsorRect, SPONSOR_PAIRS, DESKTOP_BANNER_H, panelShadow } from './HomeSponsorStrip'
 import homeChrome from '../lib/homeChrome'
@@ -259,6 +260,7 @@ function BannerHamburger({ open, onToggle }) {
       onClick={onToggle}
       aria-label={open ? 'Close menu' : 'Open menu'}
       aria-expanded={open}
+      aria-controls="desktop-menu"
       style={{
         background: 'none', border: 'none', cursor: 'pointer', padding: 'clamp(6px, 0.6vw, 10px)',
         display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 'clamp(9px, 0.9vw, 14px)', flexShrink: 0,
@@ -283,10 +285,17 @@ function BannerHamburger({ open, onToggle }) {
 // mounted for the 0.3s fade; `visibility` flips (delayed on close) so the hidden
 // items leave the tab order.
 export function DesktopMenuOverlay({ open, currentPage, onNavigate, onClose }) {
+  // Focus management: move focus in on open, contain Tab/Shift+Tab, Escape to
+  // close, restore focus to the hamburger on close. The `visibility` toggle below
+  // already drops the hidden links from the tab order, so no inert needed here.
+  const ref = useRef(null)
+  useFocusTrap(ref, { active: open, onClose })
   return (
     <div
-      onClick={onClose}
+      ref={ref}
+      id="desktop-menu"
       role="dialog"
+      aria-modal="true"
       aria-label="Menu"
       aria-hidden={!open}
       style={{
@@ -303,7 +312,15 @@ export function DesktopMenuOverlay({ open, currentPage, onNavigate, onClose }) {
         display: 'flex', alignItems: 'center',
       }}
     >
+      {/* Backdrop dismiss — a real aria-hidden, tab-excluded button behind the
+          index, so a click off the links closes without a div-onClick. */}
+      <button
+        type="button" aria-hidden="true" tabIndex={-1}
+        onClick={onClose}
+        style={{ position: 'absolute', inset: 0, background: 'transparent', border: 'none', padding: 0, cursor: 'default' }}
+      />
       <div style={{
+        position: 'relative',
         display: 'flex', flexDirection: 'column', gap: 'clamp(12px, 2.4vh, 24px)',
         alignItems: 'flex-start', paddingLeft: 'clamp(40px, 9vw, 130px)',
       }}>

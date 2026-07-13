@@ -535,6 +535,10 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
     ? photoIndex % playablePhotos.length
     : -1
 
+  // The desktop live orb is interactive only at rest, at the top of the page,
+  // before the morph — the same gate the scene's own click hit-test uses.
+  const orbInteractive = showOrb && uiVisible && phase === 'rest' && morph === 0 && !scrolledAway
+
   return (
     <div ref={homeRootRef} style={{
       background: 'rgb(0,0,0)',
@@ -680,7 +684,8 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
       ) : (
         <button
           onClick={() => onNavigate('The Road')}
-          aria-label="The Road — see the road to LA 2028"
+          className="road-tap"
+          aria-label="Explore The Road to LA 2028"
           disabled={!uiVisible}
           style={{
             position: 'absolute',
@@ -715,9 +720,12 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
           click will start the morph. Affordance only: the actual click is the
           window-level hit-test in glassOrbScene, which uses the same circle. */}
       {showOrb && (
-        <div
+        <button
+          type="button"
           className="orb-grab"
-          aria-hidden="true"
+          aria-label="Explore The Road to LA 2028"
+          onClick={() => beginMorphRef.current()}
+          disabled={!orbInteractive}
           style={{
             position: 'fixed', top: '50%', left: '50%',
             width: ORB_DIAMETER + ORB_CLICK_HALO_PX * 2,
@@ -725,11 +733,13 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
             marginTop: -(ORB_DIAMETER / 2 + ORB_CLICK_HALO_PX),
             marginLeft: -(ORB_DIAMETER / 2 + ORB_CLICK_HALO_PX),
             borderRadius: '50%',
-            clipPath: 'circle(50%)', // confine the grab cursor to the round orb
-            cursor: 'grab',
+            background: 'none', border: 'none', padding: 0,
+            cursor: orbInteractive ? 'grab' : 'default',
             zIndex: 45,
-            pointerEvents:
-              uiVisible && phase === 'rest' && morph === 0 && !scrolledAway ? 'auto' : 'none',
+            // Interactive (and in the tab order) only at rest; `disabled` drops
+            // it out otherwise. Keyboard Enter/Space + a screen-reader click both
+            // fire onClick → the same morph the scene's mouse hit-test starts.
+            pointerEvents: orbInteractive ? 'auto' : 'none',
           }}
         />
       )}

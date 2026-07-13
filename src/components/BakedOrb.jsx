@@ -356,7 +356,8 @@ const BakedOrb = forwardRef(function BakedOrb(
       onKeyDown={onKey}
       tabIndex={0}
       role="button"
-      aria-label="The Road — see the road to LA 2028"
+      className="road-tap"
+      aria-label="Explore The Road to LA 2028"
       style={{
         position: 'absolute', top: '50%', left: '50%',
         width: hotspotSize, height: hotspotSize,

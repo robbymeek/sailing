@@ -603,7 +603,7 @@ export default function createGlassOrbScene(
   // emissive (city lights) and atmosphere up, so it reads as a dark solid sphere
   // first, then the texture/colours resolve.
   let earthBuilt = false
-  let earthReady = false
+  let _earthReady = false
   let earthParts = null
   function buildGlobe() {
     if (earthBuilt || disposed) return
@@ -618,7 +618,7 @@ export default function createGlassOrbScene(
     anchor.add(atmosphere)
     scene.add(sun)
     scene.add(ambient)
-    manager.onLoad = () => { if (!disposed) earthReady = true }
+    manager.onLoad = () => { if (!disposed) _earthReady = true }
   }
 
   let morphing = false

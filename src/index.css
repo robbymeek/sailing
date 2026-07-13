@@ -223,10 +223,26 @@ button {
   cursor: grabbing;
 }
 
+/* Keyboard focus ring for the orb → The Road controls (live orb button, the
+   no-WebGL fallback boat button, and the mobile baked-orb hotspot). #6ea8ff
+   reads over the dark hero; the ring sits just outside the round hotspot. */
+.orb-grab:focus-visible,
+.road-tap:focus-visible {
+  outline: 3px solid #6ea8ff;
+  outline-offset: 4px;
+}
+
 /* Home menu links: keyboard focus ring (hover color is driven in JS state). */
 .home-nav-link:focus-visible {
   outline: 2px solid #1E40FF;
   outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Mobile menu overlay links: keyboard focus ring on the dark overlay. */
+.nav-overlay-link:focus-visible {
+  outline: 2px solid #6ea8ff;
+  outline-offset: 4px;
   border-radius: 2px;
 }
 
@@ -269,6 +285,14 @@ button {
   opacity: 0 !important;
   pointer-events: none !important;
 }
+
+/* ============ Biography results (keyboard focus) ============ */
+/* Rows bleed outward with a negative margin when active, so an INSET ring keeps
+   the focus indicator visible on the blue highlight; headers/modal buttons use
+   an outset ring. #6ea8ff reads clearly on the black/navy surfaces. */
+.result-row:focus-visible { outline: 2px solid #6ea8ff; outline-offset: -2px; }
+.group-header:focus-visible { outline: 2px solid #6ea8ff; outline-offset: 2px; }
+.event-modal-btn:focus-visible { outline: 2px solid #6ea8ff; outline-offset: 2px; }
 
 /* ============ NotFound (unknown-route page) ============ */
 .nf-home { transition: background 0.25s ease, color 0.25s ease; }
