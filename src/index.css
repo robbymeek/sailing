@@ -303,3 +303,12 @@ button {
   .ho-action::after, .ho-media-zoom, .ho-film-chip { transition: none; }
   .ho-zoom-frame:hover .ho-media-zoom { transform: none; }
 }
+
+/* ============ Footer ============ */
+/* Hover color goes accent-blue on the light skin but WHITE on the dark one —
+   rgb(10,85,235) on black is only ~3.5:1, below AA. */
+.ft-link { transition: color 0.2s ease; }
+.ft-link:focus-visible { outline: 2px solid #1E40FF; outline-offset: 3px; border-radius: 2px; }
+.ft-link-light:hover, .ft-link-light:focus-visible { color: rgb(10,85,235); }
+.ft-link-dark:hover,  .ft-link-dark:focus-visible  { color: #fff; }
+@media (prefers-reduced-motion: reduce) { .ft-link { transition: none; } }
