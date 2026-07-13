@@ -644,6 +644,7 @@ function SponsorRollCall() {
 // scroll replays exactly); pure CSS, reduced motion stills the sheen.
 function RollCallOverlay() {
   const wrapRef = useRef(null)
+  const outerRef = useRef(null)
 
   useEffect(() => {
     let raf = 0
@@ -656,14 +657,33 @@ function RollCallOverlay() {
       if (!wrap) return
       wrap.style.transform = `translateY(${-window.scrollY}px)`
     }
+    // Centered placement clips both plaque edges on short windows with no
+    // scroll position that shows the hidden top. Clamp the plaque's top just
+    // below the sticky banner when centering won't fit — the overflow then
+    // hangs off the bottom, where the statement chapter's extra scroll runway
+    // (its short-window min-height) rides it into view.
+    const MIN_TOP = 78 // banner floor 66px + gap; plate art bleeds to MIN_TOP + 6
+    const fit = () => {
+      const outer = outerRef.current
+      if (!outer) return
+      if ((window.innerHeight - outer.offsetHeight) / 2 < MIN_TOP) {
+        outer.style.top = `${MIN_TOP}px`
+        outer.style.transform = 'none'
+      } else {
+        outer.style.top = '50%'
+        outer.style.transform = 'translateY(-50%)'
+      }
+    }
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(update) }
+    const onResize = () => { fit(); onScroll() }
+    fit()
     update()
     window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onScroll)
+    window.addEventListener('resize', onResize)
     return () => {
       if (raf) cancelAnimationFrame(raf)
       window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onScroll)
+      window.removeEventListener('resize', onResize)
     }
   }, [])
 
@@ -673,7 +693,7 @@ function RollCallOverlay() {
   // the era chapters do. The names are engraved into the metal so the sponsors
   // are called out and stay easy to read.
   return (
-    <div style={{
+    <div ref={outerRef} style={{
       position: 'absolute',
       // Plate LEFT EDGE lands at 50%+40px — the era-chapter column — after it
       // extends left by PLATE_PAD_L(32): 72 − 32 = 40. Names indent inside.
@@ -726,15 +746,21 @@ function StatementChapter({ isMobile, onMeetTeam }) {
   }
   return (
     <div style={{
-      position: 'absolute',
-      inset: 0,
+      // Mobile flows in-document (the chapter grows past 100svh when the
+      // statement + inline roll call need it) — the old inner overflowY: auto
+      // scroller was unreachable through the chapter wrapper's
+      // pointerEvents: none, so short screens just cut the roll call off.
+      // Desktop keeps the absolute fill; its chapter carries a px min-height
+      // for short windows instead.
+      ...(isMobile
+        ? { position: 'relative', minHeight: '100svh' }
+        : { position: 'absolute', inset: 0 }),
       display: 'flex',
       flexDirection: 'column',
       padding: isMobile
         ? '110px 28px 30px 56px'
         : '0 calc(50% + 60px) 0 clamp(48px, 6vw, 100px)',
       justifyContent: isMobile ? 'flex-start' : 'center',
-      overflowY: isMobile ? 'auto' : 'visible',
     }}>
       <div>
         {/* The page's single <h1> — two lines: the setup greyed, the thesis white. */}
@@ -997,8 +1023,27 @@ export default function Team({ onNavigate }) {
       const boat = boatElRef.current
       if (!el || !boat) return
       const rect = el.getBoundingClientRect()
-      const travel = rect.height - window.innerHeight
-      const p = travel > 0 ? Math.max(0, Math.min(1, -rect.top / travel)) : 0
+      // Progress interpolates segment-by-segment between the REAL chapter
+      // tops (not uniformly over the region) — the statement chapter can be
+      // taller than one viewport on short windows, and per-segment p keeps
+      // the boat/crossfade/snap aligned: p hits exactly i/(N-1) whenever
+      // chapter i is snapped to the top.
+      const tops = chapterRefs.current
+        .filter(Boolean)
+        .map((c) => c.getBoundingClientRect().top - rect.top)
+      const y = -rect.top
+      const last = tops.length - 1
+      let p = 0
+      if (last > 0 && y > 0) {
+        if (y >= tops[last]) {
+          p = 1
+        } else {
+          let i = 0
+          while (i < last - 1 && y >= tops[i + 1]) i++
+          const t = (y - tops[i]) / Math.max(1, tops[i + 1] - tops[i])
+          p = (i + Math.max(0, Math.min(1, t))) / last
+        }
+      }
       // Spine runs 15% → 90% — same formula as the ghost stops, so the boat
       // sits exactly on a stop whenever its chapter is snapped to the top.
       boat.style.top = `${15 + p * 75}%`
@@ -1225,7 +1270,17 @@ export default function Team({ onNavigate }) {
             style={{
               position: 'relative',
               zIndex: 1,
-              height: isMobile ? '100svh' : '100dvh',
+              // The statement chapter may exceed one viewport on short
+              // windows — mobile grows with its in-flow content, desktop gets
+              // a px floor sized for the pinned roll-call plaque (~630px tall
+              // incl. banner clearance at full clamp fonts) so the clamped
+              // plaque's overflow is scrollable before the era beats start.
+              // Era chapters stay exactly one viewport. The scroll math
+              // interpolates between real chapter tops, so uneven heights
+              // keep the boat/crossfade/snap exact.
+              ...(chapter.type === 'statement'
+                ? { minHeight: isMobile ? '100svh' : 'max(100dvh, 660px)' }
+                : { height: isMobile ? '100svh' : '100dvh' }),
               scrollSnapAlign: 'start',
               pointerEvents: 'none',
             }}
