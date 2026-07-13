@@ -1,5 +1,6 @@
 import { useState, useRef, useLayoutEffect } from 'react'
 import useFocusTrap from '../hooks/useFocusTrap'
+import BarCountdown from './BarCountdown'
 import DonateLockup from './DonateLockup'
 import { SponsorRect, SPONSOR_PAIRS, DESKTOP_BANNER_H, panelShadow } from './HomeSponsorStrip'
 import homeChrome from '../lib/homeChrome'
@@ -216,6 +217,21 @@ export default function DesktopBanner({
         ['--sponsor-box-shadow']: initial.sponsorBoxShadow,
       }}
     >
+      {/* LA 2028 countdown — the same faded timer the mobile bar carries, pinned to the
+          banner's true horizontal centre (home only). Absolutely positioned so it never
+          shifts the space-between sponsor/CTA row; inherits the nav's --fg + intro fade
+          and stays non-interactive (the wrapper eats no clicks). */}
+      {navPath === '/' && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute', left: '50%', top: '50%',
+            transform: 'translate(-50%, -50%)', pointerEvents: 'none',
+          }}
+        >
+          <BarCountdown />
+        </div>
+      )}
       <SponsorRect
         pair={SPONSOR_PAIRS[0]}
         darkAware

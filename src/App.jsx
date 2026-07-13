@@ -17,7 +17,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { applyRouteMeta } from './lib/seo'
 import useFocusTrap from './hooks/useFocusTrap'
 import { mobileBannerHeightPx } from './components/HomeSponsorStrip'
-import useCountdown from './hooks/useCountdown'
+import BarCountdown from './components/BarCountdown'
 import DonateLockup from './components/DonateLockup'
 
 // Retry a dynamic import once (after a short beat) before giving up — smooths
@@ -144,27 +144,6 @@ function HomeShell({ onNavigate, isMobile }) {
         <HomeOverview onNavigate={onNavigate} isMobile={isMobile} />
       </div>
     </div>
-  )
-}
-
-// LA 2028 countdown, shown FADED in the centre of the mobile sticky bar (home only, a child
-// of the bar so it pins). Absolutely centred so MENU (left) + Donate (right) don't shift it.
-// Colour tracks --fg like MENU; non-interactive.
-const OLYMPICS_TARGET = Date.parse('2028-07-14T00:00:00')
-function BarCountdown() {
-  const { days, hrs, mins, secs } = useCountdown(OLYMPICS_TARGET)
-  const timer = `${days} : ${String(hrs).padStart(2, '0')} : ${String(mins).padStart(2, '0')} : ${String(secs).padStart(2, '0')}`
-  return (
-    <span aria-hidden="true" style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
-      lineHeight: 1.2, whiteSpace: 'nowrap', pointerEvents: 'none',
-      color: 'var(--fg)', opacity: 0.5,
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-    }}>
-      <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: '1.5px' }}>LA 2028</span>
-      <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: '1.5px' }}>OLYMPICS</span>
-      <span style={{ fontSize: 8, fontWeight: 500, letterSpacing: '0.2px', fontVariantNumeric: 'tabular-nums' }}>{timer}</span>
-    </span>
   )
 }
 
