@@ -74,7 +74,7 @@ export const TOUR_STATS = (() => {
 
 if (import.meta.env.DEV) {
   // Same copy-voice guard as campaignStops: no em dashes / spaced en dashes.
-  const copy = JSON.stringify(CHAPTERS.map(({ stopIndices, ...c }) => c))
+  const copy = JSON.stringify(CHAPTERS.map(({ stopIndices: _stopIndices, ...c }) => c))
   if (/—| – /.test(copy)) {
     throw new Error('tourChapters: em dash or spaced en dash found in copy — restructure instead')
   }

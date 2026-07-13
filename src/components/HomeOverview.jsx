@@ -189,21 +189,24 @@ function FilmBlock({ isMobile, bleed = false, fill = false }) {
     }
   }, [])
 
-  // React does not reliably render the `muted` attribute, and iOS/Chrome
-  // refuse to autoplay a non-muted element — force it and kick off play.
+  // React does not reliably render the `muted` attribute, and iOS/Chrome refuse
+  // to autoplay a non-muted element — force it so the in-view observer can start
+  // playback. We intentionally do NOT call play() here: this film begins BELOW
+  // the fold, and a mount-time play() defeats preload="none" and fetches the
+  // multi-MB clip on every cold homepage load. The observers below fetch + play
+  // it only as it nears the viewport.
   useEffect(() => {
     if (lite) return undefined
     const v = videoRef.current
     if (!v) return undefined
     v.muted = true
-    const p = v.play()
-    if (p && p.catch) p.catch(() => {}) // autoplay may be deferred until in-view; that's fine
     return undefined
   }, [lite])
 
-  // Early warm: preload is 'none' so cold loads never pull the multi-MB film
-  // from visitors who don't scroll; this one-shot observer arms ~1.5
-  // viewports out so the first scroll gesture starts the fetch.
+  // Early warm: preload stays 'none' so a cold homepage load never pulls the
+  // multi-MB film (it begins ~2 viewports down). This one-shot observer arms ~½
+  // a viewport out — close enough that a scroll toward the film starts the fetch
+  // before it's on screen, but NOT so far that it fires on the initial load.
   useEffect(() => {
     if (lite) return undefined
     const c = frameRef.current
@@ -218,7 +221,7 @@ function FilmBlock({ isMobile, bleed = false, fill = false }) {
         v.preload = 'auto'
         v.load()
       },
-      { rootMargin: '150% 0px' }
+      { rootMargin: '50% 0px' }
     )
     io.observe(c)
     return () => io.disconnect()
@@ -341,7 +344,6 @@ function FilmBlock({ isMobile, bleed = false, fill = false }) {
       ref={videoRef}
       className="ho-film-video"
       src={src}
-      autoPlay
       muted
       loop
       playsInline

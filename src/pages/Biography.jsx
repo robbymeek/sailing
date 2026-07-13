@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import Footer from '../components/Footer'
-import useCountdown from '../hooks/useCountdown'
+import { useNextEvent } from '../utils/campaignSchedule'
 import useTextSpray from '../hooks/useTextSpray'
 import RESULT_GROUPS from '../data/events'
 import { ResultRow, GroupHeader, EventModal } from '../components/eventUI'
@@ -35,11 +35,11 @@ const REGATTAS = [
 
 const PRESS = [
   { t: 'ILCAs dominate US Open Long Beach', u: 'https://www.sailingscuttlebutt.com/2023/07/16/ilcas-dominate-us-open-long-beach/' },
-  { t: 'School Nationals for Singlehanded titles', u: 'https://www.sailingscuttlebutt.com/2023/07/16/ilcas-dominate-us-open-long-beach/' },
+  { t: 'School Nationals for Singlehanded titles', u: 'https://www.sailingscuttlebutt.com/2022/10/31/school-nationals-for-singlehanded-titles/' },
   { t: 'Meek, Braun win High School Nationals', u: 'https://www.sailingscuttlebutt.com/2021/12/19/meek-braun-win-high-school-nationals/' },
   { t: 'Robby Meek Named NEISA Open Sailor of the Week', u: 'https://gocrimson.com/news/2024/9/18/sailing-robby-meek-named-neisa-open-sailor-of-the-week' },
-  { t: 'ILCA 6 Youth Worlds: quest for best', u: 'https://www.sailingscuttlebutt.com/2021/07/28/ilca-6-youth-worlds-midway-point/' },
-  { t: 'ILCA 6 Youth Worlds: Midway point', u: 'https://www.sailingscuttlebutt.com/2021/07/30/ilca-6-youth-worlds-quest-for-best/' },
+  { t: 'ILCA 6 Youth Worlds: quest for best', u: 'https://www.sailingscuttlebutt.com/2021/07/30/ilca-6-youth-worlds-quest-for-best/' },
+  { t: 'ILCA 6 Youth Worlds: Midway point', u: 'https://www.sailingscuttlebutt.com/2021/07/28/ilca-6-youth-worlds-midway-point/' },
   { t: 'Robby Meek feed this week. Congrats goes out to the sophomore!', u: 'https://www.threads.com/@harvardsailing/post/DAEgzXRvfyN' },
   { t: 'Robby Meek - 2022 West Marine US Open Sailing Series', u: 'https://www.sail-world.com/photo/345661' },
   { t: 'No. 1 Sailing Wins 2025 ICSA Open Team Race National Championship', u: 'https://gocrimson.com/news/2025/4/26/no-1-sailing-wins-2025-icsa-open-team-race-national-championship.aspx' },
@@ -148,7 +148,9 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
     return () => window.removeEventListener('resize', h)
   }, [])
 
-  const nextEvent = useCountdown(new Date('2026-07-20T00:00:00'), !preload)
+  // Auto-rolling next event (shared with the HelmPanel — one source of truth,
+  // no hard-coded date/name here). Frozen for the off-screen preload copy.
+  const nextEvent = useNextEvent(!preload)
 
   // Release line for the RESULTS spray = the BOTTOM EDGE of the site's sticky
   // nav bar (desktop banner / mobile bar, both pinned at top:0 on this route).
@@ -539,7 +541,7 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
           <div ref={nextEventRef} style={{ margin: '20px 0 12px' }}>
             <button
               onClick={() => onNavigate('The Road')}
-              aria-label="Next event: San Pedro OCR — see The Road"
+              aria-label={nextEvent.aria}
               style={{
                 background: 'none', border: 'none', padding: 0,
                 cursor: 'pointer', fontFamily: 'inherit',
@@ -555,7 +557,7 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
                   whiteSpace: 'nowrap',
                 }}
               >
-                Next Event: San Pedro OCR in {nextEvent.days} Days
+                {nextEvent.line}
               </p>
             </button>
           </div>

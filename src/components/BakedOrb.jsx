@@ -136,6 +136,27 @@ const BakedOrb = forwardRef(function BakedOrb(
     setTouch(window.matchMedia('(pointer: coarse)').matches)
   }, [])
 
+  // Save-Data: show the poster only (never fetch the rest clip) and skip the
+  // morph clip — a tap navigates straight through under the black-bridge curtain.
+  // Read SYNCHRONOUSLY so the rest <video> never mounts + starts a fetch first.
+  const [dataSaver] = useState(() => {
+    if (typeof navigator === 'undefined') return false
+    const c = navigator.connection || navigator.webkitConnection || navigator.mozConnection
+    return !!c?.saveData
+  })
+  const warmedMorphRef = useRef(false)
+  // Warm the (preload="none") morph clip on the first hint of intent — hover,
+  // keyboard focus, or touchstart — so the tap doesn't wait on a cold fetch. No-op
+  // under Save-Data / reduced-motion (those never play the morph).
+  const warmMorph = () => {
+    if (warmedMorphRef.current || dataSaver || prefersReducedMotion) return
+    const v = morphRef.current
+    if (!v) return
+    warmedMorphRef.current = true
+    v.preload = 'auto'
+    v.load()
+  }
+
   // Never show a native play glyph on the rest loop. React doesn't render the
   // `muted` ATTRIBUTE (only sets the property — same quirk SailingBanner works
   // around), and iOS judges autoplay eligibility by the attribute, so set it by
@@ -144,7 +165,7 @@ const BakedOrb = forwardRef(function BakedOrb(
   // Safari to decorate. Any later touch / return-to-foreground retries, since a
   // user gesture re-permits playback in Low Power Mode.
   useEffect(() => {
-    if (prefersReducedMotion) return undefined // poster-only branch, no video
+    if (prefersReducedMotion || dataSaver) return undefined // poster-only branch, no video
     const v = restRef.current
     if (!v) return undefined
     v.muted = true
@@ -180,7 +201,7 @@ const BakedOrb = forwardRef(function BakedOrb(
       window.removeEventListener('pointerdown', retry)
       document.removeEventListener('visibilitychange', onVisible)
     }
-  }, [prefersReducedMotion])
+  }, [prefersReducedMotion, dataSaver])
 
   // Idle breathing pulse on the rest loop — matches the desktop orb's rhythm. One
   // rAF writes transform+filter to the rest <video> (composing with any boxRef
@@ -189,7 +210,7 @@ const BakedOrb = forwardRef(function BakedOrb(
   // phone's equivalent of the page settling to rest). Amplitude is tiny — the rim
   // stays inside the mask feather and the tap hotspot (a separate circle) is unmoved.
   useEffect(() => {
-    if (prefersReducedMotion) return undefined
+    if (prefersReducedMotion || dataSaver) return undefined
     const v = restRef.current
     if (!v) return undefined
     const ss = (t) => t * t * (3 - 2 * t) // smoothstep 0→1
@@ -224,7 +245,7 @@ const BakedOrb = forwardRef(function BakedOrb(
       v.style.transform = ''
       v.style.filter = ''
     }
-  }, [prefersReducedMotion])
+  }, [prefersReducedMotion, dataSaver])
 
   const finish = () => {
     if (endedRef.current) return
@@ -242,7 +263,7 @@ const BakedOrb = forwardRef(function BakedOrb(
     if (onMorphBegin) onMorphBegin() // preload hook — fire before any early return
     morphingRef.current = true
     if (boxRef.current) boxRef.current.style.transform = 'scale(1)' // drop any hover scale before the morph
-    if (prefersReducedMotion) { finish(); return }
+    if (prefersReducedMotion || dataSaver) { finish(); return }
     setMorphing(true)
     const v = morphRef.current
     if (!v) { finish(); return }
@@ -354,9 +375,13 @@ const BakedOrb = forwardRef(function BakedOrb(
     <div
       onClick={begin}
       onKeyDown={onKey}
+      onPointerEnter={warmMorph}
+      onFocus={warmMorph}
+      onTouchStart={warmMorph}
       tabIndex={0}
       role="button"
-      aria-label="The Road — see the road to LA 2028"
+      className="road-tap"
+      aria-label="Explore The Road to LA 2028"
       style={{
         position: 'absolute', top: '50%', left: '50%',
         width: hotspotSize, height: hotspotSize,
@@ -366,7 +391,7 @@ const BakedOrb = forwardRef(function BakedOrb(
     />
   )
 
-  if (prefersReducedMotion) {
+  if (prefersReducedMotion || dataSaver) {
     return (
       <div ref={boxRef} style={box}>
         <img src={REST_POSTER} alt="" aria-hidden="true" style={layer(restMask)} />
@@ -384,7 +409,7 @@ const BakedOrb = forwardRef(function BakedOrb(
       <video
         ref={restRef}
         className="baked-orb-video"
-        autoPlay muted loop playsInline preload="auto" poster={REST_POSTER}
+        autoPlay muted loop playsInline preload="metadata" poster={REST_POSTER}
         style={layer({ opacity: morphing || restFrozen ? 0 : 1, transition: 'opacity 150ms linear', ...restMask })}
       >
         <source src={q(`${REST}.webm`)} type="video/webm" />
@@ -402,7 +427,7 @@ const BakedOrb = forwardRef(function BakedOrb(
       <video
         ref={morphRef}
         className="baked-orb-video"
-        muted playsInline preload="auto" poster={REST_POSTER}
+        muted playsInline preload="none" poster={REST_POSTER}
         onEnded={finish}
         style={layer({ opacity: morphing ? 1 : 0, transition: 'opacity 150ms linear' })}
       >

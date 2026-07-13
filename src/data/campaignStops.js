@@ -13,6 +13,14 @@
 //             'Training Camp' (single city) / 'Training Block' (multi-city)
 //   dates   — 'MMM YYYY' or 'MMM–MMM YYYY', uppercase 3-letter months,
 //             tight en dash (asserted in dev)
+//   start   — machine-readable window START, LOCAL ISO date 'YYYY-MM-DD'
+//   end     — machine-readable window END,   LOCAL ISO date 'YYYY-MM-DD'
+//             Derived from `dates`: a month-level stop spans the whole month
+//             (start = 1st, end = last day); San Pedro OCR carries its
+//             owner-confirmed EXACT day. Consumed by ../utils/campaignSchedule.js
+//             for the self-rolling next-event readouts on Biography + the
+//             HelmPanel. NEVER invent a day the source data doesn't state — where
+//             only the month is known, the month window is the honest encoding.
 //   venues  — [{ city, noc }] with 3-letter NOC country codes, rendered via
 //             formatVenues() in ./tourChapters.js ("Adelaide · Fremantle ·
 //             Sydney, AUS"); TOUR_STATS derives continents from the nocs
@@ -41,6 +49,7 @@
 const STOPS = [
   {
     id: 'san-pedro-ocr',
+    start: '2026-07-20', end: '2026-07-20', // owner-confirmed EXACT day; every other stop is a month-level window
     region: 'Los Angeles',
     event: 'Olympic Classes Regatta',
     dates: 'JUL 2026',
@@ -62,6 +71,7 @@ const STOPS = [
   },
   {
     id: 'nyc-training',
+    start: '2026-06-01', end: '2026-08-31',
     region: 'New York City',
     event: 'Training Camp',
     dates: 'JUN–AUG 2026',
@@ -74,6 +84,7 @@ const STOPS = [
   },
   {
     id: 'dun-laoghaire-worlds',
+    start: '2026-08-01', end: '2026-08-31',
     region: 'Dublin',
     event: 'World Championship',
     dates: 'AUG 2026',
@@ -87,6 +98,7 @@ const STOPS = [
   },
   {
     id: 'annapolis-fall-26',
+    start: '2026-09-01', end: '2026-09-30',
     region: 'Annapolis',
     event: 'Training Camp',
     dates: 'SEP 2026',
@@ -99,6 +111,7 @@ const STOPS = [
   },
   {
     id: 'australia-breeze-26',
+    start: '2026-10-01', end: '2026-11-30',
     region: 'Australia',
     event: 'Training Block',
     dates: 'OCT–NOV 2026',
@@ -120,6 +133,7 @@ const STOPS = [
   },
   {
     id: 'vilamoura-26',
+    start: '2026-11-01', end: '2026-12-31',
     region: 'Algarve',
     event: 'Vilamoura Grand-Prix',
     dates: 'NOV–DEC 2026',
@@ -141,6 +155,7 @@ const STOPS = [
   },
   {
     id: 'miami-jan-27',
+    start: '2027-01-01', end: '2027-01-31',
     region: 'Miami',
     event: 'Training Camp',
     dates: 'JAN 2027',
@@ -153,6 +168,7 @@ const STOPS = [
   },
   {
     id: 'fortaleza-worlds-27',
+    start: '2027-01-01', end: '2027-01-31',
     region: 'Fortaleza',
     event: 'World Championship',
     dates: 'JAN 2027',
@@ -166,6 +182,7 @@ const STOPS = [
   },
   {
     id: 'fort-lauderdale-feb-27',
+    start: '2027-02-01', end: '2027-02-28',
     region: 'Fort Lauderdale',
     event: 'Training Camp',
     dates: 'FEB 2027',
@@ -178,6 +195,7 @@ const STOPS = [
   },
   {
     id: 'palma-27',
+    start: '2027-03-01', end: '2027-03-31',
     region: 'Mallorca',
     event: 'Trofeo Princesa Sofía',
     dates: 'MAR 2027',
@@ -199,6 +217,7 @@ const STOPS = [
   },
   {
     id: 'hyeres-27',
+    start: '2027-04-01', end: '2027-04-30',
     region: 'Hyères',
     event: 'French Olympic Week',
     dates: 'APR 2027',
@@ -212,6 +231,7 @@ const STOPS = [
   },
   {
     id: 'europeans-27',
+    start: '2027-05-01', end: '2027-05-31',
     region: 'Mar Menor',
     event: 'European Championship',
     dates: 'MAY 2027',
@@ -225,6 +245,7 @@ const STOPS = [
   },
   {
     id: 'la-training-27',
+    start: '2027-06-01', end: '2027-08-31',
     region: 'California',
     event: 'Training Block',
     dates: 'JUN–AUG 2027',
@@ -254,6 +275,7 @@ const STOPS = [
   },
   {
     id: 'annapolis-fall-27',
+    start: '2027-09-01', end: '2027-09-30',
     region: 'Annapolis',
     event: 'Training Camp',
     dates: 'SEP 2027',
@@ -266,6 +288,7 @@ const STOPS = [
   },
   {
     id: 'oceania-summer-27',
+    start: '2027-10-01', end: '2027-12-31',
     region: 'Australia & New Zealand',
     event: 'Training Block',
     dates: 'OCT–DEC 2027',
@@ -289,6 +312,7 @@ const STOPS = [
   },
   {
     id: 'nz-worlds-28',
+    start: '2028-01-01', end: '2028-01-31',
     region: 'Auckland',
     event: 'World Championship',
     dates: 'JAN 2028',
@@ -302,6 +326,7 @@ const STOPS = [
   },
   {
     id: 'olympic-prep-28',
+    start: '2028-03-01', end: '2028-05-31',
     region: 'Europe & USA',
     event: 'Training Block',
     dates: 'MAR–MAY 2028',
@@ -333,6 +358,7 @@ const STOPS = [
   },
   {
     id: 'la-2028',
+    start: '2028-07-01', end: '2028-07-31',
     region: 'Los Angeles',
     event: 'Olympic Games',
     dates: 'JUL 2028',
@@ -364,6 +390,7 @@ if (import.meta.env.DEV) {
     'Olympic Games', 'Training Camp', 'Training Block',
   ])
   const DATES_RE = /^[A-Z]{3}(–[A-Z]{3})? \d{4}$/
+  const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
   for (const s of STOPS) {
     if (!DATES_RE.test(s.dates)) {
       throw new Error(`campaignStops: "${s.id}" dates "${s.dates}" not in MMM YYYY / MMM–MMM YYYY form`)
@@ -373,6 +400,14 @@ if (import.meta.env.DEV) {
     }
     if (s.record && !['GOLD', 'RACED', 'TRAINED'].includes(s.record.result)) {
       throw new Error(`campaignStops: "${s.id}" record.result "${s.record.result}" unknown`)
+    }
+    // Machine-readable window (drives ../utils/campaignSchedule.js). ISO local
+    // calendar dates, ascending — a bad/absent pair would silently break rollover.
+    if (!ISO_DATE_RE.test(s.start) || !ISO_DATE_RE.test(s.end)) {
+      throw new Error(`campaignStops: "${s.id}" needs ISO start/end dates (YYYY-MM-DD)`)
+    }
+    if (s.start > s.end) {
+      throw new Error(`campaignStops: "${s.id}" start ${s.start} is after end ${s.end}`)
     }
   }
   if (/—| – /.test(JSON.stringify(STOPS))) {

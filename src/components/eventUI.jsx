@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import AccessibleDialog from './AccessibleDialog'
 
 // ============================================================================
 //  Results-list UI — used by the Biography RESULTS section (the site's single
@@ -32,12 +33,10 @@ function ordinal(n) {
 // group's list. Each group toggles independently (all four can be open at
 // once); state lives in Biography's openGroups.
 export function GroupHeader({ title, years, open, onToggle }) {
-  const [hovered, setHovered] = useState(false)
   return (
     <button
+      className="group-header"
       onClick={onToggle}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       aria-expanded={open}
       aria-label={`${title} results, ${years}`}
       style={{
@@ -95,14 +94,29 @@ export function GroupHeader({ title, years, open, onToggle }) {
 export function ResultRow({ result, isActive, isMobile, onActivate }) {
   const [hovered, setHovered] = useState(false)
   const highlighted = hovered || isActive
+  // A concise, meaningful accessible name — the visible text splits "of N" and
+  // "| tag" across spans, which reads awkwardly when a screen reader flattens it.
+  const label =
+    `${ordinal(result.place)} of ${result.fleet}, ${result.event}` +
+    (result.classNote ? ` ${result.classNote}` : '') +
+    (result.tag ? `, ${result.tag}` : '') +
+    `, ${result.year}. View details.`
   return (
-    <div
+    <button
+      type="button"
+      className="result-row"
+      aria-label={label}
+      onClick={onActivate}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={onActivate}
+      onFocus={() => setHovered(true)}
+      onBlur={() => setHovered(false)}
       style={{
-        padding: highlighted ? '22px 20px' : '18px 0',
+        display: 'block', width: '100%', textAlign: 'left',
+        fontFamily: 'inherit', color: 'inherit',
+        border: 'none',
         borderBottom: '1px solid rgba(255,255,255,0.1)',
+        padding: highlighted ? '22px 20px' : '18px 0',
         cursor: 'pointer',
         background: highlighted ? 'rgb(0,20,120)' : 'transparent',
         margin: highlighted ? '4px -20px' : '0',
@@ -131,92 +145,87 @@ export function ResultRow({ result, isActive, isMobile, onActivate }) {
           {result.year}
         </span>
       </div>
-    </div>
+    </button>
   )
 }
 
 export function EventModal({ result, group, onClose }) {
+  const titleId = 'event-modal-title'
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 100,
-        background: 'rgba(0,0,0,0.7)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 20,
+    <AccessibleDialog
+      onClose={onClose}
+      labelledBy={titleId}
+      overlayStyle={{ background: 'rgba(0,0,0,0.7)', padding: 20 }}
+      panelStyle={{
+        background: 'rgb(15,25,60)',
+        border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: 8,
+        padding: '36px 40px',
+        maxWidth: 520,
+        width: '100%',
       }}
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: 'rgb(15,25,60)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: 8,
-          padding: '36px 40px',
-          maxWidth: 520,
-          width: '100%',
-        }}
-      >
-        <p style={{
-          color: '#fff', fontSize: 12, letterSpacing: '2px',
-          textTransform: 'uppercase', margin: '0 0 10px',
-        }}>
-          {group.title} · {result.year}
+      <p style={{
+        color: '#fff', fontSize: 12, letterSpacing: '2px',
+        textTransform: 'uppercase', margin: '0 0 10px',
+      }}>
+        {group.title} · {result.year}
+      </p>
+      <h2 id={titleId} style={{ color: '#fff', fontSize: 18, fontWeight: 600, margin: '0 0 14px', letterSpacing: '-0.3px' }}>
+        {result.event}
+        {result.classNote && (
+          <span style={{ color: '#fff', fontSize: 14, fontWeight: 400 }}> · {result.classNote}</span>
+        )}
+      </h2>
+      {/* Stat line: "1st of 41 | Top American" — the tag as plain text
+           after the bar, matching the "of N" size (owner request). */}
+      <div style={{ margin: '0 0 20px' }}>
+        <span style={{ fontSize: 24, fontWeight: 800, color: placeColor(result.place), letterSpacing: '-0.5px' }}>
+          {ordinal(result.place)}
+        </span>
+        <span style={{ color: '#fff', fontSize: 15, fontWeight: 400 }}> of {result.fleet}</span>
+        {result.tag && (
+          <span style={{ color: '#fff', fontSize: 15, fontWeight: 400 }}> | {result.tag}</span>
+        )}
+      </div>
+      {result.summary && (
+        <p style={{ color: '#fff', fontSize: 14, lineHeight: 1.7, margin: '0 0 20px' }}>
+          {result.summary}
         </p>
-        <h2 style={{ color: '#fff', fontSize: 18, fontWeight: 600, margin: '0 0 14px', letterSpacing: '-0.3px' }}>
-          {result.event}
-          {result.classNote && (
-            <span style={{ color: '#fff', fontSize: 14, fontWeight: 400 }}> · {result.classNote}</span>
-          )}
-        </h2>
-        {/* Stat line: "1st of 41 | Top American" — the tag as plain text
-             after the bar, matching the "of N" size (owner request). */}
-        <div style={{ margin: '0 0 20px' }}>
-          <span style={{ fontSize: 24, fontWeight: 800, color: placeColor(result.place), letterSpacing: '-0.5px' }}>
-            {ordinal(result.place)}
-          </span>
-          <span style={{ color: '#fff', fontSize: 15, fontWeight: 400 }}> of {result.fleet}</span>
-          {result.tag && (
-            <span style={{ color: '#fff', fontSize: 15, fontWeight: 400 }}> | {result.tag}</span>
-          )}
-        </div>
-        {result.summary && (
-          <p style={{ color: '#fff', fontSize: 14, lineHeight: 1.7, margin: '0 0 20px' }}>
-            {result.summary}
-          </p>
-        )}
-        {result.fleetNote && (
-          <p style={{ color: '#fff', fontSize: 13, fontStyle: 'italic', margin: '0 0 20px' }}>
-            {result.fleetNote}
-          </p>
-        )}
-        <div style={{ display: 'flex', gap: 12 }}>
-          {result.url && (
-            <a
-              href={result.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                color: '#fff', fontSize: 13, fontWeight: 400,
-                border: '1px solid rgba(255,255,255,0.15)', padding: '8px 20px',
-                textDecoration: 'none', borderRadius: 4,
-              }}
-            >
-              Event Page
-            </a>
-          )}
-          <button
-            onClick={onClose}
+      )}
+      {result.fleetNote && (
+        <p style={{ color: '#fff', fontSize: 13, fontStyle: 'italic', margin: '0 0 20px' }}>
+          {result.fleetNote}
+        </p>
+      )}
+      <div style={{ display: 'flex', gap: 12 }}>
+        {result.url && (
+          <a
+            href={result.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="event-modal-btn"
             style={{
-              background: 'none', border: '1px solid rgba(255,255,255,0.15)',
-              color: '#fff', fontSize: 13,
-              padding: '8px 20px', cursor: 'pointer', borderRadius: 4,
+              color: '#fff', fontSize: 13, fontWeight: 400,
+              border: '1px solid rgba(255,255,255,0.15)', padding: '8px 20px',
+              textDecoration: 'none', borderRadius: 4,
             }}
           >
-            Close
-          </button>
-        </div>
+            Event Page
+          </a>
+        )}
+        <button
+          onClick={onClose}
+          className="event-modal-btn"
+          style={{
+            background: 'none', border: '1px solid rgba(255,255,255,0.15)',
+            color: '#fff', fontSize: 13,
+            padding: '8px 20px', cursor: 'pointer', borderRadius: 4,
+          }}
+        >
+          Close
+        </button>
       </div>
-    </div>
+    </AccessibleDialog>
   )
 }

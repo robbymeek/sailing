@@ -97,38 +97,50 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
     // Runs on both mobile and desktop — the helm card covers both the same
     // way, and the live orb (a body-level fixed canvas) fades IN PLACE in
     // lockstep with the scrim lift — it stays centered under the rising card.
-    let rafId
+    //
+    // Driven by PASSIVE scroll/resize (coalesced into one rAF), not a permanent
+    // rAF: it did a getBoundingClientRect() every frame while idle. The sticky
+    // hero is 100dvh, so we cache its height once (+ on resize) and drive
+    // progress from scrollY — no per-frame layout read, and nothing runs while
+    // the tab is hidden or the page is still.
+    let rafId = null
     let orbTouched = false
-    const update = () => {
-      const root = homeRootRef.current
-      if (root) {
-        const rect = root.getBoundingClientRect()
-        // Fully bright once the cover has risen 62% of the frame height —
-        // well before the card reaches the top of the page. scrollY, not
-        // rect.top, drives it: the sticky frame's rect.top stays 0 while
-        // pinned. Opacity is an independent channel from the scrim's
-        // phase-driven background (morph starts only at scrollY≈0, so the
-        // post-morph black snap never coexists with a lifted scrim).
-        const gone = Math.min(1, Math.max(0, window.scrollY / (rect.height * 0.62)))
-        const scrim = restScrimRef.current
-        if (scrim) scrim.style.opacity = 1 - gone
-        const bakedScrim = bakedScrimRef.current
-        if (bakedScrim) bakedScrim.style.opacity = 1 - gone
-        // Desktop live orb: it lives in a fixed body-level overlay (survives
-        // the morph route-swap) — like the pinned hero it STAYS PUT, fading
-        // in place while the card rises over it (the card's scroll layer
-        // sits at z45, above the canvas's z40). Only while at rest (the
-        // morph owns the orb otherwise); untouched at the very top so the
-        // intro fade-in is preserved, and reset once on return.
-        if (showOrbRef.current && phaseRef.current === 'rest' && morphRef.current === 0) {
-          if (gone > 0.002) { orbOverlay.setScrollFade(0, 1 - gone); orbTouched = true }
-          else if (orbTouched) { orbOverlay.setScrollFade(0, 1); orbTouched = false }
-        }
+    // Measure the sticky root's height once (handles dvh vs innerHeight); refresh
+    // only on resize, never per frame.
+    let rootH = homeRootRef.current?.getBoundingClientRect().height || window.innerHeight
+    const apply = () => {
+      rafId = null
+      // rect.top stays 0 while the sticky hero is pinned, so scrollY alone drives
+      // progress. Fully bright once the cover has risen 62% of the frame height.
+      const gone = Math.min(1, Math.max(0, window.scrollY / (rootH * 0.62)))
+      const scrim = restScrimRef.current
+      if (scrim) scrim.style.opacity = 1 - gone
+      const bakedScrim = bakedScrimRef.current
+      if (bakedScrim) bakedScrim.style.opacity = 1 - gone
+      // Desktop live orb: it lives in a fixed body-level overlay (survives the
+      // morph route-swap) — like the pinned hero it STAYS PUT, fading in place
+      // while the card rises over it. Only while at rest (the morph owns the orb
+      // otherwise); untouched at the very top so the intro fade-in is preserved.
+      if (showOrbRef.current && phaseRef.current === 'rest' && morphRef.current === 0) {
+        if (gone > 0.002) { orbOverlay.setScrollFade(0, 1 - gone); orbTouched = true }
+        else if (orbTouched) { orbOverlay.setScrollFade(0, 1); orbTouched = false }
       }
-      rafId = requestAnimationFrame(update)
     }
-    rafId = requestAnimationFrame(update)
-    return () => cancelAnimationFrame(rafId)
+    const schedule = () => {
+      if (rafId == null && !document.hidden) rafId = requestAnimationFrame(apply)
+    }
+    const onResize = () => {
+      rootH = homeRootRef.current?.getBoundingClientRect().height || window.innerHeight
+      schedule()
+    }
+    apply() // initial paint
+    window.addEventListener('scroll', schedule, { passive: true })
+    window.addEventListener('resize', onResize)
+    return () => {
+      window.removeEventListener('scroll', schedule)
+      window.removeEventListener('resize', onResize)
+      if (rafId != null) cancelAnimationFrame(rafId)
+    }
   }, [embedded])
 
   // Mobile scroll cue: hide it once the visitor starts scrolling into the bio (and
@@ -142,15 +154,30 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Skip check: respect the module-level played flag + reduced-motion.
-  const skipIntro = forceSkip || introHasPlayed || prefersReducedMotion
+  // Skip the flash montage on: forced skip, replay (already played this tab),
+  // reduced-motion, OR a constrained connection (Save-Data / slow 2g). Those
+  // visitors get the lightweight static first frame (the rest hiking photo)
+  // instead of a ~5MB montage; capable connections keep the full montage timing.
+  const conn = typeof navigator !== 'undefined'
+    ? (navigator.connection || navigator.webkitConnection || navigator.mozConnection)
+    : null
+  const saveData = !!conn?.saveData
+  const constrainedNet = saveData || /(^|-)2g$/.test(conn?.effectiveType || '')
+  const skipIntro = forceSkip || introHasPlayed || prefersReducedMotion || constrainedNet
+
+  // Viewport-appropriate montage frames (phones use the small derivative where
+  // one exists). Empty-safe: when skipIntro, we never start the montage below.
+  const montagePhotos = introPhotos({ isMobile: embedded })
 
   // The glass orb (desktop) refracts the page behind it — the dark photo + the
   // spinning boat. Needs WebGL + motion; skipped in the mobile embedded home and
   // for reduced-motion/no-WebGL2, which keep the original DOM boat. Computed ONCE
   // (lazy) — hasWebGL2() spins up a throwaway context, never run every render.
+  // Save-Data desktop skips the live WebGL orb so the 6.6MB boat GIF is never
+  // fetched — it falls through to the lighter baked video orb (~1.5MB rest clip,
+  // morph deferred) already wired for the no-WebGL2 desktop path.
   const [useOrb] = useState(
-    () => !embedded && !prefersReducedMotion && hasWebGL2()
+    () => !embedded && !prefersReducedMotion && !saveData && hasWebGL2()
   )
   const boatImgRef = useRef(null)
   const [orbReady, setOrbReady] = useState(false)
@@ -231,7 +258,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
   // so their timing isn't locked to the overlay transition.
   const [phase, setPhase] = useState(skipIntro ? 'rest' : 'ignition')
   const [photoIndex, setPhotoIndex] = useState(0)
-  const [photoLayerVisible, setPhotoLayerVisible] = useState(!skipIntro && introPhotos.length > 0)
+  const [photoLayerVisible, setPhotoLayerVisible] = useState(!skipIntro && montagePhotos.length > 0)
   // Only photos that fully loaded + decoded make it into the montage, so a
   // slow or failed image can never produce a blank/broken flash frame.
   const [playablePhotos, setPlayablePhotos] = useState([])
@@ -259,9 +286,9 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
       schedule(1400, () => { setPhase('rest'); setUiVisible(true); introHasPlayed = true })
     }
 
-    if (introPhotos.length === 0) {
+    if (montagePhotos.length === 0) {
       // eslint-disable-next-line no-console
-      console.warn('[HomeIntro] No photos in src/assets/home-intro/, skipping flash montage')
+      console.warn('[HomeIntro] No montage frames, skipping flash montage')
       runWithoutMontage()
       return () => {
         cancelled = true
@@ -308,7 +335,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
 
     const results = []
     const allLoaded = Promise.all(
-      introPhotos.map((url) => loadOne(url).then((r) => { results.push(r); return r }))
+      montagePhotos.map((url) => loadOne(url).then((r) => { results.push(r); return r }))
     )
     const ceiling = new Promise((resolve) => setTimeout(resolve, 4000))
 
@@ -535,6 +562,10 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
     ? photoIndex % playablePhotos.length
     : -1
 
+  // The desktop live orb is interactive only at rest, at the top of the page,
+  // before the morph — the same gate the scene's own click hit-test uses.
+  const orbInteractive = showOrb && uiVisible && phase === 'rest' && morph === 0 && !scrolledAway
+
   return (
     <div ref={homeRootRef} style={{
       background: 'rgb(0,0,0)',
@@ -680,7 +711,8 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
       ) : (
         <button
           onClick={() => onNavigate('The Road')}
-          aria-label="The Road — see the road to LA 2028"
+          className="road-tap"
+          aria-label="Explore The Road to LA 2028"
           disabled={!uiVisible}
           style={{
             position: 'absolute',
@@ -715,9 +747,12 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
           click will start the morph. Affordance only: the actual click is the
           window-level hit-test in glassOrbScene, which uses the same circle. */}
       {showOrb && (
-        <div
+        <button
+          type="button"
           className="orb-grab"
-          aria-hidden="true"
+          aria-label="Explore The Road to LA 2028"
+          onClick={() => beginMorphRef.current()}
+          disabled={!orbInteractive}
           style={{
             position: 'fixed', top: '50%', left: '50%',
             width: ORB_DIAMETER + ORB_CLICK_HALO_PX * 2,
@@ -725,11 +760,13 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
             marginTop: -(ORB_DIAMETER / 2 + ORB_CLICK_HALO_PX),
             marginLeft: -(ORB_DIAMETER / 2 + ORB_CLICK_HALO_PX),
             borderRadius: '50%',
-            clipPath: 'circle(50%)', // confine the grab cursor to the round orb
-            cursor: 'grab',
+            background: 'none', border: 'none', padding: 0,
+            cursor: orbInteractive ? 'grab' : 'default',
             zIndex: 45,
-            pointerEvents:
-              uiVisible && phase === 'rest' && morph === 0 && !scrolledAway ? 'auto' : 'none',
+            // Interactive (and in the tab order) only at rest; `disabled` drops
+            // it out otherwise. Keyboard Enter/Space + a screen-reader click both
+            // fire onClick → the same morph the scene's mouse hit-test starts.
+            pointerEvents: orbInteractive ? 'auto' : 'none',
           }}
         />
       )}

@@ -13,12 +13,15 @@
 //    · voyage plan     = the whole 2026→2028 route from campaignStops
 //    · T-MINUS         = the shared LA 2028 countdown (site format)
 //    · ROUTE NM        = great-circle length of the campaign route
-//    · NEXT EVENT      = San Pedro OCR (same hardcode as Biography's chrome)
+//    · NEXT EVENT      = the auto-rolling next regatta, from the shared
+//                        ../utils/campaignSchedule (same source as Biography's
+//                        chrome line — the two can never disagree)
 //
 //  All motion is cosmetic CSS animation (helmPanel.css) — no rAF, no WebGL.
 //  The seven-segment digits are real SVG segments, not a font.
 import { useState, useRef, useEffect, useCallback } from 'react'
 import useCountdown from '../hooks/useCountdown'
+import { useNextEvent } from '../utils/campaignSchedule'
 import STOPS from '../data/campaignStops'
 import { TOUR_STATS } from '../data/tourChapters'
 import { ROUTE_NM, ROUTE_WAYPOINTS, distanceNm, bearingDeg } from '../data/routeStats'
@@ -138,8 +141,8 @@ const LABELS =
 
 // Same literal as App.jsx / MainView.jsx / TheRoad.jsx — local midnight.
 const LA_TARGET = Date.parse('2028-07-14T00:00:00')
-// Same hardcode as Biography's "Next Event" chrome line.
-const NEXT_EVENT = { name: 'SAN PEDRO OCR', where: 'LOS ANGELES', when: 'JUL 20 2026', ms: Date.parse('2026-07-20T00:00:00') }
+// (The NEXT EVENT readout is no longer a hardcode — it comes from the shared
+// campaignSchedule helper via useNextEvent(), see NextEventLCD below.)
 
 // --------------------------------------------------------------------------
 // Radar picture — the upcoming 2026 venues as targets, plotted by true
@@ -686,10 +689,12 @@ function HeelArc({ value = 12, max = 35 }) {
 // Next-event LCD — green mono text block, same fact as Biography's chrome.
 // --------------------------------------------------------------------------
 function NextEventLCD({ onNavigate }) {
-  // Live via the shared hook (isolated here, so the 1s tick re-renders only
-  // this small block) — a mount-time Date.now() would go stale across
-  // midnight in a long-lived tab while the T-MINUS clock keeps ticking.
-  const { days } = useCountdown(NEXT_EVENT.ms)
+  // Live via the shared schedule helper (isolated here, so its minute tick
+  // re-renders only this small block). Same source as Biography's "Next Event"
+  // line, so the two can never disagree, and it rolls over on its own — never
+  // stuck on "T-0 DAYS".
+  const next = useNextEvent()
+  const { name, where, when, tMinus } = next.lcd
   // Explicit line-height keeps the intrinsic content height predictable, so
   // in a short/narrow cell the lines truncate with an ellipsis instead of
   // clipping into each other; the .hp-next-detail rows drop out entirely once
@@ -713,7 +718,7 @@ function NextEventLCD({ onNavigate }) {
       className="hp-screen hp-next"
       role="button"
       tabIndex={0}
-      aria-label={`Next event: ${NEXT_EVENT.name}, ${NEXT_EVENT.where}, ${NEXT_EVENT.when}. Open The Road.`}
+      aria-label={next.aria}
       onClick={go}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -725,10 +730,10 @@ function NextEventLCD({ onNavigate }) {
     >
       {!blend && <div className="hp-next-detail" style={{ ...line, fontSize: 8, opacity: 0.55, letterSpacing: '0.2em' }}>NEXT EVENT</div>}
       <div className="hp-lcd-glow" style={{ ...line, fontSize: 'clamp(11px, 0.95vw, 14px)', fontWeight: 700, letterSpacing: '0.06em' }}>
-        {NEXT_EVENT.name}
+        {name}
       </div>
-      <div className="hp-next-detail" style={{ ...line, ...sub, fontSize: 9, opacity: 0.7 }}>{`${NEXT_EVENT.where} · ${NEXT_EVENT.when}`}</div>
-      <div style={{ ...line, ...sub, fontSize: 11, opacity: 0.9 }}>{`T-${days} DAYS`}</div>
+      <div className="hp-next-detail" style={{ ...line, ...sub, fontSize: 9, opacity: 0.7 }}>{`${where} · ${when}`}</div>
+      <div style={{ ...line, ...sub, fontSize: 11, opacity: 0.9 }}>{tMinus}</div>
     </div>
   )
 }

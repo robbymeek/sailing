@@ -12,8 +12,10 @@ import HomeHelmSection from './components/HomeHelmSection'
 import HomeOverview from './components/HomeOverview'
 import Biography from './pages/Biography'
 import Contact from './pages/Contact'
+import NotFound from './pages/NotFound'
 import ErrorBoundary from './components/ErrorBoundary'
 import { applyRouteMeta } from './lib/seo'
+import useFocusTrap from './hooks/useFocusTrap'
 import { mobileBannerHeightPx } from './components/HomeSponsorStrip'
 import useCountdown from './hooks/useCountdown'
 import DonateLockup from './components/DonateLockup'
@@ -348,16 +350,22 @@ export default function App() {
   // banner's (the two never render together).
   const [navMenuOpen, setNavMenuOpen] = useState(false)
 
-  // Close the overlay on route change and on Escape.
+  // Close the overlay on route change.
   useEffect(() => {
     setNavMenuOpen(false)
   }, [location.pathname])
+
+  // Mobile menu focus management: move focus in on open, contain Tab/Shift+Tab,
+  // Escape to close, restore focus to the hamburger on close (the desktop menu
+  // gets the same treatment inside DesktopBanner). The closed overlay is made
+  // `inert` so its links leave the tab order + AT tree entirely — fixing the old
+  // focusable-inside-aria-hidden violation without dropping the fade animation.
+  const mobileMenuRef = useRef(null)
+  useFocusTrap(mobileMenuRef, { active: navMenuOpen && isMobile, onClose: () => setNavMenuOpen(false) })
   useEffect(() => {
-    if (!navMenuOpen) return
-    const onKey = (e) => { if (e.key === 'Escape') setNavMenuOpen(false) }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [navMenuOpen])
+    const el = mobileMenuRef.current
+    if (el && 'inert' in el) el.inert = !navMenuOpen
+  }, [navMenuOpen, isMobile])
 
   // Keyed to navPath (the DISPLAYED route) not location.pathname: during the
   // leave-home exit fade the home tree is still on screen while location has already
@@ -459,6 +467,7 @@ export default function App() {
             onClick={() => setNavMenuOpen((o) => !o)}
             aria-label={navMenuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={navMenuOpen}
+            aria-controls="mobile-menu"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 10, marginLeft: 18,
               background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
@@ -506,12 +515,19 @@ export default function App() {
         </div>
       )}
 
-      {/* Mobile menu overlay: full-viewport backdrop + vertical stack. */}
+      {/* Mobile menu overlay: full-viewport backdrop + vertical stack. Kept
+          mounted for the 0.3s fade; `inert` (set in the effect above) drops it
+          from the tab order + AT when closed, and useFocusTrap moves focus in on
+          open, contains Tab, closes on Escape and restores focus to the
+          hamburger. Backdrop dismissal is a real aria-hidden, tab-excluded button
+          behind the stack (never the only close path). */}
       {isMobile && (
         <div
-          onClick={() => setNavMenuOpen(false)}
+          ref={mobileMenuRef}
+          id="mobile-menu"
           role="dialog"
-          aria-hidden={!navMenuOpen}
+          aria-modal="true"
+          aria-label="Menu"
           style={{
             position: 'fixed', inset: 0,
             background: 'rgba(12,14,20,0.94)',
@@ -522,7 +538,13 @@ export default function App() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
+          <button
+            type="button" aria-hidden="true" tabIndex={-1}
+            onClick={() => setNavMenuOpen(false)}
+            style={{ position: 'absolute', inset: 0, background: 'transparent', border: 'none', padding: 0, cursor: 'default' }}
+          />
           <div style={{
+            position: 'relative',
             display: 'flex', flexDirection: 'column',
             gap: 28, alignItems: 'center',
           }}>
@@ -531,12 +553,11 @@ export default function App() {
               return (
                 <button
                   key={item}
-                  onClick={(e) => {
-                    e.stopPropagation()
+                  onClick={() => {
                     go(item)
                     setNavMenuOpen(false)
                   }}
-                  className={isSupport ? 'chrome-text' : undefined}
+                  className={isSupport ? 'chrome-text nav-overlay-link' : 'nav-overlay-link'}
                   style={{
                     background: isSupport ? undefined : 'none',
                     border: 'none', cursor: 'pointer',
@@ -584,6 +605,11 @@ export default function App() {
               />
             </Suspense>
           } />
+          {/* Genuinely unknown URLs: GitHub Pages serves 404.html (HTTP 404),
+              which boots the SPA; this wildcard renders the designed NotFound
+              page (recovery links, keyboard-usable) instead of a blank shell.
+              Real routes above have physical files and never reach here. */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
 
