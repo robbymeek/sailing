@@ -1,6 +1,6 @@
 import { useState, useRef, useLayoutEffect } from 'react'
 import DonateLockup from './DonateLockup'
-import { SponsorRect, SPONSOR_PAIRS, DESKTOP_BANNER_H } from './HomeSponsorStrip'
+import { SponsorRect, SPONSOR_PAIRS, DESKTOP_BANNER_H, panelShadow } from './HomeSponsorStrip'
 import homeChrome from '../lib/homeChrome'
 
 // DesktopBanner — the site-wide desktop nav banner + its fullscreen menu overlay.
@@ -59,24 +59,24 @@ const MENU_HOVER = '#1E40FF' // campaign accent — hover/focus on any menu link
 // overlay's COMPACT_PAGES from this list so the two menus can't drift.
 export const MENU_PAGES = ['Home', 'Biography', 'The Team', 'The Road', 'Contact']
 
-// The sponsor lockup's box colour as it pins: a plain white sticker (sd 0) melting to a
-// black box (sd 1). Greyscale lerp so it reads as the box "darkening" with the bar.
-const sponsorBg = (sd) => {
-  const v = Math.round(255 * (1 - sd))
-  return `rgb(${v}, ${v}, ${v})`
-}
+// The sponsor lockup's box as it pins: a plain white sticker (sd 0) melting away entirely
+// (sd 1) so the white marks sit directly on the frosted glass bar. Background alpha and
+// drop shadow fade out together — a lingering shadow around a transparent box would paint
+// a ghost rectangle.
+const sponsorBg = (sd) => `rgba(255, 255, 255, ${1 - sd})`
+const sponsorShadow = (sd) => panelShadow(1 - sd)
 
 // Banner geometry/colour as a closed form of scroll (mirrors computeMobileBar).
 // t runs 0 (floating at the home rest insets) → 1 (pinned, frosted). `dark` (the four dark
-// routes) also drives the sponsor box: sponsorDark = dark ? t : 0, so the box only blackens
-// on the dark pages and stays white on the light ones (contact/support) even when pinned.
+// routes) also drives the sponsor box: sponsorDark = dark ? t : 0, so the box only melts
+// away on the dark pages and stays white on the light ones (contact/support) even when pinned.
 function computeDesktopBar(navPath, barBg, fgPinned, dark) {
   if (typeof window === 'undefined') {
     const sd = dark ? 1 : 0
     return {
       topPx: 0, padL: 0, padR: PIN_RIGHT_PAD,
       bg: withAlpha(barBg, BAR_MAX_ALPHA), blur: BAR_MAX_BLUR, fg: fgPinned, fade: 1,
-      sponsorDark: sd, sponsorBoxBg: sponsorBg(sd),
+      sponsorDark: sd, sponsorBoxBg: sponsorBg(sd), sponsorBoxShadow: sponsorShadow(sd),
     }
   }
   const restTop = navPath === '/' ? homeTopPx() : 0
@@ -96,6 +96,7 @@ function computeDesktopBar(navPath, barBg, fgPinned, dark) {
     fade: navPath === '/' ? homeChrome.fade : 1,
     sponsorDark,
     sponsorBoxBg: sponsorBg(sponsorDark),
+    sponsorBoxShadow: sponsorShadow(sponsorDark),
   }
 }
 
@@ -121,7 +122,7 @@ export default function DesktopBanner({
     const apply = () => {
       const el = barRef.current
       if (!el) return
-      const { topPx, padL, padR, bg, blur, fg, fade, sponsorDark, sponsorBoxBg } = computeDesktopBar(navPath, barBg, fgPinned, dark)
+      const { topPx, padL, padR, bg, blur, fg, fade, sponsorDark, sponsorBoxBg, sponsorBoxShadow } = computeDesktopBar(navPath, barBg, fgPinned, dark)
       const key = `${topPx}|${padL}|${padR}|${bg}|${blur}|${fg}|${fade}|${sponsorDark}`
       if (key === lastKeyRef.current) return
       lastKeyRef.current = key
@@ -135,6 +136,7 @@ export default function DesktopBanner({
       el.style.setProperty('--fg', fg)
       el.style.setProperty('--sponsor-dark', sponsorDark)
       el.style.setProperty('--sponsor-box-bg', sponsorBoxBg)
+      el.style.setProperty('--sponsor-box-shadow', sponsorBoxShadow)
       el.style.opacity = fade
       // Interactive ONLY at (near) full visibility — mirrors the old top bar's
       // pointerEvents: uiVisible && textOut < 0.05 gate, so the cluster goes inert
@@ -206,6 +208,7 @@ export default function DesktopBanner({
         ['--fg']: initial.fg,
         ['--sponsor-dark']: initial.sponsorDark,
         ['--sponsor-box-bg']: initial.sponsorBoxBg,
+        ['--sponsor-box-shadow']: initial.sponsorBoxShadow,
       }}
     >
       <SponsorRect

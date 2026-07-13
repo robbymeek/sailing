@@ -29,7 +29,11 @@ const scaledClamp = (min, vw, max, mul) =>
   `clamp(${(min * mul).toFixed(2)}px, ${(vw * mul).toFixed(3)}vw, ${(max * mul).toFixed(2)}px)`
 
 const PANEL_BG = '#ffffff'
-const PANEL_SHADOW = '0 6px 30px rgba(0,0,0,0.32)'
+// The sticker's drop shadow, parameterized by presence (0..1): DesktopBanner fades it out
+// in lockstep with the box background as the lockup melts into the frosted bar — a
+// full-strength shadow around a transparent box would paint a ghost rectangle.
+export const panelShadow = (presence = 1) => `0 6px 30px rgba(0, 0, 0, ${0.32 * presence})`
+const PANEL_SHADOW = panelShadow()
 
 // The mobile sponsor banner's height — shared as a CSS clamp for the banner itself and as
 // a px estimate for App's sticky menu bar, which rests just below the banner on home.
@@ -50,13 +54,13 @@ export const SPONSOR_PAIRS = [SPONSORS.slice(0, 2), SPONSORS.slice(2, 4)]
 // uses it as the sticky nav banner's left lockup, MainView as an absolute lockup
 // bottom-left. Non-interactive so it never competes with the orb's click zone.
 //
-// `darkAware` (only the DesktopBanner top lockup sets it): the box follows two CSS vars the
-// banner writes as it pins — `--sponsor-box-bg` (white → black) and `--sponsor-dark` (0 → 1).
-// Each logo is a colour/white pair sharing one grid cell, cross-fading on `--sponsor-dark`,
-// so the lockup melts from a white sticker (floating over the orb / on the light pages) into
-// a black box with white marks once it pins to the dark bar — in lockstep with the banner's
-// own frosted background. Without it the lockup stays the plain white sticker (pair[1]
-// bottom-left, the mobile strip).
+// `darkAware` (only the DesktopBanner top lockup sets it): the box follows CSS vars the
+// banner writes as it pins — `--sponsor-box-bg` (white → transparent), `--sponsor-box-shadow`
+// (fading out with it) and `--sponsor-dark` (0 → 1). Each logo is a colour/white pair sharing
+// one grid cell, cross-fading on `--sponsor-dark`, so the lockup melts from a white sticker
+// (floating over the orb / on the light pages) into bare white marks sitting directly on the
+// frosted glass once it pins to the dark bar — no box, no shadow. Without it the lockup stays
+// the plain white sticker (pair[1] bottom-left, the mobile strip).
 export function SponsorRect({ pair, style, darkAware = false }) {
   // Equal-AREA target height pushed up to (nearly) fill the cell; maxWidth/maxHeight 100%
   // then cap each logo to its cell so nothing overflows.
@@ -72,7 +76,7 @@ export function SponsorRect({ pair, style, darkAware = false }) {
     <div
       style={{
         background: darkAware ? 'var(--sponsor-box-bg, #ffffff)' : PANEL_BG,
-        boxShadow: PANEL_SHADOW,
+        boxShadow: darkAware ? `var(--sponsor-box-shadow, ${PANEL_SHADOW})` : PANEL_SHADOW,
         display: 'flex',
         alignItems: 'stretch',
         // Taller than before so the logos can grow — each fills its cell as much as
