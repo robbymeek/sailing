@@ -17,11 +17,33 @@
 //
 //  All motion is cosmetic CSS animation (helmPanel.css) — no rAF, no WebGL.
 //  The seven-segment digits are real SVG segments, not a font.
+import { useState, useRef, useEffect, useCallback } from 'react'
 import useCountdown from '../hooks/useCountdown'
 import STOPS from '../data/campaignStops'
 import { TOUR_STATS } from '../data/tourChapters'
 import { ROUTE_NM, ROUTE_WAYPOINTS, distanceNm, bearingDeg } from '../data/routeStats'
 import './helmPanel.css'
+
+// --------------------------------------------------------------------------
+// Feel constants for the live controls. Same ?key= override idiom as the
+// orb's TUNE in glassOrbScene — dial in dev, then bake the winners.
+// --------------------------------------------------------------------------
+const TUNE = {
+  knobSens: 0.006, // fraction of a knob's range per pixel dragged (vertical)
+  rangeMin: 2600, //  RANGE knob: tightest scope (NM) — keeps the nearest venues on-scope
+  rangeMax: 12000, // RANGE knob: widest scope — pulls in the far venues
+  dimMin: 0.5, //     DIM knob: darkest
+  dimMax: 1.55, //    DIM knob: brightest (>1 blooms)
+  mobMs: 4000, //     MOB alarm auto-clears after this
+  sqlHold: 900, //    SQL volume popup lingers this long after the last turn
+  spinMs: 1150, //    reveal: gauge needles' full-turn duration
+  heelMs: 1150, //    reveal: heel port→stbd sweep duration
+  revealAt: 0.3, //   reveal: viewport fraction that arms the power-on
+}
+if (import.meta.env.DEV && typeof location !== 'undefined') {
+  const q = new URLSearchParams(location.search)
+  for (const k of Object.keys(TUNE)) if (q.has(k)) TUNE[k] = parseFloat(q.get(k))
+}
 
 // --------------------------------------------------------------------------
 // Color themes. "blend" — the white editorial instrument sheet — is the
@@ -136,6 +158,24 @@ const RADAR_BLIPS = [
   const s = STOPS.find((t) => t.id === id)
   return { label, brg: bearingDeg(RADAR_BASE, s), nm: distanceNm(RADAR_BASE, s) }
 })
+
+// Curated three-letter tags for the marquee venues; every other stop derives
+// a tag from its first city, so turning the RANGE knob OUT can light the whole
+// campaign up on the scope (zoom out → more distant venues swim into range).
+const BLIP_TAGS = {
+  'nyc-training': 'NYC', 'dun-laoghaire-worlds': 'DUB', 'miami-jan-27': 'MIA',
+  'australia-breeze-26': 'ADL', 'vilamoura-26': 'VIL',
+}
+const autoTag = (s) => (s.venues?.[0]?.city || s.id).replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase()
+// Every campaign stop as a radar target (true bearing + great-circle NM from
+// San Pedro), minus the home-water venues that would pile onto own-ship.
+const ALL_TARGETS = STOPS
+  .map((s) => ({ id: s.id, label: BLIP_TAGS[s.id] || autoTag(s), brg: bearingDeg(RADAR_BASE, s), nm: distanceNm(RADAR_BASE, s) }))
+  .filter((t) => t.nm > 60)
+  .sort((a, b) => a.nm - b.nm)
+const dynamicBlips = (range) => ALL_TARGETS.filter((t) => t.nm <= range * 0.99)
+// ring caption ("2k", "4.5k") for a scope radius given in NM
+const fmtK = (nm) => (nm >= 1000 ? `${(nm / 1000).toFixed(1).replace(/\.0$/, '')}k` : String(Math.round(nm)))
 
 // Course/next-leg numbers shared by the chart, the HDG gauge and the scope's
 // course line: San Pedro → the first waypoint out (NYC training).
@@ -341,8 +381,13 @@ function CountdownSeg() {
 // the classed elements consume (--hp-phos[-rgb], --hp-phos-hi-rgb,
 // --hp-scope-*, --hp-sweep-s, --hp-mono) since there is no .hp-root above.
 // --------------------------------------------------------------------------
-export function Radar({ colors } = {}) {
+// `rangeNm` (helm panel only) makes the scope live: the RANGE knob drives it,
+// so turning out enlarges the range and swims more campaign venues into view.
+// Omitting it (the blue overview radar) keeps the curated 8000 NM picture.
+export function Radar({ colors, rangeNm } = {}) {
   const { phos = PHOS, grid = GRID, bone = BONE } = colors ?? {}
+  const range = rangeNm ?? RADAR_RANGE_NM
+  const blips = rangeNm != null ? dynamicBlips(rangeNm) : RADAR_BLIPS
   const rings = [22, 44, 66, 88]
   const spokes = Array.from({ length: 12 }, (_, i) => i * 30)
   return (
@@ -368,12 +413,12 @@ export function Radar({ colors } = {}) {
               </text>
             )
           })}
-          {/* range labels along the SW diagonal */}
+          {/* range labels along the SW diagonal — track the live range */}
           {rings.map((r, i) => {
             const [x, y] = polar(100, 100, r, 225)
             return (
               <text key={r} x={x - 2} y={y + 4} textAnchor="end" fontSize="5.5" fill={grid + '0.34)'} style={{ fontFamily: 'var(--hp-mono)' }}>
-                {(i + 1) * 2}k
+                {fmtK((range * (i + 1)) / 4)}
               </text>
             )
           })}
@@ -392,13 +437,13 @@ export function Radar({ colors } = {}) {
           <circle cx="100" cy="100" r="4.5" fill="none" stroke={phos + '0.4)'} strokeWidth="0.6" />
         </svg>
         <div className="hp-sweep" aria-hidden="true" />
-        {RADAR_BLIPS.map((b) => {
-          const rr = (Math.min(b.nm, RADAR_RANGE_NM * 0.94) / RADAR_RANGE_NM) * 44
+        {blips.map((b) => {
+          const rr = (Math.min(b.nm, range * 0.94) / range) * 44
           const left = 50 + rr * Math.sin(rad(b.brg))
           const top = 50 - rr * Math.cos(rad(b.brg))
           return (
             <div
-              key={b.label}
+              key={b.id ?? b.label}
               className="hp-blip"
               style={{ left: `${left}%`, top: `${top}%`, '--blip-delay': `${((b.brg / 360) * 4.4).toFixed(2)}s` }}
             >
@@ -527,7 +572,7 @@ function Chart() {
 // Round analog gauge — white ticks/needle on a near-black face. `compass`
 // maps 0-360 around the full dial; otherwise min..max spans -120°..+120°.
 // --------------------------------------------------------------------------
-function RoundGauge({ value, min = 0, max = 40, step = 10, minor = 5, redFrom = null, unit, compass = false, redHub = false, wobbleDelay = '0s' }) {
+function RoundGauge({ value, min = 0, max = 40, step = 10, minor = 5, redFrom = null, unit, compass = false, redHub = false, wobbleDelay = '0s', spinDelay = '0s' }) {
   const angle = compass ? (v) => v : (v) => -120 + ((v - min) / (max - min)) * 240
   const majors = []
   const minors = []
@@ -575,7 +620,7 @@ function RoundGauge({ value, min = 0, max = 40, step = 10, minor = 5, redFrom = 
       </text>
       {/* glass highlight */}
       <ellipse cx="76" cy="62" rx="46" ry="30" fill="rgba(233,239,248,0.045)" />
-      <g className="hp-needle" style={{ '--angle': `${angle(value)}deg`, '--wobble-delay': wobbleDelay }}>
+      <g className="hp-needle" style={{ '--angle': `${angle(value)}deg`, '--wobble-delay': wobbleDelay, '--spin-delay': spinDelay }}>
         <polygon points="100,24 96.5,110 103.5,110" fill={BONE + '0.96)'} />
         <polygon points="98,110 102,110 101,120 99,120" fill={BONE + '0.6)'} />
       </g>
@@ -597,13 +642,17 @@ function HeelArc({ value = 12, max = 35 }) {
     const a1 = -90 + ((k + 1) * 180) / N - 1.4
     const mid = (a0 + a1) / 2
     const heelAt = (mid / 90) * max
-    const lit = heelAt >= -0.5 && heelAt <= value
+    // light from centre out to the current heel, on whichever side it leans
+    const lit = value >= 0 ? heelAt >= -0.5 && heelAt <= value : heelAt <= 0.5 && heelAt >= value
     const [ox1, oy1] = polar(110, 108, 92, a0)
     const [ox2, oy2] = polar(110, 108, 92, a1)
     const [ix2, iy2] = polar(110, 108, 74, a1)
     const [ix1, iy1] = polar(110, 108, 74, a0)
     segs.push({ pts: `${ox1},${oy1} ${ox2},${oy2} ${ix2},${iy2} ${ix1},${iy1}`, lit })
   }
+  const heelAbs = Math.round(Math.abs(value))
+  const heelSide = value > 0.5 ? 'STBD' : value < -0.5 ? 'PORT' : 'LEVEL'
+  const heelText = heelSide === 'LEVEL' ? 'LEVEL 0°' : `${heelSide} ${heelAbs}°`
   return (
     <svg
       viewBox="0 0 220 120"
@@ -627,7 +676,7 @@ function HeelArc({ value = 12, max = 35 }) {
       <text x="24" y="114" fontSize="8" letterSpacing="1.5" fill={BONE + '0.45)'}>PORT</text>
       <text x="196" y="114" textAnchor="end" fontSize="8" letterSpacing="1.5" fill={BONE + '0.45)'}>STBD</text>
       <text x="110" y="112" textAnchor="middle" fontSize="13" fontWeight="700" fill={T.heel ? T.heel.color : 'var(--hp-ember)'} style={{ fontFamily: 'var(--hp-mono)' }} className="hp-lcd-glow">
-        {`STBD ${value}°`}
+        {heelText}
       </text>
     </svg>
   )
@@ -636,15 +685,20 @@ function HeelArc({ value = 12, max = 35 }) {
 // --------------------------------------------------------------------------
 // Next-event LCD — green mono text block, same fact as Biography's chrome.
 // --------------------------------------------------------------------------
-function NextEventLCD() {
+function NextEventLCD({ onNavigate }) {
   // Live via the shared hook (isolated here, so the 1s tick re-renders only
   // this small block) — a mount-time Date.now() would go stale across
   // midnight in a long-lived tab while the T-MINUS clock keeps ticking.
   const { days } = useCountdown(NEXT_EVENT.ms)
+  // Explicit line-height keeps the intrinsic content height predictable, so
+  // in a short/narrow cell the lines truncate with an ellipsis instead of
+  // clipping into each other; the .hp-next-detail rows drop out entirely once
+  // the box gets too skinny (CSS container query), leaving name + T-minus.
   const line = {
     fontFamily: 'var(--hp-mono)',
     color: 'var(--hp-phos)',
     minWidth: 0,
+    lineHeight: 1.15,
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -653,13 +707,27 @@ function NextEventLCD() {
   // inner kicker drops and the detail rows go ink (the name keeps the blue).
   const blend = VARIANT === 'blend'
   const sub = blend ? { color: 'rgba(20, 28, 54, 0.75)' } : null
+  const go = () => onNavigate?.('The Road')
   return (
-    <div className="hp-screen" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 3, padding: '8px 12px' }}>
-      {!blend && <div style={{ ...line, fontSize: 8, opacity: 0.55, letterSpacing: '0.2em' }}>NEXT EVENT</div>}
+    <div
+      className="hp-screen hp-next"
+      role="button"
+      tabIndex={0}
+      aria-label={`Next event: ${NEXT_EVENT.name}, ${NEXT_EVENT.where}, ${NEXT_EVENT.when}. Open The Road.`}
+      onClick={go}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          go()
+        }
+      }}
+      style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 3, padding: '8px 12px', cursor: 'pointer' }}
+    >
+      {!blend && <div className="hp-next-detail" style={{ ...line, fontSize: 8, opacity: 0.55, letterSpacing: '0.2em' }}>NEXT EVENT</div>}
       <div className="hp-lcd-glow" style={{ ...line, fontSize: 'clamp(11px, 0.95vw, 14px)', fontWeight: 700, letterSpacing: '0.06em' }}>
         {NEXT_EVENT.name}
       </div>
-      <div style={{ ...line, ...sub, fontSize: 9, opacity: 0.7 }}>{`${NEXT_EVENT.where} · ${NEXT_EVENT.when}`}</div>
+      <div className="hp-next-detail" style={{ ...line, ...sub, fontSize: 9, opacity: 0.7 }}>{`${NEXT_EVENT.where} · ${NEXT_EVENT.when}`}</div>
       <div style={{ ...line, ...sub, fontSize: 11, opacity: 0.9 }}>{`T-${days} DAYS`}</div>
     </div>
   )
@@ -690,42 +758,209 @@ function Module({ area, label, screws = false, children }) {
   )
 }
 
-function Knob({ label, angle }) {
+// Drag-to-turn: vertical pointer travel adjusts the value (drag up = more) —
+// the classic outboard/audio-knob feel. Same pointer-capture idiom as the
+// globe grab-spin: setPointerCapture + preventDefault, with cancel/lost
+// cleanup so a stolen capture can never strand the knob mid-drag.
+function useKnob({ value, min, max, onChange }) {
+  const ref = useRef(null)
+  const drag = useRef(null)
+  const onPointerDown = (e) => {
+    if (e.button != null && e.button > 0) return
+    ref.current?.setPointerCapture?.(e.pointerId)
+    drag.current = { id: e.pointerId, y: e.clientY, v: value }
+    e.preventDefault()
+  }
+  const onPointerMove = (e) => {
+    const d = drag.current
+    if (!d || d.id !== e.pointerId) return
+    const dy = d.y - e.clientY // up = increase
+    onChange(Math.max(min, Math.min(max, d.v + dy * TUNE.knobSens * (max - min))))
+  }
+  const end = (e) => {
+    const d = drag.current
+    if (!d || d.id !== e.pointerId) return
+    drag.current = null
+    ref.current?.releasePointerCapture?.(e.pointerId)
+  }
+  return { ref, handlers: { onPointerDown, onPointerMove, onPointerUp: end, onPointerCancel: end, onLostPointerCapture: end } }
+}
+
+function Knob({ label, value, min, max, onChange, children }) {
+  const angle = -150 + ((value - min) / (max - min)) * 300 // 300° usable sweep
+  const { ref, handlers } = useKnob({ value, min, max, onChange })
+  const step = (max - min) / 20
+  const onKeyDown = (e) => {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { e.preventDefault(); onChange(Math.min(max, value + step)) }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { e.preventDefault(); onChange(Math.max(min, value - step)) }
+  }
   return (
     <div className="hp-knob-unit">
-      <div className="hp-knob" style={{ '--knob-angle': `${angle}deg` }} />
+      <div
+        ref={ref}
+        className="hp-knob hp-knob--live"
+        style={{ '--knob-angle': `${angle}deg` }}
+        role="slider"
+        tabIndex={0}
+        aria-label={label}
+        aria-valuemin={Math.round(min)}
+        aria-valuemax={Math.round(max)}
+        aria-valuenow={Math.round(value)}
+        onKeyDown={onKeyDown}
+        {...handlers}
+      />
       <div className="hp-util-label">{label}</div>
+      {children}
     </div>
   )
 }
 
-function Toggle({ label, on = true }) {
+function Toggle({ label, on = true, onClick }) {
+  const live = !!onClick
+  const cls = `${on ? 'hp-toggle' : 'hp-toggle hp-toggle--off'}${live ? ' hp-toggle--live' : ''}`
   return (
     <div className="hp-toggle-unit">
-      <div className={on ? 'hp-toggle' : 'hp-toggle hp-toggle--off'} />
+      <div
+        className={cls}
+        {...(live
+          ? {
+              role: 'switch',
+              tabIndex: 0,
+              'aria-checked': on,
+              'aria-label': label,
+              onClick,
+              onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(e) } },
+            }
+          : {})}
+      />
       <div className="hp-util-label">{label}</div>
     </div>
   )
 }
 
-function Lamp({ label, tone }) {
+function Lamp({ label, tone, on = true, className = '' }) {
   return (
     <div className="hp-lamp-unit">
-      <div className={`hp-lamp hp-lamp--${tone}`} />
+      <div className={`hp-lamp hp-lamp--${tone}${on ? '' : ' hp-lamp--off'}${className ? ' ' + className : ''}`} />
       <div className="hp-util-label">{label}</div>
     </div>
   )
 }
 
 // ============================================================================
-export default function HelmPanel() {
+export default function HelmPanel({ onNavigate } = {}) {
+  const rootRef = useRef(null)
+  const hornRef = useRef(null)
+  const [poweredOn, setPoweredOn] = useState(false)
+  const [rangeNm, setRangeNm] = useState(RADAR_RANGE_NM)
+  const [dimLevel, setDimLevel] = useState(1)
+  const [sqlLevel, setSqlLevel] = useState(62)
+  const [sqlPop, setSqlPop] = useState(false)
+  const [mobAlarm, setMobAlarm] = useState(false)
+  const [navOn, setNavOn] = useState(true) // NAV LTS = master display power
+  const [aisOn, setAisOn] = useState(true)
+  const [dscOn, setDscOn] = useState(false)
+  const [hornPop, setHornPop] = useState(false)
+  const [heelValue, setHeelValue] = useState(12)
+
+  const sqlTimer = useRef(0)
+  const mobTimer = useRef(0)
+  const raf = useRef(0)
+  const heelRef = useRef(12) // mirrors heelValue so a tween reads its own live start
+
+  // Heel tween — shared by the reveal sweep and the DSC level toggle.
+  const animateHeel = useCallback((to, dur) => {
+    cancelAnimationFrame(raf.current)
+    const from = heelRef.current
+    const start = performance.now()
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / dur)
+      const e = 1 - Math.pow(1 - t, 3) // easeOutCubic
+      const v = from + (to - from) * e
+      heelRef.current = v
+      setHeelValue(v)
+      if (t < 1) raf.current = requestAnimationFrame(tick)
+    }
+    raf.current = requestAnimationFrame(tick)
+  }, [])
+
+  // Power-on: fire once when the panel scrolls into view (HomeOverview's
+  // Reveal idiom — an IntersectionObserver that flips on, then disconnects).
+  useEffect(() => {
+    const el = rootRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') { setPoweredOn(true); return }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setPoweredOn(true)
+          io.disconnect()
+          const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+          if (!reduce) {
+            heelRef.current = -26
+            setHeelValue(-26)
+            animateHeel(12, TUNE.heelMs) // sweep port → starboard, settle at 12°
+          }
+        }
+      },
+      { threshold: TUNE.revealAt },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [animateHeel])
+
+  // Clear pending timers / frames on unmount.
+  useEffect(
+    () => () => {
+      clearTimeout(sqlTimer.current)
+      clearTimeout(mobTimer.current)
+      cancelAnimationFrame(raf.current)
+    },
+    [],
+  )
+
+  // Horn popup: dismiss on any pointerdown outside the horn.
+  useEffect(() => {
+    if (!hornPop) return undefined
+    const onDoc = (e) => { if (!hornRef.current?.contains(e.target)) setHornPop(false) }
+    document.addEventListener('pointerdown', onDoc)
+    return () => document.removeEventListener('pointerdown', onDoc)
+  }, [hornPop])
+
+  const onSql = (v) => {
+    setSqlLevel(v)
+    setSqlPop(true)
+    clearTimeout(sqlTimer.current)
+    sqlTimer.current = setTimeout(() => setSqlPop(false), TUNE.sqlHold)
+  }
+  const fireMob = () => {
+    setMobAlarm(true)
+    clearTimeout(mobTimer.current)
+    mobTimer.current = setTimeout(() => setMobAlarm(false), TUNE.mobMs)
+  }
+  const toggleDsc = () => {
+    setDscOn((v) => {
+      const next = !v
+      animateHeel(next ? 0 : 12, 650) // DSC levels the boat, releasing returns to trim
+      return next
+    })
+  }
+
+  // DIM > 1 blooms; feed the face a brightness + a glow radius.
+  const bloom = Math.max(0, dimLevel - 1) / (TUNE.dimMax - 1)
+  const radarLabel = VARIANT === 'blend'
+    ? `RADAR · THE 2026 SEASON · ${Math.round(rangeNm)} NM`
+    : `RADAR · RANGE ${Math.round(rangeNm)} NM · RINGS ${Math.round(rangeNm / 4)}`
+
   return (
     <div
-      className={`hp-root hp-root--${VARIANT}`}
-      role="img"
-      aria-label="Helm station: campaign instruments. Radar scope sweeping the 2026 venues, the 2026 to 2028 voyage plan, wind and heading gauges, and the countdown to the LA 2028 Olympics."
+      ref={rootRef}
+      className={`hp-root hp-root--${VARIANT}${poweredOn ? ' hp-powered' : ''}${mobAlarm ? ' hp-alarm' : ''}${navOn ? '' : ' hp-off'}`}
+      style={{ '--hp-dim': dimLevel.toFixed(3), '--hp-bloom': bloom.toFixed(3), '--hp-spin-ms': `${TUNE.spinMs}ms` }}
+      role="group"
+      aria-label="Helm station: interactive campaign instruments — radar, voyage plan, wind and heading gauges, countdown, and hardware controls."
     >
       <Screws inset={9} />
+      <div className="hp-alarm-veil" aria-hidden="true" />
       <div className="hp-face">
         {VARIANT === 'blend' ? (
           /* masthead — just the station name, rendered in the same segment-
@@ -745,8 +980,8 @@ export default function HelmPanel() {
         )}
 
         <div className="hp-grid">
-          <Module area="radar" label={LABELS.radar} screws>
-            <Radar />
+          <Module area="radar" label={radarLabel} screws>
+            <Radar rangeNm={rangeNm} />
           </Module>
           <Module area="chart" label={LABELS.chart} screws>
             <Chart />
@@ -755,7 +990,7 @@ export default function HelmPanel() {
             <RoundGauge value={14} min={0} max={40} step={10} minor={5} redFrom={30} unit="KNOTS" redHub />
           </Module>
           <Module area="hdg" label={LABELS.hdg}>
-            <RoundGauge value={COG} compass unit="MAG" wobbleDelay="-1.7s" />
+            <RoundGauge value={COG} compass unit="MAG" wobbleDelay="-1.7s" spinDelay="0.16s" />
           </Module>
           <Module area="days" label={LABELS.days}>
             <CountdownSeg />
@@ -764,32 +999,60 @@ export default function HelmPanel() {
             <SegDisplay text={String(ROUTE_NM)} color={T.segNm.color} glow={T.segNm.glow} />
           </Module>
           <Module area="heel" label={LABELS.heel}>
-            <HeelArc value={12} />
+            <HeelArc value={heelValue} />
           </Module>
           <Module area="next" label={LABELS.next}>
-            <NextEventLCD />
+            <NextEventLCD onNavigate={onNavigate} />
           </Module>
         </div>
 
         <div className="hp-utility">
           <div className="hp-util-group">
-            <Knob label="RANGE" angle={-35} />
-            <Knob label="DIM" angle={10} />
-            <Knob label="SQL" angle={-70} />
+            <Knob label="RANGE" value={rangeNm} min={TUNE.rangeMin} max={TUNE.rangeMax} onChange={setRangeNm} />
+            <Knob label="DIM" value={dimLevel} min={TUNE.dimMin} max={TUNE.dimMax} onChange={setDimLevel} />
+            <Knob label="SQL" value={sqlLevel} min={0} max={100} onChange={onSql}>
+              <div className={`hp-vol-pop${sqlPop ? ' is-on' : ''}`} aria-hidden="true">
+                <div className="hp-vol-track"><div className="hp-vol-fill" style={{ height: `${sqlLevel}%` }} /></div>
+                <span className="hp-vol-num">{Math.round(sqlLevel)}</span>
+              </div>
+            </Knob>
           </div>
           <div className="hp-util-group hp-util-group--toggles">
-            <Toggle label="NAV LTS" on />
-            <Toggle label="AIS" on />
-            <Toggle label="DSC" on={false} />
+            <Toggle label="NAV LTS" on={navOn} onClick={() => setNavOn((v) => !v)} />
+            <Toggle label="AIS" on={aisOn} onClick={() => setAisOn((v) => !v)} />
+            <Toggle label="DSC" on={dscOn} onClick={toggleDsc} />
           </div>
           <div className="hp-util-group">
             <Lamp label="GPS" tone="green" />
-            <Lamp label="AIS" tone="amber" />
-            <Lamp label="MOB" tone="red" />
+            <Lamp label="AIS" tone="amber" on={aisOn} />
+            <button
+              type="button"
+              className={`hp-lamp-unit hp-lamp-btn${mobAlarm ? ' is-armed' : ''}`}
+              onClick={fireMob}
+              aria-label="Man overboard alarm"
+              aria-pressed={mobAlarm}
+            >
+              <div className={`hp-lamp hp-lamp--red${mobAlarm ? ' is-lit' : ''}`} />
+              <div className="hp-util-label">MOB</div>
+            </button>
           </div>
-          <div className="hp-horn">
-            <div className="hp-horn-btn" />
+          <div className="hp-horn" ref={hornRef}>
+            <button
+              type="button"
+              className={`hp-horn-btn${hornPop ? ' is-pressed' : ''}`}
+              onClick={() => setHornPop((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={hornPop}
+              aria-label="Start horn"
+            />
             <div className="hp-horn-plate">START HORN</div>
+            {hornPop && (
+              <div className="hp-horn-pop" role="menu">
+                <button type="button" className="hp-horn-pop-btn" role="menuitem" onClick={() => onNavigate?.('The Road')}>
+                  Go to The Road <span aria-hidden="true">→</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
