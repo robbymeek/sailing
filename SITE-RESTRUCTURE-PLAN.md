@@ -251,7 +251,7 @@ and regathers the same pixels as chrome lettering; the animated
 .chrome-text DOM takes over at rest. Pure closed form of scrollY; reduced
 motion gets a plain crossfade. Mobile centers the list below each beat's
 statement. **Follow-up to explore:** the owner suggested a liquid-logo
-treatment — see `~/Desktop/Code/reference-repos/` (liquid-logo clone)
+treatment — see `~/Code/reference-repos/` (liquid-logo clone)
 before building any WebGL version.
 
 ### Bottom-of-page treatment (proposed, described 2026-07-03 — confirm on review)

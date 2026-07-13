@@ -166,7 +166,7 @@ Your decisions: **do all Tier 1**, **move orphaned photos out of the repo**, **E
 | # | Category | Commit | What changed | Evidence |
 |---|---|---|---|---|
 | 1 | Dead code / deps | `a6ee5d0` | remove `@emailjs/browser`, delete `Marquee.jsx` + dead `@keyframes` | build green; provably unused |
-| 2 | Orphaned assets | `e8f1be5` | 20 files (~8.5 MB) moved to `~/Desktop/robbysailing-assets/archive/…` | probe identical, 0 broken |
+| 2 | Orphaned assets | `e8f1be5` | 20 files (~8.5 MB) moved to `~/Code/robbysailing-assets/archive/…` | probe identical, 0 broken |
 | 3 | Error boundary + deploy resilience | `c103f8f` | top-level `ErrorBoundary`, `lazyWithRetry`, `silent` preload boundary | **functional test:** throwing route → fallback + Reload; normal routes unaffected |
 | 4 | Re-render perf | `44609f1` | gate preload `useCountdown`; rAF-throttle nav color sampler | probe identical; visible countdowns unchanged |
 | 5 | Code-splitting | `39dba68` | lazy-load `Team` + `Support` | entry **259→231 kB** gz 80.9→73.3; routes render identical |
