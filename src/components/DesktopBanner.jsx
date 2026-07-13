@@ -168,13 +168,16 @@ export default function DesktopBanner({
     }
     if (navPath === '/') {
       // Home: continuous loop — the homeChrome fade is time-driven (morph/intro),
-      // not scroll-driven. Same pattern as MainView's exit-veil rAF; the key
-      // compare above makes idle frames free.
-      let rafId = requestAnimationFrame(function loop() {
-        apply()
-        rafId = requestAnimationFrame(loop)
-      })
-      return () => cancelAnimationFrame(rafId)
+      // not scroll-driven. The key-compare in apply() makes idle frames cheap;
+      // still, stop the loop entirely while the tab is hidden and resume on return.
+      let rafId = null
+      const loop = () => { apply(); rafId = requestAnimationFrame(loop) }
+      const start = () => { if (rafId == null && !document.hidden) rafId = requestAnimationFrame(loop) }
+      const stop = () => { if (rafId != null) { cancelAnimationFrame(rafId); rafId = null } }
+      const onVis = () => { if (document.hidden) stop(); else start() }
+      document.addEventListener('visibilitychange', onVis)
+      start()
+      return () => { document.removeEventListener('visibilitychange', onVis); stop() }
     }
     // Inner routes: every output is a constant (pinned, t = 1, fade 1) — one
     // write-through above suffices; no scroll/resize listeners needed.
