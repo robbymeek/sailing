@@ -138,7 +138,7 @@ function HomeShell({ onNavigate, isMobile }) {
     <div>
       <MainView key={isMobile ? 'mobile' : 'desktop'} onNavigate={onNavigate} embedded={isMobile} />
       <div style={{ position: 'relative', zIndex: 45 }}>
-        <HomeHelmSection isMobile={isMobile} />
+        <HomeHelmSection isMobile={isMobile} onNavigate={onNavigate} />
         <HomeOverview onNavigate={onNavigate} isMobile={isMobile} />
       </div>
     </div>

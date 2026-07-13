@@ -17,7 +17,7 @@
 import HelmPanel from './HelmPanel'
 import { DESKTOP_BANNER_H } from './HomeSponsorStrip'
 
-export default function HomeHelmSection({ isMobile = false }) {
+export default function HomeHelmSection({ isMobile = false, onNavigate }) {
   return (
     <section
       aria-label="Helm station"
@@ -40,7 +40,7 @@ export default function HomeHelmSection({ isMobile = false }) {
           margin: '0 auto',
         }}
       >
-        <HelmPanel />
+        <HelmPanel onNavigate={onNavigate} />
       </div>
     </section>
   )
