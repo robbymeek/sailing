@@ -443,6 +443,7 @@ export default function App() {
       {isMobile && (
         <div
           ref={barRef}
+          data-sticky-bar
           style={{
             position: 'fixed', left: 0, right: 0, top: initialBar.topPx,
             height: 52, zIndex: 80,

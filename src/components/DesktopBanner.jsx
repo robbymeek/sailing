@@ -184,6 +184,7 @@ export default function DesktopBanner({
     <nav
       ref={barRef}
       aria-label="Primary"
+      data-sticky-bar
       style={{
         position: 'fixed', left: 0, right: 0, top: initial.topPx,
         // The banner IS the sponsor lockup's height — no vertical padding around it.

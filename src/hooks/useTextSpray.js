@@ -9,7 +9,7 @@ import { hasWebGL2 } from '../lib/webglSupport'
 // Save-Data, non-WebGL2 browsers, and the hidden preload copies App mounts
 // off-screen (their rects sit permanently "near the top" and would otherwise
 // boot a zombie WebGL loop).
-export default function useTextSpray(h1Ref, { enabled = true, palette = 'white', containerRef, zIndex = 20, fadeRefs = [], pausedRef } = {}) {
+export default function useTextSpray(h1Ref, { enabled = true, palette = 'white', containerRef, zIndex = 20, fadeRefs = [], pausedRef, releaseLine = 0 } = {}) {
   useEffect(() => {
     if (!enabled) return undefined
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined
@@ -40,6 +40,7 @@ export default function useTextSpray(h1Ref, { enabled = true, palette = 'white',
               zIndex,
               fadeEls: fadeRefs.map((r) => r.current),
               isPaused: pausedRef ? () => !!pausedRef.current : null,
+              releaseLine,
             })
           } catch (err) {
             console.warn('textSpray failed to start; headline scrolls away plain', err)

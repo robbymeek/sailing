@@ -150,9 +150,23 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
 
   const nextEvent = useCountdown(new Date('2026-07-20T00:00:00'), !preload)
 
+  // Release line for the RESULTS spray = the BOTTOM EDGE of the site's sticky
+  // nav bar (desktop banner / mobile bar, both pinned at top:0 on this route).
+  // The bar is opaque and covers the top band of the viewport, so releasing at
+  // y=0 dissolved the letters HIDDEN behind it — they just slid under the bar.
+  // Measured live (viewport coords, [data-sticky-bar]) so it tracks the
+  // mobile↔desktop split and resize without hard-coding either bar's height.
+  const stickyBarRef = useRef(null)
+  const releaseLine = () => {
+    if (!stickyBarRef.current || !stickyBarRef.current.isConnected) {
+      stickyBarRef.current = document.querySelector('[data-sticky-bar]')
+    }
+    return stickyBarRef.current ? Math.max(0, stickyBarRef.current.getBoundingClientRect().bottom) : 0
+  }
+
   // RESULTS sea-spray dissolve — replaces the old sticky banner. The headline
-  // scrolls naturally; as its letters cross the top edge of the viewport they
-  // atomize into wind-blown spray, and scrolling back reassembles them.
+  // scrolls naturally; as its letters reach the bottom of the sticky nav bar
+  // they atomize into wind-blown spray, and scrolling back reassembles them.
   useTextSpray(resultsRef, {
     enabled: !preload,
     palette: 'white',
@@ -160,6 +174,7 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
     zIndex: 20,
     fadeRefs: [nextEventRef, hintRef],
     pausedRef: sprayPausedRef,
+    releaseLine,
   })
 
   // Parallax: text moves faster than image, image moves faster than page.

@@ -2,13 +2,17 @@
 //  textSpray — the LA 2028 "sea-spray dissolve"
 // ============================================================================
 //  Replaces the old sticky banners: the headline is never pinned. The DOM h1
-//  scrolls naturally and the viewport clips it at the top edge like any other
-//  content; this module draws GPU spray for the letterform rows that have
-//  crossed y=0, so the letters atomize into wind-blown spume at the moment of
-//  contact. A particle at age 0 sits exactly on the clip line, so the seam
-//  between crisp DOM text (below the edge) and spray (at it) is continuous by
-//  construction. THE RELEASE LINE MUST STAY AT/ABOVE THE EDGE — the h1 is
-//  never masked, so releasing below the edge would paint the same row twice.
+//  scrolls naturally and this module draws GPU spray for the letterform rows
+//  that have crossed the RELEASE LINE (uReleaseLine), so the letters atomize
+//  into wind-blown spume at the moment of contact. A particle at age 0 sits
+//  exactly on the release line, so the seam between crisp DOM text (below it)
+//  and spray (at it) is continuous by construction. The release line defaults
+//  to the viewport top edge (y=0), where the viewport itself clips the h1;
+//  callers may push it DOWN to the bottom of a sticky nav bar (biography page),
+//  since the opaque bar hides the DOM rows between the edge and that line.
+//  THE RELEASE LINE MUST STAY WHERE THE DOM ROWS ARE ALREADY HIDDEN — clipped
+//  by the viewport (≤0) or covered by the bar (0…barH) — because the h1 is
+//  never masked, so releasing over still-visible text would paint it twice.
 //
 //  Motion is a CLOSED FORM of scroll position (agePx = how far a row has
 //  scrolled past its release line): no integration, no per-frame CPU particle
@@ -64,6 +68,7 @@ const VERT = /* glsl */ `
 
   uniform vec2  uViewport;   // canvas band size, CSS px (w, bandH)
   uniform float uTextTop;    // viewport-relative top of the h1 box, CSS px
+  uniform float uReleaseLine; // viewport y where rows atomize (0 = top edge; >0 = bottom of the sticky bar)
   uniform float uTextLeft;
   uniform float uTextWidth;
   uniform float uDpr;
@@ -85,11 +90,13 @@ const VERT = /* glsl */ `
   float hash1(float n) { return fract(sin(n) * 43758.5453123); }
 
   void main() {
-    // Ragged crest: each column releases a few px INTO the clipped region
-    // (never below the edge — see the file header invariant).
+    // Ragged crest: each column releases a few px ABOVE the release line, into
+    // the region the bar (or the top edge) already covers — see the file
+    // header invariant. The release line rides at uReleaseLine (0 = viewport
+    // top edge; the sticky nav bar's bottom on the biography page).
     float jitter = 8.0 * hash1(floor(position.x / 6.0) * 12.9898);
-    float rowY = uTextTop + position.y;      // viewport y if still attached
-    float agePx = max(0.0, -jitter - rowY);  // px of scroll since release
+    float rowY = uTextTop + position.y;                    // viewport y if still attached
+    float agePx = max(0.0, uReleaseLine - jitter - rowY);  // px of scroll since release
 
     if (agePx <= 0.0) {
       // Unreleased: the DOM glyphs own these pixels. Cull off-screen.
@@ -307,7 +314,13 @@ export function createTextSpray(h1El, opts = {}) {
     fadeEls = [],
     isPaused = null,
     halo = true,
+    // Viewport y (CSS px) where rows atomize. A number, or a function read each
+    // frame (so it can track a live-measured sticky-bar bottom through resize /
+    // the mobile↔desktop split). Default 0 = the viewport top edge.
+    releaseLine = 0,
   } = opts
+  const releaseLineNow = () =>
+    Math.max(0, typeof releaseLine === 'function' ? (releaseLine() || 0) : releaseLine)
 
   const isMobile = window.innerWidth < 700
   const T = isMobile ? TUNE_MOBILE : TUNE_DESKTOP
@@ -346,6 +359,7 @@ export function createTextSpray(h1El, opts = {}) {
   const uniforms = {
     uViewport: { value: new THREE.Vector2(1, 1) },
     uTextTop: { value: 9999 },
+    uReleaseLine: { value: releaseLineNow() },
     uTextLeft: { value: 0 },
     uTextWidth: { value: 1 },
     uDpr: { value: 1 },
@@ -442,7 +456,9 @@ export function createTextSpray(h1El, opts = {}) {
   }
 
   function inBand(top, height) {
-    return top < ACTIVE_TOP && top > -(height + T.tail + 300)
+    // Start a little before the release line (which may sit below the top edge
+    // behind the sticky bar), stop once the whole cloud below it is spent.
+    return top < ACTIVE_TOP + releaseLineNow() && top > -(height + T.tail + 300)
   }
 
   function tick(now) {
@@ -455,6 +471,7 @@ export function createTextSpray(h1El, opts = {}) {
       stopLoop()
       return
     }
+    const releaseY = releaseLineNow()
 
     const y = window.scrollY
     const v = (y - lastY) / dt
@@ -466,7 +483,9 @@ export function createTextSpray(h1El, opts = {}) {
     else staleness *= Math.exp(-dt / 0.15)
 
     for (const { el, dy } of fadeOffsets) {
-      const o = Math.min(1, Math.max(0, (rect.top + dy - 50) / 90))
+      // Exhale as the line approaches the release line (bar bottom), not the
+      // viewport top — so it fades just before sliding under the bar.
+      const o = Math.min(1, Math.max(0, (rect.top + dy - 50 - releaseY) / 90))
       el.style.opacity = String(o)
       // A fully faded element must also leave hit-testing and tab order:
       // opacity:0 alone keeps buttons inside it clickable and focusable
@@ -479,12 +498,15 @@ export function createTextSpray(h1El, opts = {}) {
     rule.style.visibility = paused ? 'hidden' : 'visible'
     if (paused) return
 
-    // Rule line: brightest while rows are actively shearing across the edge.
-    const zone = rect.top < 0 && rect.top > -(rect.height + 80)
+    // Rule line: pinned at the release line, brightest while rows are actively
+    // shearing across it.
+    rule.style.top = `${releaseY}px`
+    const zone = rect.top < releaseY && rect.top > releaseY - (rect.height + 80)
     const target = zone ? Math.min(1, Math.abs(vSmooth) / 1200) * 0.5 : 0
     ruleO += (target - ruleO) * (1 - Math.exp(-dt * 10))
     rule.style.opacity = ruleO < 0.01 ? '0' : ruleO.toFixed(3)
 
+    uniforms.uReleaseLine.value = releaseY
     uniforms.uTextTop.value = rect.top
     uniforms.uTextLeft.value = rect.left
     uniforms.uTextWidth.value = Math.max(1, rect.width)
