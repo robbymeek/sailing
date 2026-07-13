@@ -12,6 +12,7 @@ import HomeHelmSection from './components/HomeHelmSection'
 import HomeOverview from './components/HomeOverview'
 import Biography from './pages/Biography'
 import Contact from './pages/Contact'
+import NotFound from './pages/NotFound'
 import ErrorBoundary from './components/ErrorBoundary'
 import { applyRouteMeta } from './lib/seo'
 import { mobileBannerHeightPx } from './components/HomeSponsorStrip'
@@ -584,6 +585,11 @@ export default function App() {
               />
             </Suspense>
           } />
+          {/* Genuinely unknown URLs: GitHub Pages serves 404.html (HTTP 404),
+              which boots the SPA; this wildcard renders the designed NotFound
+              page (recovery links, keyboard-usable) instead of a blank shell.
+              Real routes above have physical files and never reach here. */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
 

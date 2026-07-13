@@ -270,6 +270,15 @@ button {
   pointer-events: none !important;
 }
 
+/* ============ NotFound (unknown-route page) ============ */
+.nf-home { transition: background 0.25s ease, color 0.25s ease; }
+.nf-home:hover { background: #fff; color: rgb(19,23,31); }
+.nf-home:focus-visible { outline: 2px solid #1E40FF; outline-offset: 3px; }
+.nf-link { transition: color 0.2s ease; }
+.nf-link:hover, .nf-link:focus-visible { color: #fff; }
+.nf-link:focus-visible { outline: 2px solid #1E40FF; outline-offset: 3px; border-radius: 2px; }
+@media (prefers-reduced-motion: reduce) { .nf-home, .nf-link { transition: none; } }
+
 /* ============ HomeOverview (home editorial index) ============ */
 
 /* Route action: a classic outlined button — ink border + ink label/arrow that
