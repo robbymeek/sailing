@@ -19,8 +19,12 @@ const ARC_SAMPLES = 128
 
 // scratch objects for the render loop (never allocate in frame())
 const _yawQ = new THREE.Quaternion()
+const _grabDq = new THREE.Quaternion()
+const _grabSnapQ = new THREE.Quaternion()
+const IDENTITY_Q = new THREE.Quaternion()
 const _v = new THREE.Vector3()
 const _va = new THREE.Vector3()
+const X_AXIS = new THREE.Vector3(1, 0, 0)
 const Y_AXIS = new THREE.Vector3(0, 1, 0)
 const Z_AXIS = new THREE.Vector3(0, 0, 1)
 
@@ -74,7 +78,7 @@ function makeGlowTexture() {
 // ---------- factory ----------
 // frames: [{ lat, lng, isFinale, chapter, keyArrival }] (one per waypoint, in tour order)
 // tour:   { segments, chapterPoses, landY } — the page's choreography table
-export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, onReady, getProgress, seamless = false, tour }) {
+export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, onReady, getProgress, seamless = false, tour, grabTopPx = () => 0 }) {
   // Prefer the discrete GPU, but retry with the default adapter if a config
   // refuses 'high-performance' (mirrors glassOrbScene), so a refusal degrades to a
   // working globe rather than the static timeline.
@@ -403,6 +407,31 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
   let startedAt = 0 // seconds at first start() — anchors the seamless pin fade-in
   const t0 = performance.now()
 
+  // ---------- grab-and-spin state ----------
+  // A purely visual user offset quaternion premultiplied over the scroll-derived
+  // pose (handlers near the context-loss block below). It never touches scrollY,
+  // and the snap-back ease decays it to identity — the same sanctioned time-based
+  // exception class as entryT, so the page's closed-form-of-scroll invariant
+  // resumes exactly whenever grab.state is 'idle'.
+  const GRAB_SNAP_S = 0.38 // snap-back duration (s) — brisk, not a pop
+  const GRAB_EPS_Y = 0.01 // vh-units of scroll that mean "user moved on" (~9px)
+  const grab = {
+    state: 'idle', // idle → dragging → held → snapping → idle
+    q: new THREE.Quaternion(),
+    heldQ: new THREE.Quaternion(),
+    pointerId: -1,
+    lastX: 0,
+    lastY: 0,
+    yRef: 0,
+    snapT0: 0,
+  }
+  const circle = { x: -1e4, y: -1e4, r: 0 } // live projected earth circle (px), written each frame
+  const mouse = { x: 0, y: 0, has: false } // last mouse position (cursor liveness)
+  let lastPy = 0
+  let lastC = 0 // last frame's recentre blend — grabs are off once the recap takes over
+  let grabResync = false // re-anchor yRef after a resize (p.y is vh-normalized, so a
+  // URL-bar/rotation innerHeight change shifts it with zero user scroll)
+
   function frame() {
     rafId = requestAnimationFrame(frame)
     const p = getProgress()
@@ -425,6 +454,26 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
       _yawQ.setFromAxisAngle(Y_AXIS, Math.PI * 2 * p.spinT)
       globe.quaternion.premultiply(_yawQ)
     }
+
+    // user grab offset — premultiplied LAST: the camera is axis-aligned (it only
+    // translates on Z), so a world-space offset reads as a pure screen-space
+    // rotation on top of whatever pose the scroll derives underneath. A held
+    // spin starts easing home the moment the user scrolls away from where they
+    // let go (yRef); clearSpin() covers jumps that don't move scrollY.
+    if (grabResync) { grab.yRef = p.y; grabResync = false }
+    if (grab.state === 'held' && Math.abs(p.y - grab.yRef) > GRAB_EPS_Y) beginSnap()
+    if (grab.state === 'snapping') {
+      const k = smoothstep(0, 1, (performance.now() / 1000 - grab.snapT0) / GRAB_SNAP_S)
+      _grabSnapQ.slerpQuaternions(grab.heldQ, IDENTITY_Q, k)
+      globe.quaternion.premultiply(_grabSnapQ)
+      if (k >= 1) {
+        grab.state = 'idle'
+        grab.q.identity()
+      }
+    } else if (grab.state !== 'idle') {
+      globe.quaternion.premultiply(grab.q)
+    }
+    lastPy = p.y
 
     // arcs: behind the frontier fully drawn, the current hop animating in
     // (instanced segment count = progressive draw for Line2). During the recap
@@ -595,6 +644,26 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
     anchor.position.set(ax, ay, 0)
     const restScaleNow = REST_SCALE + (1 - REST_SCALE) * c
     anchor.scale.setScalar(1 + (restScaleNow - 1) * entryT)
+
+    // live projected screen circle of the earth (radius-1 mesh × anchor scale at
+    // the z=0 plane) — the grab hitbox + cursor zone. Reading the same
+    // ax/ay/camZ/scale the render uses means it tracks the entry ease and the
+    // key-stop dollies for free. lastC gates grabs off once the recap recentres:
+    // the grown, centred globe would otherwise be a mid-screen scroll trap on
+    // mobile, and the recap/finale choreography isn't meant to be hand-spun.
+    const gw = canvas.clientWidth
+    const gh = Math.max(1, canvas.clientHeight)
+    const whH = camZ * TAN_HALF_V
+    circle.x = ((ax / (whH * camera.aspect)) * 0.5 + 0.5) * gw
+    circle.y = (0.5 - (ay / whH) * 0.5) * gh
+    circle.r = (anchor.scale.x / whH) * (gh / 2)
+    lastC = c
+    // keep the hover cursor honest while the globe moves under a parked mouse
+    // (jumps, dollies, Play) — one compare per frame, write only on change
+    if (mouse.has && grab.state !== 'dragging') {
+      const want = hitTest(mouse.x, mouse.y) ? 'grab' : ''
+      if (canvas.style.cursor !== want) canvas.style.cursor = want
+    }
     atmosMat.uniforms.uIntensity.value =
       1 + 1.2 * p.finaleT + (p.mode === 'recap' ? 0.3 * Math.sin(Math.PI * p.recapT) : 0)
 
@@ -638,12 +707,105 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
   canvas.addEventListener('webglcontextlost', onContextLost, false)
   canvas.addEventListener('webglcontextrestored', onContextRestored, false)
 
+  // ---------- grab-and-spin handlers ----------
+  // They live on the CANVAS (the bottom of the page's z-stack), so the browser's
+  // own hit-testing is the occlusion rule: any pointerEvents:auto element over
+  // the globe (menus, controls, the finale block — including its transparent
+  // lead-in) swallows the event first, and the globe is only grabbable where the
+  // path to it is uninterrupted. The one visible-but-inert overlay (the site
+  // banner's nav, pointerEvents:none) is excluded geometrically via grabTopPx.
+  function hitTest(x, y) {
+    if (lastC > 0.05) return false // recap/finale recentre: grabs off (see frame())
+    if (y < grabTopPx()) return false
+    const dx = x - circle.x
+    const dy = y - circle.y
+    return dx * dx + dy * dy <= circle.r * circle.r
+  }
+  function beginSnap() {
+    grab.heldQ.copy(grab.q)
+    grab.snapT0 = performance.now() / 1000
+    grab.state = 'snapping'
+  }
+  function endDrag() {
+    grab.pointerId = -1
+    grab.yRef = lastPy
+    grab.state = 'held'
+  }
+  // Public: the page calls this on tour jumps (stop rows, leg boxes, Play) so a
+  // held spin returns to the story even when the click doesn't move scrollY.
+  function clearSpin() {
+    if (grab.state === 'dragging') endDrag()
+    if (grab.state === 'held') beginSnap()
+  }
+  const onGrabDown = (e) => {
+    // main button only: a right-click's context menu (macOS opens it on DOWN)
+    // swallows the matching pointerup, which would leave a drag glued to the cursor
+    if (!e.isPrimary || e.button !== 0 || disposed || !hitTest(e.clientX, e.clientY)) return
+    if (grab.state === 'snapping') {
+      // regrab mid-snap: freeze the interpolated offset so nothing pops
+      const k = smoothstep(0, 1, (performance.now() / 1000 - grab.snapT0) / GRAB_SNAP_S)
+      grab.q.slerpQuaternions(grab.heldQ, IDENTITY_Q, k)
+    }
+    grab.state = 'dragging'
+    grab.pointerId = e.pointerId
+    grab.lastX = e.clientX
+    grab.lastY = e.clientY
+    try { canvas.setPointerCapture(e.pointerId) } catch { /* fine uncaptured */ }
+    canvas.style.cursor = 'grabbing'
+    e.preventDefault() // no text selection under a drag
+  }
+  const onGrabMove = (e) => {
+    if (grab.state === 'dragging' && e.pointerId === grab.pointerId) {
+      // px→radians via the LIVE projected radius, so the surface tracks ~1:1
+      // under the pointer at any zoom. Free tumble on both axes — snap-back
+      // always restores north-up, so full spins cost nothing.
+      const r = Math.max(circle.r, 8)
+      _grabDq.setFromAxisAngle(Y_AXIS, (e.clientX - grab.lastX) / r)
+      grab.q.premultiply(_grabDq)
+      _grabDq.setFromAxisAngle(X_AXIS, (e.clientY - grab.lastY) / r)
+      grab.q.premultiply(_grabDq)
+      grab.lastX = e.clientX
+      grab.lastY = e.clientY
+    } else if (e.pointerType === 'mouse') {
+      mouse.x = e.clientX
+      mouse.y = e.clientY
+      mouse.has = true
+      canvas.style.cursor = hitTest(e.clientX, e.clientY) ? 'grab' : ''
+    }
+  }
+  const onGrabEnd = (e) => {
+    if (grab.state !== 'dragging' || e.pointerId !== grab.pointerId) return
+    endDrag()
+    canvas.style.cursor = e.pointerType === 'mouse' && hitTest(e.clientX, e.clientY) ? 'grab' : ''
+  }
+  const onGrabLeave = () => {
+    mouse.has = false
+    if (grab.state !== 'dragging') canvas.style.cursor = ''
+  }
+  // iOS decides page-scroll from touchmove (not pointermove): cancel it ONLY
+  // while a grab is live. The grab is established at pointerdown, so the FIRST
+  // move of the gesture is already cancelled and the scroll never starts;
+  // touches outside the circle are untouched and scroll the page natively.
+  const onGrabTouchMove = (e) => {
+    if (grab.state === 'dragging') e.preventDefault()
+  }
+  canvas.addEventListener('pointerdown', onGrabDown)
+  canvas.addEventListener('pointermove', onGrabMove)
+  canvas.addEventListener('pointerup', onGrabEnd)
+  canvas.addEventListener('pointercancel', onGrabEnd)
+  // safety net: capture stolen by the browser (alt-tab, system gestures) ends
+  // the drag like a release; idempotent via the state/pointerId guards
+  canvas.addEventListener('lostpointercapture', onGrabEnd)
+  canvas.addEventListener('pointerleave', onGrabLeave)
+  canvas.addEventListener('touchmove', onGrabTouchMove, { passive: false })
+
   function resize() {
     const w = canvas.clientWidth
     const h = Math.max(1, canvas.clientHeight)
     camera.aspect = w / h
     baseZ = fitCameraZ(camera.aspect)
     applyConfined() // re-fit the confined pose to the new aspect (globe never clipped)
+    if (grab.state === 'held') grabResync = true // p.y shifts on ih change; not a user scroll
     camera.updateProjectionMatrix()
     renderer.setSize(w, h, false)
     arcMaterial.resolution.set(w, h)
@@ -656,6 +818,14 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
     document.removeEventListener('visibilitychange', onVisibility)
     canvas.removeEventListener('webglcontextlost', onContextLost)
     canvas.removeEventListener('webglcontextrestored', onContextRestored)
+    canvas.removeEventListener('pointerdown', onGrabDown)
+    canvas.removeEventListener('pointermove', onGrabMove)
+    canvas.removeEventListener('pointerup', onGrabEnd)
+    canvas.removeEventListener('pointercancel', onGrabEnd)
+    canvas.removeEventListener('lostpointercapture', onGrabEnd)
+    canvas.removeEventListener('pointerleave', onGrabLeave)
+    canvas.removeEventListener('touchmove', onGrabTouchMove)
+    canvas.style.cursor = ''
     scene.traverse((obj) => {
       if (obj.geometry) obj.geometry.dispose()
       if (obj.material) {
@@ -676,5 +846,5 @@ export default function createGlobeScene(canvas, frames, { isMobile, baseUrl, on
     renderer.dispose()
   }
 
-  return { resize, dispose }
+  return { resize, dispose, clearSpin }
 }

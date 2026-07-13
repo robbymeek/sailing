@@ -70,6 +70,27 @@ function smoothstep(a, b, x) {
   return t * t * (3 - 2 * t)
 }
 
+// ---------- interaction tuning ----------
+// Stop-row jumps: duration scales with distance, so a far row reads as a
+// deliberate glide (the banner slides down the list as scrollY eases).
+const JUMP_MS_PER_SCREEN = 260 // ms per screen (100vh) of jump distance
+const JUMP_MS_MIN = 650
+const JUMP_MS_MAX = 1600
+// Globe-follow lag: during a programmatic jump the SCENE reads an exponentially
+// lagged scrollY, so the DOM banner (raw scroll) leads and the globe chases.
+const LAG_TAU = 150 // ms — how far behind the banner the globe runs
+const LAG_TAU_CONVERGE = 70 // ms — fast catch-up once the tween ends / halts
+// Momentum glide: when input ends with leftover velocity, keep coasting down
+// the stops; any wheel/touch/key/click stops it dead.
+const GLIDE_IDLE_MS = 110 // quiet window after the last scroll event
+const GLIDE_V_MIN = 0.25 // px/ms — minimum hand-off velocity to engage
+const GLIDE_V_MAX = 3.5 // px/ms — cap: a hard fling coasts ≤ ~2 screens
+const GLIDE_V_STOP = 0.008 // px/ms — decay floor: the coast is over
+const GLIDE_TAU = 550 // ms — velocity decay constant; coast distance ≈ v0·τ
+const GLIDE_V_SMOOTH = 40 // ms — velocity estimator smoothing
+const SETTLE_WINDOW = 0.3 // vh-units: land on a stop if the coast dies this close
+const SETTLE_MS = 350
+
 // Flatten stops → frames (one per waypoint), tagging position within the stop.
 function buildFrames(stops) {
   const frames = []
@@ -336,9 +357,9 @@ const P = {
   labelKey: 0,
 }
 
-function computeScroll() {
+function computeScroll(yPx = window.scrollY) {
   const vh = window.innerHeight || 1
-  const y = window.scrollY / vh
+  const y = yPx / vh
 
   // active segment = last segment whose start has passed (linear scan, ~40 rows)
   let k = 0
@@ -571,6 +592,13 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
   // window.scrollY powers "to the start / play / to the end"; any real user input
   // (wheel / touch / scroll-keys) cancels it, so manual scrolling always wins. The
   // scene + computeScroll read window.scrollY, so this needs no globe API.
+  // Shared interaction state (mutable, never read during render): the tour
+  // tween, the scene's lagged-progress closure and the glide engine coordinate
+  // through these. lagY/tweenActive drive the globe-follow lag; lastProgAt marks
+  // "this scroll was programmatic" so the glide never mistakes it for a fling.
+  const motionRef = useRef({ tweenActive: false, lagY: null, lastProgAt: 0 })
+  const glideRef = useRef({ cancel: null })
+  const sceneRef = useRef(null)
   const tourRef = useRef(null)
   if (tourRef.current === null) {
     const S = { raf: 0, onUser: null, onKey: null, playing: false }
@@ -588,14 +616,20 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
       if (S.raf) { cancelAnimationFrame(S.raf); S.raf = 0 }
       detach()
       if (S.playing) { S.playing = false; setPlaying(false) }
+      motionRef.current.tweenActive = false // the globe lag converges + disengages
+      glideRef.current.cancel?.() // a starting tween / user input kills any coast
     }
     // Shared animation plumbing: run `apply(p)` under a rAF for `ms`, with the
     // user-input cancel hooks attached. tween eases scrollY directly; play maps
     // linear time through the warped-units table so chapter intros linger.
     const animate = (ms, apply, onDone) => {
       halt()
-      S.onUser = () => halt()
-      S.onKey = (e) => { if ([' ', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) halt() }
+      // ignore the very event that TRIGGERED this animation: a Space-key row
+      // activation is still bubbling to window when these hooks attach, and
+      // would otherwise halt the tween in the same dispatch (silent no-op)
+      const armT = performance.now()
+      S.onUser = (e) => { if (e.timeStamp > armT) halt() }
+      S.onKey = (e) => { if (e.timeStamp > armT && [' ', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) halt() }
       window.addEventListener('wheel', S.onUser, { passive: true })
       window.addEventListener('touchstart', S.onUser, { passive: true })
       window.addEventListener('keydown', S.onKey)
@@ -609,10 +643,22 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
       S.raf = requestAnimationFrame(step)
     }
     const tween = (targetY, ms, onDone) => {
+      // every tour jump returns a held globe spin to the story — even a no-op
+      // click (the scene's scroll-epsilon can't see those)
+      sceneRef.current?.clearSpin()
       const startY = window.scrollY
       const dist = targetY - startY
       if (Math.abs(dist) < 2 || ms <= 0) { halt(); window.scrollTo(0, targetY); if (onDone) onDone(); return }
-      animate(ms, (p) => window.scrollTo(0, startY + dist * easeIO(p)), onDone)
+      // engage the globe-follow lag: the scene chases this tween ~LAG_TAU behind
+      // (see laggedProgress). Seeded before animate(); flagged after it, because
+      // animate()'s opening halt() clears the flag.
+      const M = motionRef.current
+      if (M.lagY == null) M.lagY = window.scrollY
+      animate(ms, (p) => {
+        M.lastProgAt = performance.now()
+        window.scrollTo(0, startY + dist * easeIO(p))
+      }, () => { M.tweenActive = false; if (onDone) onDone() })
+      M.tweenActive = true
     }
     tourRef.current = {
       toStart: () => tween(0, 850),
@@ -620,13 +666,17 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
       toY: (y, ms = 900) => tween(y, ms), // fly to an arbitrary scroll offset (clickable rail)
       stop: () => halt(), // cancel any in-flight tween (e.g. when the user grabs the boat)
       toggle: () => {
+        sceneRef.current?.clearSpin() // Play AND Pause return a held spin to the story
         if (S.playing) { halt(); return }
         const target = climaxY()
         const remaining = target - window.scrollY
         if (remaining < 8) { tween(0, 850); return } // at the climax → rewind to the start
         const u0 = playUOfY(window.scrollY / (window.innerHeight || 1))
         const u1 = playUOfY(target / (window.innerHeight || 1))
+        // Play stays lag-free (it IS the tour, not a jump) but stamps lastProgAt
+        // so the glide never reads its tail as user velocity.
         animate((u1 - u0) * PLAY_MS_PER_UNIT, (p) => {
+          motionRef.current.lastProgAt = performance.now()
           const vh = window.innerHeight || 1
           window.scrollTo(0, playYOfU(u0 + (u1 - u0) * p) * vh)
         }, () => { S.playing = false; setPlaying(false) })
@@ -634,6 +684,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
         S.playing = true
         setPlaying(true)
       },
+      isAnimating: () => !!S.raf, // truthy during Play and tweens (glide guard)
       dispose: () => { if (S.raf) cancelAnimationFrame(S.raf); detach() },
     }
   }
@@ -656,25 +707,60 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
   // cross rebuilds it. dispose() intentionally keeps the canvas context (see
   // globeScene.js), so re-creating on the same canvas is safe.
   useEffect(() => {
+    // Globe-follow: while a jump tween is in flight (plus a short convergence
+    // tail) the SCENE sees an exponentially-lagged scrollY, so the banner/cards
+    // (raw scroll via the React listener) lead and the globe chases ~LAG_TAU
+    // behind. Frame-rate independent; outside a tween this returns the raw
+    // closed form untouched, so manual scroll / reverse-scrub stay pure.
+    let lagLastT = 0
+    let convergeT0 = 0
+    const laggedProgress = () => {
+      const M = motionRef.current
+      if (M.lagY == null) return computeScroll()
+      const y = window.scrollY
+      const now = performance.now()
+      const dt = lagLastT ? Math.min(100, now - lagLastT) : 16
+      lagLastT = now
+      const tau = M.tweenActive ? LAG_TAU : LAG_TAU_CONVERGE
+      M.lagY += (y - M.lagY) * (1 - Math.exp(-dt / tau))
+      // disengage once converged — or after a deadline: if the user cancelled a
+      // jump and keeps scrubbing, the chase never closes inside 1px, and a tiny
+      // one-time pose skip beats staying off the pure closed form indefinitely
+      if (M.tweenActive) convergeT0 = 0
+      else if (!convergeT0) convergeT0 = now
+      if (!M.tweenActive && (Math.abs(M.lagY - y) < 1 || now - convergeT0 > 400)) {
+        M.lagY = null
+        lagLastT = 0
+        convergeT0 = 0
+        return computeScroll()
+      }
+      return computeScroll(M.lagY)
+    }
     let scene
     try {
       scene = createGlobeScene(canvasRef.current, FRAMES, {
         isMobile,
         baseUrl: import.meta.env.BASE_URL,
         onReady: () => { setReady(true); if (onGlobeReady) onGlobeReady() },
-        getProgress: computeScroll,
+        getProgress: laggedProgress,
         seamless, // fade the pins in after the orb→globe handoff
         tour: { segments: SEGMENTS, chapterPoses: CHAPTER_POSES, landY: LAND_Y },
+        // grab-hitbox exclusion for the top bar, whose nav is pointerEvents:none
+        // (desktop mirrors DESKTOP_BANNER_H in HomeSponsorStrip; mobile's 52px
+        // bar already swallows events itself — belt-and-braces).
+        grabTopPx: isMobile ? () => 52 : () => Math.min(Math.max(66, window.innerHeight * 0.09), 92),
       })
     } catch (err) {
       console.warn('Globe scene failed to initialize, using static timeline', err)
       onSceneFail()
       return undefined
     }
+    sceneRef.current = scene
     const onResize = () => scene.resize()
     window.addEventListener('resize', onResize)
     return () => {
       window.removeEventListener('resize', onResize)
+      sceneRef.current = null
       scene.dispose()
     }
   }, [isMobile]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -699,32 +785,37 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
       raf = requestAnimationFrame(() => {
         raf = 0
         const p = computeScroll()
+        // Snapshot P's fields SYNCHRONOUSLY: the updater below runs later on
+        // React's scheduler, by which time the scene's rAF may have re-run
+        // computeScroll with a LAGGED y (see laggedProgress) and overwritten
+        // the shared P singleton — the card must be built from raw-scroll values.
+        const next = {
+          stopIndex: p.bodyStopIndex,
+          opacity: p.bodyOpacity,
+          prog: p.stopProgress,
+          showLabel: p.showLabel,
+          label: p.label,
+          labelKey: p.labelKey,
+          mode: p.mode,
+          chIdx: p.chapterCardIdx,
+          chapterIdx: p.chapterIdx,
+          chT: p.chapterCardT,
+          recapT: p.recapT,
+        }
         setCard((prev) =>
-          prev.stopIndex === p.bodyStopIndex &&
-          prev.opacity === p.bodyOpacity &&
-          prev.prog === p.stopProgress &&
-          prev.showLabel === p.showLabel &&
-          prev.label === p.label &&
-          prev.labelKey === p.labelKey &&
-          prev.mode === p.mode &&
-          prev.chIdx === p.chapterCardIdx &&
-          prev.chapterIdx === p.chapterIdx &&
-          prev.chT === p.chapterCardT &&
-          prev.recapT === p.recapT
+          prev.stopIndex === next.stopIndex &&
+          prev.opacity === next.opacity &&
+          prev.prog === next.prog &&
+          prev.showLabel === next.showLabel &&
+          prev.label === next.label &&
+          prev.labelKey === next.labelKey &&
+          prev.mode === next.mode &&
+          prev.chIdx === next.chIdx &&
+          prev.chapterIdx === next.chapterIdx &&
+          prev.chT === next.chT &&
+          prev.recapT === next.recapT
             ? prev
-            : {
-                stopIndex: p.bodyStopIndex,
-                opacity: p.bodyOpacity,
-                prog: p.stopProgress,
-                showLabel: p.showLabel,
-                label: p.label,
-                labelKey: p.labelKey,
-                mode: p.mode,
-                chIdx: p.chapterCardIdx,
-                chapterIdx: p.chapterIdx,
-                chT: p.chapterCardT,
-                recapT: p.recapT,
-              }
+            : next
         )
         setHeroDone(p.heroT > 0.6)
         setFinaleT(p.finaleT)
@@ -738,6 +829,135 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
       if (raf) cancelAnimationFrame(raf)
     }
   }, [])
+
+  // Momentum glide: scrolling carries on a bit down the stops after the input
+  // ends, unless you purposely stop it (any wheel/touch/key/click kills it).
+  // Nothing is hijacked — every listener is passive, and native trackpad/iOS
+  // momentum runs to completion first (its terminal velocity is ~0, so it never
+  // double-coasts); the real win is discrete mouse-wheel bursts, which end
+  // abruptly at high velocity. The coast writes scrollTo, so the banner, cards
+  // and globe all follow through the ordinary closed form. If the coast dies
+  // within SETTLE_WINDOW of a stop, a short ease lands the banner exactly on it.
+  useEffect(() => {
+    const M = motionRef.current
+    let v = 0 // smoothed scroll velocity, px/ms
+    let lastY = window.scrollY
+    let lastT = 0
+    let lastInputAt = 0
+    let idleTimer = 0
+    let glideRaf = 0
+    let touchCount = 0 // fingers on the glass — never glide under a planted finger
+    let mouseDown = false // ditto for a held mouse button (incl. scrollbar drags)
+
+    const cancelGlide = () => {
+      if (glideRaf) { cancelAnimationFrame(glideRaf); glideRaf = 0 }
+    }
+    glideRef.current.cancel = cancelGlide // tour halt() reaches in here
+
+    const onInput = () => { lastInputAt = performance.now(); cancelGlide() }
+    const onKey = (e) => {
+      if ([' ', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) onInput()
+    }
+    const onTouch = (e) => { touchCount = e.touches.length; onInput() }
+    const onPointerDown = (e) => { if (e.pointerType === 'mouse') mouseDown = true; onInput() }
+    // releasing a mouse button also zeroes the estimate: velocity built while a
+    // button was down is a scrollbar-thumb drag, and scrollbars must not coast
+    const onPointerUp = (e) => { if (e.pointerType === 'mouse') { mouseDown = false; lastInputAt = performance.now(); v = 0 } }
+
+    const startSettle = (dir) => {
+      const ih = window.innerHeight || 1
+      const u = window.scrollY / ih
+      // NEAREST stop inside the window (consecutive stops can sit closer than
+      // 2× the window), and never yank noticeably AGAINST the coast direction —
+      // a backward settle across a segment edge reads as rubber-banding
+      let si = -1
+      let best = SETTLE_WINDOW
+      for (let i = 0; i < STOP_Y.length; i++) {
+        const d = Math.abs(STOP_Y[i] - u)
+        if (d < best) { best = d; si = i }
+      }
+      if (si < 0) return
+      const startY = window.scrollY
+      const target = STOP_Y[si] * ih
+      const delta = target - startY
+      if (Math.abs(delta) < 2) return
+      if (dir !== 0 && Math.sign(delta) !== Math.sign(dir) && Math.abs(delta) > 0.1 * ih) return
+      const t0 = performance.now()
+      const step = (now) => {
+        const p = Math.min(1, (now - t0) / SETTLE_MS)
+        M.lastProgAt = now
+        window.scrollTo(0, startY + delta * easeInOut(p))
+        glideRaf = p < 1 ? requestAnimationFrame(step) : 0
+      }
+      glideRaf = requestAnimationFrame(step)
+    }
+    const startGlide = (v0) => {
+      let gv = clamp(v0, -GLIDE_V_MAX, GLIDE_V_MAX)
+      let gy = window.scrollY
+      let gt = performance.now()
+      const maxY = document.documentElement.scrollHeight - window.innerHeight
+      const step = (now) => {
+        const dt = Math.min(50, now - gt)
+        gt = now
+        gv *= Math.exp(-dt / GLIDE_TAU)
+        gy = clamp(gy + gv * dt, 0, maxY)
+        M.lastProgAt = now // our own scrollTo isn't "user velocity"
+        window.scrollTo(0, gy)
+        if (Math.abs(gv) < GLIDE_V_STOP || gy <= 0 || gy >= maxY) { glideRaf = 0; startSettle(Math.sign(gv)); return }
+        glideRaf = requestAnimationFrame(step)
+      }
+      glideRaf = requestAnimationFrame(step)
+    }
+
+    const check = () => {
+      const now = performance.now()
+      if (glideRaf) return // already coasting / settling
+      if (touchCount > 0 || mouseDown) return // gesture still engaged (pinned finger / held thumb)
+      if (tourRef.current?.isAnimating()) return // Play / a jump owns the scroll
+      if (document.documentElement.style.overflow === 'hidden') return // seamless entry lock
+      if (now - lastInputAt < GLIDE_IDLE_MS - 20) return
+      if (now - M.lastProgAt < 250) return // a tween/Play/coast tail isn't user velocity
+      if (now - lastT > 220) return // velocity sample is stale — nothing live to extend
+      if (Math.abs(v) >= GLIDE_V_MIN) startGlide(v)
+    }
+    const onScroll = () => {
+      const now = performance.now()
+      const y = window.scrollY
+      const dt = now - lastT
+      // exponentially-smoothed instantaneous velocity; a stale gap (no events
+      // for >160ms) restarts the estimate instead of averaging across it
+      if (lastT && dt > 0 && dt < 160) v += ((y - lastY) / dt - v) * (1 - Math.exp(-dt / GLIDE_V_SMOOTH))
+      else v = 0
+      lastY = y
+      lastT = now
+      clearTimeout(idleTimer)
+      idleTimer = setTimeout(check, GLIDE_IDLE_MS) // fires once scroll events cease
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('wheel', onInput, { passive: true })
+    window.addEventListener('touchstart', onTouch, { passive: true })
+    window.addEventListener('touchend', onTouch, { passive: true })
+    window.addEventListener('touchcancel', onTouch, { passive: true })
+    window.addEventListener('pointerdown', onPointerDown, { passive: true })
+    window.addEventListener('pointerup', onPointerUp, { passive: true })
+    window.addEventListener('pointercancel', onPointerUp, { passive: true })
+    window.addEventListener('keydown', onKey)
+    return () => {
+      cancelGlide()
+      clearTimeout(idleTimer)
+      glideRef.current.cancel = null
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('wheel', onInput)
+      window.removeEventListener('touchstart', onTouch)
+      window.removeEventListener('touchend', onTouch)
+      window.removeEventListener('touchcancel', onTouch)
+      window.removeEventListener('pointerdown', onPointerDown)
+      window.removeEventListener('pointerup', onPointerUp)
+      window.removeEventListener('pointercancel', onPointerUp)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // The leg frame is the tour's PERSISTENT scaffolding. Once it fades in (on the
   // first chapter interstitial) it stays on screen — chrome and all — until the
@@ -787,6 +1007,19 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
     const si = CHAPTERS[i]?.stopIndices?.[0]
     if (si == null) return
     tourRef.current?.toY(STOP_Y[si] * ih)
+  }
+  // Click a stop row -> fly to that stop's dwell point. Duration scales with
+  // distance (a far row reads as a deliberate glide down the list); the shared
+  // tween engages the globe-follow lag, so the banner leads and the globe
+  // chases. Clicking the active stop is a no-op via tween()'s |dist|<2 guard.
+  const jumpToStop = (si) => {
+    // the finale stop's dwell point is a chrome-less beat (frame + card faded,
+    // EndBlock text still screens below) — take that click to the climax instead
+    if (si >= STOPS.length - 1) { tourRef.current?.toEnd(); return }
+    const ih = window.innerHeight || 1
+    const targetY = STOP_Y[si] * ih
+    const screens = Math.abs(targetY - window.scrollY) / ih
+    tourRef.current?.toY(targetY, clamp(screens * JUMP_MS_PER_SCREEN, JUMP_MS_MIN, JUMP_MS_MAX))
   }
   return (
     <div style={{ background: 'rgb(0,0,0)' }}>
@@ -841,7 +1074,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
           opacity: frameOpacity, transform: `translateY(${(1 - frameOpacity) * 14}px)`,
         }}>
           <LegHeader numPrev={numPrev} numCur={numCur} numT={numT} timelineF={timelineF} isMobile={false} onJump={jumpToLeg} interactive={controlsInteractive} />
-          <LegList prevLeg={prevLeg} curLeg={curLeg} chT={listChT} progOut={progOut} progIn={progIn} isMobile={false} />
+          <LegList prevLeg={prevLeg} curLeg={curLeg} chT={listChT} progOut={progOut} progIn={progIn} isMobile={false} onJumpStop={jumpToStop} interactive={controlsInteractive} />
           {/* passage readout + Play — persistent (fade only with the whole frame) */}
           <div style={{
             flexShrink: 0, marginTop: 16, display: 'flex', alignItems: 'center', gap: 18,
@@ -864,7 +1097,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
           opacity: frameOpacity, transform: `translateY(${(1 - frameOpacity) * 12}px)`,
         }}>
           <LegHeader numPrev={numPrev} numCur={numCur} numT={numT} timelineF={timelineF} isMobile onJump={jumpToLeg} interactive={controlsInteractive} />
-          <LegList prevLeg={prevLeg} curLeg={curLeg} chT={listChT} progOut={progOut} progIn={progIn} isMobile />
+          <LegList prevLeg={prevLeg} curLeg={curLeg} chT={listChT} progOut={progOut} progIn={progIn} isMobile onJumpStop={jumpToStop} interactive={controlsInteractive} />
           <div style={{
             flexShrink: 0, marginTop: 14,
             pointerEvents: controlsInteractive ? 'auto' : 'none',
@@ -878,9 +1111,11 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
 
       {/* end block scrolls up over the fixed globe. The LA 2028 climax reads over the
           zoomed globe (transparent lead-in), then everything scrolls through the top —
-          the headline dissolving into spray as it crosses (see EndBlock). */}
+          the headline dissolving into spray as it crosses (see EndBlock). Its box
+          (including the transparent lead-in) also blocks globe grabs at the finale —
+          intentional: the content is about to legitimately cover the globe. */}
       <div style={{ position: 'relative', zIndex: 2 }}>
-        <EndBlock onNavigate={onNavigate} />
+        <EndBlock onNavigate={onNavigate} onBackToTop={() => tourRef.current?.toStart()} />
       </div>
     </div>
   )
@@ -1024,7 +1259,7 @@ const BANNER_BLEED_R = 8
 // stop framed). Banner position, internal scroll, and the crossfade are all pure
 // functions of scroll (progIn / progOut / chT), so reverse-scrub is exact.
 // During a leg prevLeg is -1 and chT is 1 (no crossfade — just the current leg).
-function LegList({ prevLeg, curLeg, chT, progOut, progIn, isMobile }) {
+function LegList({ prevLeg, curLeg, chT, progOut, progIn, isMobile, onJumpStop, interactive }) {
   const itemH = isMobile ? 34 : 42
   const FADE = isMobile ? 20 : 26
   const boxRef = useRef(null)
@@ -1078,6 +1313,15 @@ function LegList({ prevLeg, curLeg, chT, progOut, progIn, isMobile }) {
   return (
     <div
       ref={boxRef}
+      // the box's layout is pure transform — it must never actually scroll, but
+      // browsers scroll overflow:hidden containers to reveal a focused child
+      // (Tab onto a clipped row). Undo it instantly or every banner/row/mask
+      // computation is silently offset from then on.
+      onScroll={(e) => {
+        const el = e.currentTarget
+        if (el.scrollTop) el.scrollTop = 0
+        if (el.scrollLeft) el.scrollLeft = 0
+      }}
       style={{
         position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden',
         marginLeft: -BANNER_BLEED_L, marginRight: -BANNER_BLEED_R,
@@ -1094,24 +1338,77 @@ function LegList({ prevLeg, curLeg, chT, progOut, progIn, isMobile }) {
           borderLeft: '2px solid rgb(0,80,255)',
         }}
       />
-      <StopList leg={cur} opacity={inOpacity} itemH={itemH} isMobile={isMobile} />
-      {outClips && <StopList leg={out} opacity={outOpacity} itemH={itemH} isMobile={isMobile} />}
+      {/* only the DOMINANT list is clickable — no half-transparent targets during
+          a hand-off (same rule as the tracker boxes). The outgoing list matters
+          too: a leg's LAST stop dwells exactly on the hand-off boundary (chT=0),
+          where the solid list the user sees IS the outgoing one. The two gates
+          can't both pass (opacities cross at ~0.27/0.73), and the non-clickable
+          list's rows are pointerEvents:none, so hits never collide. */}
+      {/* keyed by leg id so hover state lives and dies WITH its leg — unkeyed,
+          the first instance would carry a stale hoverIdx across every hand-off */}
+      <StopList
+        key={cur.ch.id}
+        leg={cur}
+        opacity={inOpacity}
+        itemH={itemH}
+        isMobile={isMobile}
+        onJumpStop={interactive && inOpacity > 0.5 ? onJumpStop : undefined}
+        legNo={curLeg + 1}
+      />
+      {outClips && (
+        <StopList
+          key={out.ch.id}
+          leg={out}
+          opacity={outOpacity}
+          itemH={itemH}
+          isMobile={isMobile}
+          onJumpStop={interactive && outOpacity > 0.5 ? onJumpStop : undefined}
+          legNo={prevLeg + 1}
+        />
+      )}
     </div>
   )
 }
 
 // One leg's rows, translated to keep the active stop framed inside the clipped
-// box. Banner-free (the frame owns the single persistent banner). Presentational
-// only — its `leg` geometry + opacity are computed by LegList from scroll.
-function StopList({ leg, opacity, itemH, isMobile }) {
+// box. Banner-free (the frame owns the single persistent banner). Geometry +
+// opacity are computed by LegList from scroll; when LegList hands in onJumpStop
+// the rows become buttons that fly the tour to their stop (banner leads, globe
+// follows — see jumpToStop). Hover affordance rides ONLY filter/transform so
+// the scroll-driven active-row colors are never smeared (same rule as the
+// tracker boxes); the <li>s re-enable pointer events inside the frame's
+// pointerEvents:none wrapper, so the empty box space stays hit-transparent.
+function StopList({ leg, opacity, itemH, isMobile, onJumpStop, legNo }) {
+  const [hoverIdx, setHoverIdx] = useState(-1)
+  const clickable = typeof onJumpStop === 'function'
   return (
     <ul style={{ position: 'absolute', left: 0, right: 0, top: 0, listStyle: 'none', margin: 0, padding: `0 ${BANNER_BLEED_R}px 0 ${BANNER_BLEED_L}px`, transform: `translateY(${-leg.scrollOffset}px)`, opacity }}>
       {leg.ch.stopIndices.map((si, i) => {
         const s = STOPS[si]
         const worlds = s.short === 'Worlds'
         const on = i === leg.active
+        const hovered = clickable && hoverIdx === i
         return (
-          <li key={s.id} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10, height: itemH, fontSize: isMobile ? 14 : 17 }}>
+          <li
+            key={s.id}
+            role={clickable ? 'button' : undefined}
+            tabIndex={clickable ? 0 : undefined}
+            aria-label={clickable ? `Jump to ${s.region}${s.short ? `, ${s.short}` : ''}, Leg ${legNo}` : undefined}
+            onClick={clickable ? () => onJumpStop(si) : undefined}
+            onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onJumpStop(si) } } : undefined}
+            onMouseEnter={clickable ? () => setHoverIdx(i) : undefined}
+            onMouseLeave={clickable ? () => setHoverIdx(-1) : undefined}
+            style={{
+              position: 'relative', display: 'flex', alignItems: 'center', gap: 10, height: itemH, fontSize: isMobile ? 14 : 17,
+              pointerEvents: clickable ? 'auto' : 'none',
+              cursor: clickable ? 'pointer' : 'default',
+              filter: hovered ? 'brightness(1.45)' : 'none',
+              transform: hovered ? 'translateX(3px)' : 'none',
+              transition: 'filter 120ms ease, transform 120ms ease',
+              WebkitTapHighlightColor: 'transparent',
+              userSelect: 'none',
+            }}
+          >
             <span style={{ color: on ? 'rgb(0,120,255)' : 'rgba(255,255,255,0.3)', fontSize: 9 }}>●</span>
             <span style={{ color: on ? '#fff' : 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{s.region}</span>
             {s.short && (
@@ -1341,7 +1638,7 @@ function TourControls({ tour, playing }) {
   )
 }
 
-function EndBlock({ onNavigate }) {
+function EndBlock({ onNavigate, onBackToTop }) {
   const { days, hrs, mins, secs } = useCountdown(new Date('2028-07-14T00:00:00'))
   const blockRef = useRef(null)
   const h1Ref = useRef(null)
@@ -1416,7 +1713,7 @@ function EndBlock({ onNavigate }) {
           padding: '48px 0 72px',
         }}>
           <div style={{ textAlign: 'center' }}>
-            <BackToTop />
+            <BackToTop onBackToTop={onBackToTop} />
           </div>
         </div>
       </div>
@@ -1465,13 +1762,15 @@ function CountdownUnits({ days, hrs, mins, secs }) {
   )
 }
 
-// "Back to the top" — smooth-scrolls to the top of the tour. Styled like the tour
-// controls (white, bordered) for consistency.
-function BackToTop() {
+// "Back to the top" — flies to the top of the tour. Prefers the tour tween
+// (onBackToTop) over native smooth scroll: the tween stamps lastProgAt and halts
+// on input, so interrupting it can't hand its velocity to the glide engine.
+// Styled like the tour controls (white, bordered) for consistency.
+function BackToTop({ onBackToTop }) {
   const [hover, setHover] = useState(false)
   return (
     <button
-      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      onClick={() => (onBackToTop ? onBackToTop() : window.scrollTo({ top: 0, behavior: 'smooth' }))}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
