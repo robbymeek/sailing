@@ -2,7 +2,7 @@
 //  Liquid metal — the sponsor roll call rendered as living, refracting chrome.
 //
 //  A self-contained raw-WebGL2 port of the paper-design "liquid-logo" effect
-//  (~/Desktop/Code/reference-repos/liquid-logo). ONE fragment shader on a
+//  (~/Code/reference-repos/liquid-logo). ONE fragment shader on a
 //  fullscreen quad reads a beveled depth field (red channel): `edge` is 1.0 at
 //  a glyph boundary AND outside the glyphs, ramping to 0.0 deep inside, so the
 //  metal fills the letters and everything else stays transparent — the names

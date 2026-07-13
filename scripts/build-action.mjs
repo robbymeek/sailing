@@ -17,7 +17,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdirSync, writeFileSync, rmSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-const SRC    = process.env.SRC || `${process.env.HOME}/Desktop/robbysailing-assets/masters/SAILING MOVIE 1.mp4`
+const SRC    = process.env.SRC || `${process.env.HOME}/Code/robbysailing-assets/masters/SAILING MOVIE 1.mp4`
 const OUTDIR = resolve(process.env.OUTDIR || '.')
 const SEGDIR = resolve(OUTDIR, 'segs')
 const W = 1920, H = 886, FPS = 30
