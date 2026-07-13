@@ -1,48 +1,17 @@
-// Per-route <title>, meta description, and canonical URL for the SPA.
-// Applied by an effect in App.jsx on every route change — no react-helmet
-// dependency. index.html still carries the default/home head (and the OG /
-// Twitter tags social scrapers read), so no-JS crawlers get sensible defaults;
-// this upgrades the per-route signal for JS-capable crawlers and browser tabs.
-//
-// These titles/descriptions are editable metadata assembled from the existing
-// page names + brand line — not on-page copy. Tweak freely.
+// Per-route <head> metadata for the SPA. Applied by an effect in App.jsx on
+// every route change — no react-helmet dependency. The values come from the
+// shared ../data/routeMeta.js map, the SAME map scripts/generate-static-routes
+// bakes into each route's static index.html at build time, so the initial HTML
+// (what crawlers/social scrapers read) and the client-side updates can never
+// describe a route two different ways.
 
-const BRAND = 'Robby Meek | LA2028 Olympic Sailing Campaign'
-const ORIGIN = 'https://robbysailing.com'
+import { ROUTE_META, NOT_FOUND_META } from '../data/routeMeta'
 
-const ROUTE_META = {
-  '/': {
-    title: BRAND,
-    description:
-      'Official site of Robby Meek — Olympic hopeful and sailing athlete. Bio, partners, updates, and events from his road to LA 2028.',
-  },
-  '/biography': {
-    title: 'Biography · Robby Meek — LA2028 Sailing',
-    description: "Robby Meek's sailing biography and race results on the road to the 2028 Olympics.",
-  },
-  '/team': {
-    title: 'The Team · Robby Meek — LA2028 Sailing',
-    description: "The team and partners behind Robby Meek's LA 2028 Olympic sailing campaign.",
-  },
-  '/the-road': {
-    title: 'The Road · Robby Meek — LA2028 Sailing',
-    description: "The Road to LA 2028 — the schedule and journey of Robby Meek's Olympic sailing campaign.",
-  },
-  '/contact': {
-    title: 'Contact · Robby Meek — LA2028 Sailing',
-    description: 'Get in touch with Robby Meek.',
-  },
-  '/support': {
-    title: 'Support · Robby Meek — LA2028 Sailing',
-    description: "Support Robby Meek's LA 2028 Olympic sailing campaign.",
-  },
-}
-
-function upsertMeta(name, content) {
-  let el = document.head.querySelector(`meta[name="${name}"]`)
+function upsertMeta(attr, key, content) {
+  let el = document.head.querySelector(`meta[${attr}="${key}"]`)
   if (!el) {
     el = document.createElement('meta')
-    el.setAttribute('name', name)
+    el.setAttribute(attr, key)
     document.head.appendChild(el)
   }
   el.setAttribute('content', content)
@@ -59,8 +28,24 @@ function upsertCanonical(href) {
 }
 
 export function applyRouteMeta(pathname) {
-  const meta = ROUTE_META[pathname] || ROUTE_META['/']
+  // Normalise the way the app + the index.html first-paint script do (case /
+  // trailing slash), then fall back to the Not Found metadata for any route the
+  // SPA's wildcard renders.
+  const key = pathname.toLowerCase().replace(/\/+$/, '') || '/'
+  const meta = ROUTE_META[key] || NOT_FOUND_META
+
   document.title = meta.title
-  upsertMeta('description', meta.description)
-  upsertCanonical(ORIGIN + (pathname === '/' ? '/' : pathname))
+  upsertMeta('name', 'description', meta.description)
+  upsertCanonical(meta.canonical)
+
+  upsertMeta('property', 'og:title', meta.ogTitle)
+  upsertMeta('property', 'og:description', meta.ogDescription)
+  upsertMeta('property', 'og:url', meta.ogUrl)
+  upsertMeta('property', 'og:image', meta.ogImage)
+  upsertMeta('property', 'og:type', meta.ogType)
+
+  upsertMeta('name', 'twitter:card', meta.twitterCard)
+  upsertMeta('name', 'twitter:title', meta.twitterTitle)
+  upsertMeta('name', 'twitter:description', meta.twitterDescription)
+  upsertMeta('name', 'twitter:image', meta.twitterImage)
 }
