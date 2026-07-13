@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import Footer from '../components/Footer'
-import useCountdown from '../hooks/useCountdown'
+import { useNextEvent } from '../utils/campaignSchedule'
 import useTextSpray from '../hooks/useTextSpray'
 import RESULT_GROUPS from '../data/events'
 import { ResultRow, GroupHeader, EventModal } from '../components/eventUI'
@@ -148,7 +148,9 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
     return () => window.removeEventListener('resize', h)
   }, [])
 
-  const nextEvent = useCountdown(new Date('2026-07-20T00:00:00'), !preload)
+  // Auto-rolling next event (shared with the HelmPanel — one source of truth,
+  // no hard-coded date/name here). Frozen for the off-screen preload copy.
+  const nextEvent = useNextEvent(!preload)
 
   // Release line for the RESULTS spray = the BOTTOM EDGE of the site's sticky
   // nav bar (desktop banner / mobile bar, both pinned at top:0 on this route).
@@ -539,7 +541,7 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
           <div ref={nextEventRef} style={{ margin: '20px 0 12px' }}>
             <button
               onClick={() => onNavigate('The Road')}
-              aria-label="Next event: San Pedro OCR — see The Road"
+              aria-label={nextEvent.aria}
               style={{
                 background: 'none', border: 'none', padding: 0,
                 cursor: 'pointer', fontFamily: 'inherit',
@@ -555,7 +557,7 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
                   whiteSpace: 'nowrap',
                 }}
               >
-                Next Event: San Pedro OCR in {nextEvent.days} Days
+                {nextEvent.line}
               </p>
             </button>
           </div>
