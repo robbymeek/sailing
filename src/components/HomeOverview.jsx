@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import Footer from './Footer'
-import { TOUR_STATS } from '../data/tourChapters'
 import { Radar } from './HelmPanel'
+import ContactPhoto from './ContactPhoto'
 import teamPhoto from '../assets/exit-cards/exit-path.jpg'
-import wordmark from '../assets/contact/robby-meek-wordmark.png'
 
 const BASE = import.meta.env.BASE_URL
 
@@ -17,10 +16,10 @@ const BASE = import.meta.env.BASE_URL
 //  bottom of the text column (mobile: media, then text, then the action).
 //  Biography (the film) · The Team (the crew photo) · The Road (the page's
 //  one black row — the helm station's radar, blue on black, sweeping the
-//  2026 venues) · Contact (the wordmark, the contact page's own media).
+//  2026 venues) · Contact (Robby's headshot with a scroll-aware treatment).
 //
-//  The interaction signature is the route action: a thin electric-blue rule
-//  under each action that extends toward the arrow on hover/focus
+//  The interaction signature is the route action: an outlined ink button that
+//  fills to the site blue on hover/focus
 //  (.ho-action in index.css — hover/focus states can't be inline).
 //
 //  Deliberately NOT here: a second live globe (exclusive to /the-road),
@@ -32,9 +31,8 @@ const POSTER = `${BASE}trailer/trailer-poster.jpg`
 // ---- page tokens ----
 const INK = 'rgb(20,28,54)' //        deep navy ink (Support's NAVY)
 const BODY = 'rgba(20,28,54,0.8)' //  body copy on white
-const MUTED = '#646262' //            proof lines (Contact/Support grey)
 const FRAME_BG = 'rgb(11,14,20)' //   film-frame pre-paint fill
-// The accent lives in index.css too (.ho-action underline, chip hover) —
+// The accent lives in index.css too (.ho-action button fill, chip hover) —
 // it is the site's established on-light blue (Support/Team), visually
 // identical to The Road's rgb(0,80,255) once it sits on black.
 
@@ -49,17 +47,18 @@ const ROW_MEDIA_H_MOBILE = 'min(64vw, 380px)'
 
 const FILM_ALT = "Robby Meek's ILCA 7 under sail on open water — Robby Meek, US Sailing Team."
 
-// The Road line is derived, not hard-coded — it tracks the tour data.
-// Continents render as a word for the sentence rhythm ("Four continents"),
-// with a numeric fallback so a data change can never print "undefined".
-const NUM_WORDS = { 2: 'Two', 3: 'Three', 4: 'Four', 5: 'Five', 6: 'Six', 7: 'Seven' }
-const ROAD_LINE = `${TOUR_STATS.stops} stops. ${NUM_WORDS[TOUR_STATS.continents] || TOUR_STATS.continents} continents. One start line.`
-
 const sectionHeading = {
   fontSize: 'clamp(24px, 2.4vw, 32px)', fontWeight: 700,
   letterSpacing: '-0.6px', lineHeight: 1.15, color: INK, margin: '0 0 14px',
 }
 const bodyCopy = { fontSize: 17, lineHeight: 1.65, color: BODY, margin: '0 0 18px' }
+
+// Each refreshed row leads with a short signature line (light weight-600 lead),
+// then a Contact-style first-person campaign blurb beneath it. The blurb sets
+// its own color per row so the dark (black) Road row stays legible.
+const signatureLead = { fontWeight: 600 }
+const cursiveAccent = { fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic', fontWeight: 400 }
+const blurbCopy = { ...bodyCopy, margin: '0 0 22px', maxWidth: 480 }
 
 // The Road row hosts the helm station's Radar OUTSIDE the panel, so the CSS
 // vars its classed elements consume (.hp-scope/.hp-sweep/.hp-blip[-tag])
@@ -125,20 +124,24 @@ function Reveal({ children, delay = 0, style }) {
 // inside a full-bleed (unpadded) mobile section.
 const LANE_PAD = '0 clamp(24px, 5vw, 64px)'
 
-// A route action: label + arrow over the extending accent underline
-// (.ho-action::after in index.css). The arrow is decoration — the accessible
-// name is just the label.
+// A route action: a classic outlined button — label + arrow inside an ink box
+// that fills to the site blue on hover/focus. Border/label/fill colours live in
+// index.css (.ho-action / --dark / :hover) so the hover can override the resting
+// colour; `dark` inverts the resting box to white for the one black row (The
+// Road). The arrow is decoration — the accessible name is just the label.
 function RouteAction({ label, onClick, dark = false, style }) {
   return (
-    <button type="button" className="ho-action" onClick={onClick} style={{
-      position: 'relative',
-      display: 'inline-flex', alignItems: 'baseline', gap: 8,
-      background: 'none', border: 'none', cursor: 'pointer',
-      padding: '2px 0 9px',
-      fontFamily: 'inherit', fontSize: 15, fontWeight: 600, letterSpacing: '0.3px',
-      color: dark ? '#fff' : INK,
-      ...style,
-    }}>
+    <button
+      type="button"
+      className={dark ? 'ho-action ho-action--dark' : 'ho-action'}
+      onClick={onClick}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+        padding: '11px 18px', borderRadius: 2,
+        fontFamily: 'inherit', fontSize: 15, fontWeight: 600, letterSpacing: '0.3px',
+        ...style,
+      }}
+    >
       {label}
       <span aria-hidden="true" style={{ fontWeight: 500 }}>→</span>
     </button>
@@ -415,6 +418,68 @@ function Row({ title, body, extra, actionLabel, onAction, media, dark = false, i
   )
 }
 
+// Biography row copy — shared by the standard row and the full-bleed film
+// overlay below so the two never drift, and the experiment stays easy to revert.
+const BIO_SIGNATURE = '6x National Championships & 3x Continental Titles'
+const BIO_BLURB = "I've been racing since I was nine. Every one of those titles is a step toward representing the United States in the ILCA 7 at the 2028 Olympics."
+// EXPERIMENT — flip to false to restore the standard media-left / text-right row.
+const BIO_FULLBLEED = true
+
+// Biography as a full-bleed film with the copy overlaid. Desktop: the film fills
+// the whole row and a smooth right-side wash (never fully black) carries white
+// type. Mobile: film on top dissolving into a black panel, so the text below
+// still reads as overlaid on the footage. Same row height as the others — the
+// film just covers and crops to centre.
+function BiographyFilmRow({ isMobile, onNavigate }) {
+  const heading = { ...sectionHeading, color: '#fff', width: '100%' }
+  const sig = { ...bodyCopy, color: '#fff', fontWeight: 600, margin: '0 0 16px', width: '100%' }
+  const blurb = { ...bodyCopy, color: 'rgba(255,255,255,0.9)', margin: '0 0 22px', maxWidth: 460, width: '100%' }
+  const legible = { textShadow: '0 1px 22px rgba(0,0,0,0.38)' }
+
+  if (isMobile) {
+    return (
+      <section aria-label="Biography" style={{ background: '#000', padding: 'clamp(28px, 5vh, 48px) 0' }}>
+        <Reveal style={{ position: 'relative', overflow: 'hidden', height: ROW_MEDIA_H_MOBILE }}>
+          <FilmBlock isMobile={isMobile} fill />
+          {/* the film dissolves into the black text panel below */}
+          <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '58%', background: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, #000 100%)', pointerEvents: 'none' }} />
+        </Reveal>
+        <Reveal delay={120} style={{ background: '#000', padding: LANE_PAD, paddingTop: 16, ...legible }}>
+          <h3 style={heading}>Biography</h3>
+          <p style={sig}>{BIO_SIGNATURE}</p>
+          <p style={blurb}>{BIO_BLURB}</p>
+          <RouteAction dark label="Read biography" onClick={() => onNavigate('Biography')} />
+        </Reveal>
+      </section>
+    )
+  }
+
+  return (
+    <section aria-label="Biography" style={{ background: '#fff', padding: ROW_PAD }}>
+      <div style={{ ...WRAP, position: 'relative', minHeight: ROW_MEDIA_H, overflow: 'hidden' }}>
+        <Reveal style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+          <FilmBlock isMobile={isMobile} fill />
+        </Reveal>
+        {/* smooth right-side wash — never fully black, just enough for white type */}
+        <div aria-hidden style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          background: 'linear-gradient(to right, rgba(11,14,20,0) 0%, rgba(11,14,20,0.05) 28%, rgba(11,14,20,0.28) 55%, rgba(11,14,20,0.50) 78%, rgba(11,14,20,0.66) 100%)',
+        }} />
+        <Reveal delay={120} style={{
+          position: 'relative', minHeight: ROW_MEDIA_H,
+          display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start',
+          width: '46%', marginLeft: 'auto', ...legible,
+        }}>
+          <h3 style={heading}>Biography</h3>
+          <p style={sig}>{BIO_SIGNATURE}</p>
+          <p style={blurb}>{BIO_BLURB}</p>
+          <RouteAction dark label="Read biography" onClick={() => onNavigate('Biography')} />
+        </Reveal>
+      </div>
+    </section>
+  )
+}
+
 export default function HomeOverview({
   onNavigate,
   isMobile = typeof window !== 'undefined' && window.innerWidth < 700,
@@ -422,29 +487,29 @@ export default function HomeOverview({
   return (
     <div style={{ background: '#FFFFFF', color: INK, paddingTop: 'clamp(40px, 7vh, 80px)' }}>
 
-      <Row
-        isMobile={isMobile}
-        title="Biography"
-        body="Racing since nine. Now working toward LA 2028 in the ILCA 7."
-        extra={
-          <p style={{
-            fontSize: 12, fontWeight: 600, letterSpacing: '1.8px',
-            textTransform: 'uppercase', color: MUTED, margin: '0 0 26px',
-          }}>
-            <span style={{ whiteSpace: 'nowrap' }}>6 national titles</span>
-            {' · '}
-            <span style={{ whiteSpace: 'nowrap' }}>3 continental titles</span>
-          </p>
-        }
-        actionLabel="Read biography"
-        onAction={() => onNavigate('Biography')}
-        media={<FilmBlock isMobile={isMobile} fill />}
-      />
+      {BIO_FULLBLEED ? (
+        <BiographyFilmRow isMobile={isMobile} onNavigate={onNavigate} />
+      ) : (
+        <Row
+          isMobile={isMobile}
+          title="Biography"
+          body={<span style={signatureLead}>{BIO_SIGNATURE}</span>}
+          extra={<p style={blurbCopy}>{BIO_BLURB}</p>}
+          actionLabel="Read biography"
+          onAction={() => onNavigate('Biography')}
+          media={<FilmBlock isMobile={isMobile} fill />}
+        />
+      )}
 
       <Row
         isMobile={isMobile}
         title="The Team"
-        body="A singlehanded boat. A team effort."
+        body={<><span style={signatureLead}>Sponsors & Partners</span>{' '}<span style={cursiveAccent}>thank you for your support</span></>}
+        extra={
+          <p style={blurbCopy}>
+            {"A singlehanded campaign only looks solo. I'm racing toward LA 2028 with coaches, family, and partners behind every start line, and I'm grateful for every one of them."}
+          </p>
+        }
         actionLabel="Meet the team"
         onAction={() => onNavigate('The Team')}
         media={
@@ -465,7 +530,12 @@ export default function HomeOverview({
         isMobile={isMobile}
         dark
         title="The Road"
-        body={ROAD_LINE}
+        body={<span style={signatureLead}>2026 onwards to the 2028 Olympic Games</span>}
+        extra={
+          <p style={{ ...blurbCopy, color: 'rgba(255,255,255,0.82)' }}>
+            {"This is the plan between now and the 2028 Games. This fall I start racing full time for the first time. Follow along if you'd like to see how it goes."}
+          </p>
+        }
         actionLabel="See the road"
         onAction={() => onNavigate('The Road')}
         media={
@@ -489,21 +559,7 @@ export default function HomeOverview({
         body="I'm campaigning to represent the United States in the ILCA 7 at LA 2028. This site follows the work, the people, and the road ahead. Every gift gives this campaign more room to train, travel, and compete at its best."
         actionLabel="Contact Robby"
         onAction={() => onNavigate('Contact')}
-        media={
-          <div style={{
-            position: 'absolute', inset: 0, background: '#fff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <img
-              src={wordmark}
-              alt=""
-              aria-hidden="true"
-              loading="lazy"
-              decoding="async"
-              style={{ width: 'min(70%, 480px)', height: 'auto' }}
-            />
-          </div>
-        }
+        media={<ContactPhoto />}
       />
 
       <Footer variant="light" onNavigate={onNavigate} />

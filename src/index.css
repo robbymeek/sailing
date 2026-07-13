@@ -272,19 +272,25 @@ button {
 
 /* ============ HomeOverview (home editorial index) ============ */
 
-/* Route action: thin accent underline that extends toward the arrow on
-   hover/focus. The 24px inset ≈ gap + arrow width, so at rest the line
-   stops at the label. */
-.ho-action::after {
-  content: '';
-  position: absolute;
-  left: 0; right: 24px; bottom: 0;
-  height: 2px;
-  background: rgb(10,85,235);
-  transition: right 0.25s ease;
+/* Route action: a classic outlined button — ink border + ink label/arrow that
+   fills to the site blue on hover/focus. `--dark` inverts the resting state to
+   white for the one black row (The Road). */
+.ho-action {
+  border: 1.5px solid rgb(20,28,54);
+  background: transparent;
+  color: rgb(20,28,54);
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
-.ho-action:hover::after,
-.ho-action:focus-visible::after { right: 0; }
+.ho-action--dark {
+  border-color: #fff;
+  color: #fff;
+}
+.ho-action:hover,
+.ho-action:focus-visible {
+  background: rgb(10,85,235);
+  border-color: rgb(10,85,235);
+  color: #fff;
+}
 .ho-action:focus-visible {
   outline: 2px solid #1E40FF;
   outline-offset: 3px;
@@ -300,7 +306,7 @@ button {
 .ho-film-chip:focus-visible { outline: 2px solid #1E40FF; outline-offset: 3px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .ho-action::after, .ho-media-zoom, .ho-film-chip { transition: none; }
+  .ho-action, .ho-media-zoom, .ho-film-chip { transition: none; }
   .ho-zoom-frame:hover .ho-media-zoom { transform: none; }
 }
 
