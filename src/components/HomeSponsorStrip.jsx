@@ -29,6 +29,9 @@ const scaledClamp = (min, vw, max, mul) =>
   `clamp(${(min * mul).toFixed(2)}px, ${(vw * mul).toFixed(3)}vw, ${(max * mul).toFixed(2)}px)`
 
 const PANEL_BG = '#ffffff'
+// The SponsorRect's inner padding (uniform, px). Named so the logo height cap below
+// can subtract it from the box height and stay in sync if the padding ever changes.
+const BOX_PAD_PX = 7
 // The sticker's drop shadow, parameterized by presence (0..1): DesktopBanner fades it out
 // in lockstep with the box background as the lockup melts into the frosted bar — a
 // full-strength shadow around a transparent box would paint a ghost rectangle.
@@ -62,13 +65,19 @@ export const SPONSOR_PAIRS = [SPONSORS.slice(0, 2), SPONSORS.slice(2, 4)]
 // frosted glass once it pins to the dark bar — no box, no shadow. Without it the lockup stays
 // the plain white sticker (pair[1] bottom-left, the mobile strip).
 export function SponsorRect({ pair, style, darkAware = false }) {
-  // Equal-AREA target height pushed up to (nearly) fill the cell; maxWidth/maxHeight 100%
-  // then cap each logo to its cell so nothing overflows.
+  // Equal-AREA target height pushed up to (nearly) fill the cell; maxWidth caps each
+  // logo to its cell width. maxHeight caps it to the BOX's inner height — the box is
+  // DESKTOP_BANNER_H tall minus its 2×BOX_PAD_PX padding. This is a real length (not a
+  // percentage), so it always resolves and bites: the logo `height` is a vw-based clamp
+  // that keeps growing with width, so on a wide-but-short window it would otherwise
+  // outgrow the vh-based box and poke out (the banner has a FIXED height and can't grow
+  // to absorb it). A plain `maxHeight: 100%` doesn't resolve against the flex-stretched
+  // cell here, so it wouldn't clamp — this ties the logo to the box's own height instead.
   const imgStyle = (s) => ({
     height: scaledClamp(52, 5.2, 80, shortMul(s)),
     width: 'auto',
     maxWidth: '100%',
-    maxHeight: '100%',
+    maxHeight: `calc(${DESKTOP_BANNER_H} - ${2 * BOX_PAD_PX}px)`,
     objectFit: 'contain',
     display: 'block',
   })
@@ -84,7 +93,7 @@ export function SponsorRect({ pair, style, darkAware = false }) {
         // (so the wide marks fill the cell WIDTH and the squarer ones the HEIGHT).
         // Single source of truth with the desktop nav banner: banner height ≡ this.
         minHeight: DESKTOP_BANNER_H,
-        padding: '7px',
+        padding: BOX_PAD_PX,
         boxSizing: 'border-box',
         pointerEvents: 'none',
         ...style,
