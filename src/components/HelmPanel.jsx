@@ -968,12 +968,10 @@ export default function HelmPanel({ onNavigate } = {}) {
       <div className="hp-alarm-veil" aria-hidden="true" />
       <div className="hp-face">
         {VARIANT === 'blend' ? (
-          /* masthead — just the station name, rendered in the same segment-
-             display family as the countdown (14-seg: letters need it) */
+          /* masthead — station name removed; keep the fixed-height spacer so
+             the panel layout below stays put */
           <div className="hp-header">
-            <div style={{ height: 'clamp(20px, 1.9vw, 30px)' }}>
-              <Seg14Text text="HELM STATION" color="rgb(10, 85, 235)" />
-            </div>
+            <div style={{ height: 'clamp(20px, 1.9vw, 30px)' }} />
           </div>
         ) : (
           <div className="hp-header">
