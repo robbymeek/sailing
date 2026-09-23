@@ -141,14 +141,15 @@ export function fmtTick(v, pos, neg) {
   return m === 0 ? `${d}°${hemi}` : `${d}°${mm}′${hemi}`
 }
 
-// Decimal degrees → mariner's degrees-and-minutes ("38°58.5′N"). Rounds to
-// tenths of a minute FIRST so 59.96′ carries into the degree (no "38°60.0′").
+// Decimal degrees → mariner's degrees-and-minutes ("38°58.5′N", "32°04.1′S").
+// Rounds to tenths of a minute FIRST so 59.96′ carries into the degree (no
+// "38°60.0′"); minutes are zero-padded like the chart border's labels.
 export function toDM(v, pos, neg) {
   const hemi = v >= 0 ? pos : neg
   const t = Math.round(Math.abs(v) * 600)
   const d = Math.floor(t / 600)
   const m = (t % 600) / 10
-  return `${d}°${m.toFixed(1)}′${hemi}`
+  return `${d}°${m.toFixed(1).padStart(4, '0')}′${hemi}`
 }
 export const formatPosition = ({ lat, lng }) => `${toDM(lat, 'N', 'S')} ${toDM(lng, 'E', 'W')}`
 

@@ -84,8 +84,8 @@
   container: tile / size;
   display: flex;
   flex-direction: column;
-  padding: 14px 16px;
-  padding: clamp(10px, 7cqh, 18px) clamp(12px, 7cqw, 20px);
+  /* fixed px: a container's OWN cq units resolve against the card, not itself */
+  padding: 18px 20px;
 }
 
 .nc-credits {
@@ -124,9 +124,13 @@
   .nc-root .nc-strava--tile,
   .nc-root .nc-credit { display: none; }
 }
+@container nc (max-aspect-ratio: 135 / 100) and (max-width: 460px) {
+  .nc-tile--cond,
+  .nc-tile--work { padding: 12px 12px; }
+}
 
 /* SHORT ROW — squat cards (short landscape windows). */
-@container nc (min-aspect-ratio: 135 / 100) and (max-height: 380px) {
+@container nc (min-aspect-ratio: 135 / 100) and (max-height: 380px) and (min-width: 600px) {
   .nc-grid {
     grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
@@ -137,6 +141,23 @@
     grid-template-areas: 'chart cond';
   }
 }
+
+/* FLOW — tiny viewports (e.g. 400% zoom, 320×256): the card stops being a
+   fixed box and simply stacks, one tile per row, growing with its content. */
+.nc-root--flow { container-type: inline-size; height: auto; }
+.nc-root--flow .nc-grid {
+  height: auto;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: none;
+  grid-auto-rows: auto;
+  grid-template-areas: 'chart' 'cond' 'work' 'credits';
+}
+.nc-root--flow.nc-root--solo .nc-grid { grid-template-areas: 'chart' 'cond' 'credits'; }
+.nc-root--flow .nc-tile--chart { height: 300px; }
+.nc-root--flow .nc-tile--cond { height: 150px; }
+.nc-root--flow .nc-tile--work { height: 110px; }
+.nc-root--flow .nc-tile--cond,
+.nc-root--flow .nc-tile--work { padding: 12px; }
 
 /* Browsers without size containers (Safari < 16): stack on phones. */
 @supports not (container-type: size) {
@@ -370,7 +391,8 @@
   letter-spacing: -0.3px;
   line-height: 1.15;
   color: var(--nc-ink);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 .nc-work-dur {
   font-size: 17px;
@@ -385,7 +407,9 @@
   .nc-work { gap: 10px; }
 }
 @container tile (max-width: 190px) {
-  .nc-work { gap: 9px; }
+  .nc-work { gap: 8px; }
+  .nc-medal { width: 28px; }
+  .nc-work-sport { font-size: 15px; letter-spacing: -0.4px; }
 }
 
 /* ==========================================================================
@@ -565,6 +589,11 @@
 .nc-strip .nc-event { grid-area: event; margin-top: 2px; }
 .nc-strip .nc-focus { grid-area: focus; }
 .nc-strip .nc-cart-foot { grid-area: road; align-self: center; margin: 0; padding: 0; border: 0; }
+.nc-strip--narrow {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'kick' 'title' 'event' 'focus' 'road';
+}
+.nc-strip--narrow .nc-cart-foot { justify-self: start; margin-top: 8px; }
 
 .nc-kicker {
   margin: 0;
@@ -611,6 +640,7 @@
 .nc-strip .nc-focus { font-size: 13.5px; line-height: 1.4; }
 .nc-focus-lead { font-weight: 600; color: var(--nc-ink); }
 .nc-cart-foot {
+  flex: none;
   margin-top: 8px;
   padding-top: 12px;
   border-top: 1px solid var(--nc-rule);

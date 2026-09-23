@@ -40,6 +40,7 @@ const STALE_MAX_MS = 6 * HOUR // expired data still shows (as 'stale') up to thi
 const DEFAULT_TTL_MS = 30 * MIN // no/unreadable Expires header
 const MIN_TTL_MS = 5 * MIN // floor, so a skewed clock can't turn Expires into a refetch loop
 const RECHECK_MS = MIN
+const REFRESH_GRACE_MS = 15 * MIN // expired data still reads 'ready' while its routine refresh runs
 const FORECAST_HOURS = [3, 6, 9, 12]
 const FORECAST_WINDOW_MS = 90 * MIN
 const KEEP_BEFORE_MS = 3 * HOUR // series kept around the fetch time (enough for 6 h stale + 12 h ahead)
@@ -152,8 +153,9 @@ function conditionsFrom(norm, tz, now, fallbackUpdatedAt = null) {
   }
   return {
     now: { kn: cur.kn, dir: cur.dir, compass: compass16(cur.dir), tempF: cur.tempF },
-    fc: fc.map(({ label, kn, dir }) => ({ label, kn, dir })),
+    fc: fc.map(({ label, kn, dir }) => ({ label, kn, dir, compass: compass16(dir) })),
     updatedAt: norm.updatedAt ?? fallbackUpdatedAt ?? now,
+    fetchedAt: fallbackUpdatedAt ?? null, // when WE fetched it (the 'last updated' line)
     tz: tz || null,
   }
 }
@@ -304,7 +306,12 @@ function snapshot(id, key, tz, live, now = Date.now()) {
     data = usable ? conditionsFrom(entry.data, tz, now, entry.savedAt) : null
     // A background retry after a failure keeps reading 'error' (no flicker
     // back to 'loading' every cooldown); success flips it straight to ready.
-    if (data) status = fresh ? 'ready' : 'stale'
+    // A routine refresh of just-expired data keeps reading 'ready' (no blue →
+    // ink → blue flash every Expires cycle); 'stale' means a refresh FAILED,
+    // or the data is well past its expiry.
+    const refreshing = inflight.has(key) && !failedAt.has(key) && now >= backoffUntil
+    const graceful = !!entry && refreshing && now - entry.expires < REFRESH_GRACE_MS
+    if (data) status = fresh || graceful ? 'ready' : 'stale'
     else if (failedAt.has(key) || now < backoffUntil) status = 'error'
     else if (inflight.has(key) || live) status = 'loading'
   }

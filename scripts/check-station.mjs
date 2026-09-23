@@ -233,6 +233,7 @@ function selfTest(loaded) {
     ['override: unknown stopId', withOverride({ active: true, until: '2026-10-05', stopId: 'nowhere-26' }), 'unknown stopId'],
     ['override: point not on stop', withOverride({ active: true, until: '2026-10-05', stopId: 'australia-breeze-26', point: 'Perth' }), 'is not a point of australia-breeze-26'],
     ['override: no stop, no place', withOverride({ active: true, until: '2026-10-05' }), 'needs a `stopId`'],
+    ['override: lat/lng without place', withOverride({ active: true, until: '2026-10-05', stopId: 'australia-breeze-26', lat: -33.85, lng: 151.22 }), 'belong to a `place`'],
     ['override: place without lat/lng', withOverride({ active: true, until: '2026-10-05', place: 'Valencia' }), 'needs its own `lat`'],
     ['override: focus em dash', withOverride({ active: true, until: '2026-10-05', stopId: 'annapolis-fall-26', focus: 'Starts — and speed' }), '`focus` has an em dash'],
     ['override: focus too long', withOverride({ active: true, until: '2026-10-05', stopId: 'annapolis-fall-26', focus: 'x'.repeat(91) }), '`focus` is 91 characters'],

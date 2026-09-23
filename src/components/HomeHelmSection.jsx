@@ -18,7 +18,7 @@
 //  Zero scroll JS here — no listeners: plain document flow, so reverse
 //  scrolling replays exactly and the banner/bar pin math (closed forms of
 //  window.scrollY) stays untouched.
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { DESKTOP_BANNER_H } from './HomeSponsorStrip'
 
 // The card sits below the fold, so it ships as its own chunk (its chart
@@ -35,9 +35,25 @@ const HomeNowCard = lazy(() =>
   ),
 )
 // While the chunk lands: the bare white sheet, same box — no layout shift.
-const CARD_PLACEHOLDER = <div style={{ width: '100%', height: '100%', background: '#fff' }} />
+const placeholder = (tiny) => <div style={{ width: '100%', height: '100%', minHeight: tiny ? 560 : 0, background: '#fff' }} />
+
+// Tiny viewports (a 320×256 window = 400% zoom on a laptop) can't hold a
+// fixed-height card; there it flows instead, growing with its tiles.
+const TINY_Q = '(max-width: 359px), (max-height: 299px)'
+function useTiny() {
+  const [tiny, setTiny] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.(TINY_Q).matches)
+  useEffect(() => {
+    const mq = window.matchMedia?.(TINY_Q)
+    if (!mq) return undefined
+    const on = () => setTiny(mq.matches)
+    mq.addEventListener?.('change', on)
+    return () => mq.removeEventListener?.('change', on)
+  }, [])
+  return tiny
+}
 
 export default function HomeHelmSection({ isMobile = false, onNavigate }) {
+  const tiny = useTiny()
   return (
     <section
       aria-label="Where Robby is now"
@@ -56,16 +72,18 @@ export default function HomeHelmSection({ isMobile = false, onNavigate }) {
           // svh on mobile so the collapsing URL bar can't jump the card. The
           // floor never exceeds what fits under the pinned bar, so a short
           // landscape window still shows the whole card.
-          height: isMobile ? '66svh' : '66dvh',
-          minHeight: isMobile
-            ? 'min(340px, calc(100svh - 52px - 16px))'
-            : `min(340px, calc(100dvh - ${DESKTOP_BANNER_H} - 16px))`,
+          height: tiny ? 'auto' : isMobile ? '66svh' : '66dvh',
+          minHeight: tiny
+            ? 0
+            : isMobile
+              ? 'min(340px, calc(100svh - 52px - 16px))'
+              : `min(340px, calc(100dvh - ${DESKTOP_BANNER_H} - 16px))`,
           maxWidth: 1600,
           margin: '0 auto',
         }}
       >
-        <Suspense fallback={CARD_PLACEHOLDER}>
-          <HomeNowCard onNavigate={onNavigate} />
+        <Suspense fallback={placeholder(tiny)}>
+          <HomeNowCard onNavigate={onNavigate} flow={tiny} />
         </Suspense>
       </div>
     </section>

@@ -70,7 +70,7 @@ class TileBoundary extends Component {
   }
 }
 
-export default function HomeNowCard({ onNavigate }) {
+export default function HomeNowCard({ onNavigate, flow = false }) {
   const rootRef = useRef(null)
   const view = useInView(rootRef)
   const here = useWhereNow()
@@ -82,6 +82,7 @@ export default function HomeNowCard({ onNavigate }) {
 
   const cls = ['nc-root']
   if (!hasWorkout) cls.push('nc-root--solo')
+  if (flow) cls.push('nc-root--flow')
   if (view.on) cls.push('is-on')
   if (view.visible) cls.push('is-visible')
 
@@ -154,13 +155,18 @@ function ConditionsTile({ here, wx, visible }) {
                         <path d="M0 4.5V-4.5M-2.6 -1.8L0 -4.5 2.6 -1.8" />
                       </svg>
                     )}
-                    <span className="nc-fc-s">{Number.isFinite(f.kn) ? f.kn : '--'}<span className="nc-sr"> knots</span></span>
+                    <span className="nc-fc-s">
+                    {Number.isFinite(f.kn) ? f.kn : '--'}
+                    <span className="nc-sr"> knots{f.compass ? ` from ${f.compass}` : ''}</span>
+                  </span>
                   </li>
                 ))}
               </ol>
             )}
           </div>
-          {status === 'stale' && data.updatedAt && <p className="nc-stale">Last updated {staleLabel(data.updatedAt, place?.tz)}</p>}
+          {status === 'stale' && (data.fetchedAt || data.updatedAt) && (
+            <p className="nc-stale">Last updated {staleLabel(data.fetchedAt || data.updatedAt, place?.tz)}</p>
+          )}
         </>
       ) : status === 'error' ? (
         <p className="nc-empty">Live wind isn&rsquo;t available right now.</p>
@@ -199,12 +205,19 @@ function useClock(tz, visible) {
 // way the wind is blowing (from-bearing + 180°) and swings in once on reveal.
 function Dial({ dir }) {
   const has = Number.isFinite(dir)
+  // Unwrap against the last angle drawn so an update takes the SHORT way
+  // round (355° → 5° turns 10°, not 350° backwards). StrictMode's second
+  // render sees a zero delta, so it's idempotent.
+  const last = useRef(null)
+  let to = has ? dir + 180 : 0
+  if (has && last.current != null) to = last.current + ((((to - last.current) % 360) + 540) % 360) - 180
+  if (has) last.current = to
   return (
     <svg className="nc-dial" viewBox="-20 -20 40 40" aria-hidden="true">
       <circle className="nc-dial-ring" r="17" />
       <line className="nc-dial-n" x1="0" y1="-17" x2="0" y2="-13.5" />
       {has && (
-        <g className="nc-dial-needle" style={{ '--wind-to': `${dir + 180}deg` }}>
+        <g className="nc-dial-needle" style={{ '--wind-to': `${to}deg` }}>
           <path d="M0 12V-12M-4 -7.5L0 -12 4 -7.5" />
         </g>
       )}

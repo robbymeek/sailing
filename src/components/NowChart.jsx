@@ -125,8 +125,15 @@ export default function NowChart({ here, onNavigate, visible = true }) {
   // Title block mode: a cartouche over the chart when the tile is roomy, a
   // strip under the chart when it's narrow (phones) or squat.
   const worldMode = !entry || chartFailed
+  // If the cartouche's content doesn't fit its box (a long 'working on' line
+  // on a squat tile), fall back to the strip rather than clip it. Latched per
+  // tile size + content, measured before paint (no flash); the tile's size
+  // doesn't depend on the mode, so it can't flap.
+  const [cartTooTall, setCartTooTall] = useState(false)
+  const fitKey = `${tile.w}x${tile.h}|${key}|${here?.focus ?? ''}|${here?.mode ?? ''}`
+  useLayoutEffect(() => { setCartTooTall(false) }, [fitKey])
   // (the world fallback always takes the strip, so the fix is never under it)
-  const overlay = !worldMode && tile.w >= 560 && tile.h >= 300
+  const overlay = !worldMode && !cartTooTall && tile.w >= 560 && tile.h >= 300
   const W = stage.w
   const H = stage.h
 
@@ -135,11 +142,12 @@ export default function NowChart({ here, onNavigate, visible = true }) {
     const el = cartRef.current
     const st = stageRef.current
     if (!overlay || !el || !st) { setCartRect(null); return }
+    if (el.scrollHeight > el.clientHeight + 1) { setCartTooTall(true); return }
     const a = el.getBoundingClientRect()
     const s = st.getBoundingClientRect()
     const r = { x: a.left - s.left, y: a.top - s.top, w: a.width, h: a.height }
     setCartRect((p) => (p && p.x === r.x && p.y === r.y && p.w === r.w && p.h === r.h ? p : r))
-  }, [overlay, W, H, here])
+  }, [overlay, W, H, here, fitKey])
 
   const frame = useMemo(() => {
     if (!here || worldMode || !W || !H) return null
@@ -158,7 +166,7 @@ export default function NowChart({ here, onNavigate, visible = true }) {
   const aria = `Nautical chart of ${place.title}. ${live ? "Robby's position" : 'Position'} ${place.position}.`
 
   const titleBlock = (
-    <div ref={cartRef} className={overlay ? 'nc-cart' : 'nc-strip'}>
+    <div ref={cartRef} className={overlay ? 'nc-cart' : `nc-strip${tile.w < 360 ? ' nc-strip--narrow' : ''}`}>
       <p className="nc-kicker">
         <span className={live ? 'nc-live-dot' : 'nc-live-dot nc-live-dot--off'} aria-hidden="true" />
         {kickerText}
@@ -212,12 +220,12 @@ export default function NowChart({ here, onNavigate, visible = true }) {
             />
           )}
         </div>
+        {overlay && titleBlock}
         {!worldMode && (
           <a className="nc-credit" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
             © OpenStreetMap contributors
           </a>
         )}
-        {overlay && titleBlock}
       </div>
       {!overlay && titleBlock}
     </div>

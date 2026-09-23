@@ -87,6 +87,7 @@ export function validateOverride(o) {
     return '`lat` and `lng` must both be finite degrees'
   }
   if (o.place != null && !hasCoords) return '`place` needs its own `lat` and `lng` (use `point` to pick a city inside a stop)'
+  if (hasCoords && o.place == null) return '`lat`/`lng` belong to a `place` (use `point` to pick a city inside a stop)'
   if (o.stopId != null) {
     const i = findStop(o.stopId)
     if (i < 0) return `unknown stopId "${o.stopId}"`
