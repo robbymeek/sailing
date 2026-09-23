@@ -1,6 +1,7 @@
 # Last workout (Strava): every 30 minutes, ask Strava for Robby's latest
-# PUBLIC activity and, only when it differs from what robbysailing.com serves,
-# redeploy the site with the new data/last-workout.json. Runbook: STRAVA.md.
+# activity (private ones included) and, only when it differs from what
+# robbysailing.com serves, redeploy the site with the new
+# data/last-workout.json. Runbook: STRAVA.md.
 #
 # Secrets live in the `strava` GitHub Environment (restricted to main):
 # STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, STRAVA_REFRESH_TOKEN (rotated and
@@ -49,7 +50,7 @@ jobs:
         with:
           node-version: 20
       - id: fetch
-        name: Fetch the latest public activity
+        name: Fetch the latest activity
         run: node scripts/fetch-last-workout.mjs
         env:
           STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}

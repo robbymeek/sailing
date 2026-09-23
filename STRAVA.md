@@ -1,7 +1,8 @@
 # Last workout (Strava)
 
-The home card shows Robby's most recent **public** Strava workout as one short
-line, e.g. **Bike ride · 1h 12m**, with the official "Powered by Strava" mark.
+The home card shows Robby's most recent Strava workout (private ones included)
+as one short line, e.g. **Bike ride · 1h 12m**, with the official "Powered by
+Strava" mark.
 The browser never talks to Strava. A scheduled GitHub Action reads Strava,
 trims the activity to five harmless fields and redeploys the site with a tiny
 static file, `/data/last-workout.json`.
@@ -36,18 +37,17 @@ No activity name, map, GPS points, heart rate, power, distance, speed, gear,
 device, athlete or start time (only the local calendar day). The site never
 links to the activity.
 
-An activity is **eligible** only when all of these hold:
+An activity is **eligible** when:
 
-- visible to **Everyone** on Strava (`visibility: "everyone"`, not private). Followers-only and Only-You activities never show. If Strava ever stops sending the visibility field, nothing shows (fails closed).
-- not marked as a **commute**
-- at least **5 minutes** long
+- it's any visibility: Everyone, Followers or **Only You**. Robby keeps his workouts private, so `INCLUDE_PRIVATE = true` in `src/data/workoutSchema.js` and the app asks for the `activity:read_all` scope. That's safe because only sport, duration and day are ever published and the site never links to the activity. (Set it to `false` to go back to public-only, which fails closed on a missing visibility field.)
+- it's not marked as a **commute**
+- it's at least **5 minutes** long
 
 Each run reads every activity from the last **22 days** in one request (the
 tile hides anything older than 21 days anyway; the extra day covers time zones)
-and the newest eligible one wins. If the published one is later made
-non-public or deleted, the next run replaces it with the next eligible one, or
-with nothing: the site never keeps an activity Strava no longer lists as
-public. The card hides the tile when there is nothing to show or the workout is
+and the newest eligible one wins. If the published one is later deleted (or
+marked as a commute), the next run replaces it with the next eligible one, or
+with nothing: the site never keeps an activity Strava no longer lists. The card hides the tile when there is nothing to show or the workout is
 more than **21 days** old.
 
 Duration: moving time for bike, run, walk, swim, row and paddle sports; elapsed
@@ -111,10 +111,11 @@ R=robbymeek/sailing
 read "SID?Strava Client ID: "
 read -s "SSECRET?Strava Client Secret: "; echo
 
-# Approve in the browser, leaving the activities checkbox ticked.
+# Approve in the browser, leaving BOTH activity checkboxes ticked (including
+# "View data about your private activities").
 # Strava then redirects to a localhost page that fails to load: that's expected.
-# Check its address bar shows scope=read,activity:read and copy the code= value.
-open "https://www.strava.com/oauth/authorize?client_id=${SID}&response_type=code&redirect_uri=http://localhost/exchange_token&approval_prompt=force&scope=read,activity:read"
+# Check its address bar shows scope=read,activity:read_all and copy the code= value.
+open "https://www.strava.com/oauth/authorize?client_id=${SID}&response_type=code&redirect_uri=http://localhost/exchange_token&approval_prompt=force&scope=read,activity:read_all"
 read -s "SCODE?code= value from the address bar: "; echo
 
 # Exchange the code. The form is built by zsh's printf builtin and fed to curl
@@ -171,12 +172,11 @@ this way too; that's harmless.)
 
 ### 5. Strava privacy check
 
-The site only ever shows sport, duration and day, but an activity is eligible
-only when it's public on Strava, so the activity page itself is public too:
+Your activities can stay **Only You**: the site reads them through the API
+but publishes only sport, duration and day, and never links to them.
 
-- **Privacy zones** (Settings → Privacy Controls → Map Visibility): hide the start and end around home and anywhere else you sleep.
-- **Heart rate:** hide it from others in Strava's privacy controls if you'd rather it wasn't public.
-- **Activities:** only activities visible to **Everyone** can appear on the site. Use Followers or Only You for anything you don't want there, and mark commutes as Commute.
+- To keep something off the site, mark it as a **Commute** in Strava (commutes are always skipped), or delete it.
+- Anything under 5 minutes (an accidental start) is skipped automatically.
 
 ### 6. First run
 
@@ -206,7 +206,7 @@ a human.
 | STRAVA_SECRETS_PAT is not set | Add it (step 4). Strava was not contacted, so the refresh token is fine. |
 | STRAVA_SECRETS_PAT cannot write the strava environment secret (HTTP nnn) | Make a new PAT and store it (step 4); nothing else. Strava was not contacted, so the refresh token is fine. **401**: the PAT expired or was revoked. **403**: it lacks **Environments: Read and write**. **404**: its repository access doesn't include `robbymeek/sailing`, or the `strava` environment is gone (step 1). `gh not available` or `unknown` (no HTTP status; gh's own error text is never logged, since it could echo the input): re-run the workflow once; if it repeats, check that the `ubuntu-latest` runner image still ships `gh`. |
 | Strava rejected the refresh token | Redo step 3 (authorize, exchange, store). Happens if the app's access was revoked on Strava or the stored token was lost. |
-| The activity:read scope is missing | Redo step 3 and leave the activities checkbox ticked on the Strava approval page. |
+| The activity:read_all scope is missing | Redo step 3 and leave both activity checkboxes ticked on the Strava approval page (including private activities). |
 | Strava rotated the refresh token and saving it failed (…), so it is lost | Rare now that the PAT is checked first (it passed seconds earlier, so this is GitHub failing mid-run or the PAT revoked in between). The new refresh token was lost and the old one is dead. If the status is 401, 403 or 404, redo step 4 first; then redo step 3. |
 | Malformed JSON | A Strava outage returning junk. If it repeats for hours, check <https://status.strava.com>. |
 
@@ -236,7 +236,7 @@ shows recent runs; open one for its one-line summary.
 
 - Preview the tile without any network (dev server only): `?workout=Ride:4310`, `?workout=Sail:7260`, `?workout=WeightTraining:3000`, `?workout=none`, a third part for "days ago" (`?workout=Run:2880:30` shows the stale case), `?workout=error`, `?workout=loading`.
 - Pipeline self-test (offline): `node scripts/stage-last-workout.mjs --self-test`
-- Dry-run the picker on a saved activities list: `node scripts/fetch-last-workout.mjs --fixture activities.json`. The checked-in `scripts/fixtures/strava-activities.json` (fake data: one public ride among a followers-only run, a private swim, a commute and a 2-minute walk) prints the ride. CI runs both of these on every PR.
+- Dry-run the picker on a saved activities list: `node scripts/fetch-last-workout.mjs --fixture activities.json`. The checked-in `scripts/fixtures/strava-activities.json` (fake data: public, followers-only and private activities, a commute and a 2-minute walk) prints the newest eligible one, a followers-only run. CI runs both of these on every PR.
 - **Never** run `fetch-last-workout.mjs` for real on your Mac (it refuses without `CI`). A local token refresh would rotate the refresh token and break the scheduled workflow until step 3 is redone.
 
 ## Strava API agreement and branding

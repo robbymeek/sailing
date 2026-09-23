@@ -17,15 +17,23 @@
 //
 //  Deliberately NOT carried: the activity name, map/polyline, start/end
 //  latlng, heart rate, power, distance, speed, gear, device, the athlete, the
-//  start TIME (only the local calendar day). Privacy fails closed: an activity
-//  is only eligible when Strava says it is visible to Everyone; a missing
-//  visibility field means NOT eligible.
+//  start TIME (only the local calendar day), and never a link to the activity.
+//
+//  Visibility: Robby keeps his workouts "Only You" on Strava (owner, Sep 23
+//  2026), so INCLUDE_PRIVATE lets private and followers-only activities count
+//  too (the pipeline asks for the activity:read_all scope). That's safe
+//  because of the whitelist above: the site shows sport + duration only and
+//  never links to the activity. Set it false to go back to public-only (then a
+//  missing visibility field means NOT eligible, failing closed).
 //
 //  Plain module (Node + browser, no import.meta).
 
 import { formatDuration, pickDurationS } from './sportTypes.js'
 
 const MAX_DURATION_S = 604800 // one week; anything longer is a recording glitch
+
+// Private + followers-only activities are eligible (see the header).
+export const INCLUDE_PRIVATE = true
 
 const ID_RE = /^\d{1,20}$/
 const SPORT_RE = /^[A-Za-z]{2,40}$/
@@ -106,13 +114,15 @@ const startMs = (a) => {
   return Number.isNaN(t) ? -Infinity : t
 }
 
-// Is this Strava activity OK to show on the public site? Public (visible to
-// Everyone, not private), not a commute, long enough to count, and
-// representable by the whitelist.
-function isEligible(a, { minDurationS, excludeCommutes }) {
+// Is this Strava activity OK to show on the site? Visible enough (any
+// visibility with includePrivate, else Everyone + not private), not a commute,
+// long enough to count, and representable by the whitelist.
+function isEligible(a, { minDurationS, excludeCommutes, includePrivate }) {
   if (!a || typeof a !== 'object') return false
-  if (a.private) return false
-  if (a.visibility !== 'everyone') return false // missing field → excluded
+  if (!includePrivate) {
+    if (a.private) return false
+    if (a.visibility !== 'everyone') return false // missing field → excluded
+  }
   if (excludeCommutes && a.commute) return false
   const longest = Math.max(Number(a.moving_time) || 0, Number(a.elapsed_time) || 0)
   if (!(longest >= minDurationS)) return false
@@ -121,14 +131,14 @@ function isEligible(a, { minDurationS, excludeCommutes }) {
 
 // The newest eligible activity from Strava's list (any order), or null.
 // Never mutates the input.
-export function pickEligible(list, { minDurationS = 300, excludeCommutes = true } = {}) {
+export function pickEligible(list, { minDurationS = 300, excludeCommutes = true, includePrivate = INCLUDE_PRIVATE } = {}) {
   if (!Array.isArray(list)) return null
   const newestFirst = (x, y) => {
     const d = startMs(y) - startMs(x)
     return Number.isNaN(d) ? 0 : d // two undated items (-Infinity - -Infinity)
   }
   const sorted = list.filter((a) => a && typeof a === 'object').sort(newestFirst)
-  return sorted.find((a) => isEligible(a, { minDurationS, excludeCommutes })) || null
+  return sorted.find((a) => isEligible(a, { minDurationS, excludeCommutes, includePrivate })) || null
 }
 
 // Same published activity? Takes two payload.activity values (or null). Every

@@ -21,7 +21,7 @@
 //
 //  `node scripts/stage-last-workout.mjs --self-test` checks the pipeline's
 //  guarantees offline (placeholder valid, every sport mapped, private fields
-//  trimmed, non-public activities excluded, duration basis per sport).
+//  trimmed, private activities in/out per INCLUDE_PRIVATE, duration basis per sport).
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -154,9 +154,15 @@ function selfTest() {
     { ...base, id: 1007, sport_type: 'WeightTraining', start_date: '2026-09-21T14:00:00Z', start_date_local: '2026-09-21T10:00:00Z', moving_time: 2400, elapsed_time: 3600, visibility: 'everyone' },
   ]
   const shuffled = [list[5], list[0], list[6], list[2], list[4], list[1], list[3]]
-  const pick = pickEligible(shuffled)
-  check('followers_only, private, commute, <5 min and no-visibility activities are excluded', pick?.id === 1006)
-  check('an activity missing `visibility` is never eligible', pickEligible([list[3]]) === null)
+  // Default (INCLUDE_PRIVATE): Robby's "Only You" workouts count; commutes and
+  // accidental starts still don't.
+  check('by default private + followers-only count; commute and <5 min are excluded', pickEligible(shuffled)?.id === 1001)
+  check('by default a private or no-visibility activity is eligible', pickEligible([list[4]])?.id === 1005 && pickEligible([list[3]])?.id === 1004)
+  check('by default a commute and a 2-minute start are still excluded', pickEligible([list[2], list[1]]) === null)
+  // Public-only mode (INCLUDE_PRIVATE = false) fails closed.
+  const pick = pickEligible(shuffled, { includePrivate: false })
+  check('public-only: followers_only, private, commute, <5 min and no-visibility activities are excluded', pick?.id === 1006)
+  check('public-only: an activity missing `visibility` is never eligible', pickEligible([list[3]], { includePrivate: false }) === null)
   check('pickEligible does not mutate its input', shuffled[0].id === 1006 && shuffled[1].id === 1001)
 
   const payload = fromStravaActivity(pick, new Date('2026-09-23T15:17:04.123Z'))

@@ -1,5 +1,5 @@
 // ============================================================================
-//  fetch-last-workout — ask Strava for Robby's latest public workout (CI only).
+//  fetch-last-workout — ask Strava for Robby's latest workout (CI only).
 // ============================================================================
 //  Runs every 30 minutes in .github/workflows/workout.yml (see STRAVA.md):
 //
@@ -11,10 +11,11 @@
 //       Environment secret, because the old one dies the moment a new one is
 //       issued),
 //    2. read EVERY activity from the last WINDOW_DAYS (the whole span in which
-//       the tile can show anything), keep the newest ELIGIBLE one (public to
-//       Everyone, not a commute, 5+ minutes) and trim it to the whitelist in
+//       the tile can show anything), keep the newest ELIGIBLE one (any
+//       visibility per INCLUDE_PRIVATE, not a commute, 5+ minutes) and trim it
+//       to the whitelist in
 //       src/data/workoutSchema.js. Nothing eligible → activity: null, so an
-//       activity later made Followers/Only You, or deleted, comes down on the
+//       activity later deleted (or marked as a commute) comes down on the
 //       next run,
 //    3. compare with what robbysailing.com is serving right now, and
 //    4. tell the workflow `changed=true|false` plus `workout_b64` (the new file,
@@ -34,7 +35,7 @@
 //    1  needs the owner: STRAVA_SECRETS_PAT missing or unable to write the
 //       secret (checked before Strava is contacted, so the refresh token
 //       survives), refresh token rejected (re-run the STRAVA.md bootstrap),
-//       activity:read scope missing, the rotated token couldn't be saved, or
+//       activity:read_all scope missing, the rotated token couldn't be saved, or
 //       Strava sent malformed JSON
 //    2  refused: not in CI (a local token refresh would rotate the token CI
 //       depends on). For a local dry run use --fixture <activities.json>.
@@ -370,7 +371,7 @@ async function main() {
     headers: { authorization: `Bearer ${access}` },
   })
   if (ar.status === 401 || ar.status === 403) {
-    error(`Strava refused the activity list: ${describeHttp(ar)}. The activity:read scope is missing; re-run the bootstrap, see STRAVA.md.`)
+    error(`Strava refused the activity list: ${describeHttp(ar)}. The activity:read_all scope is missing; re-run the bootstrap, see STRAVA.md.`)
     return noChange(1)
   }
   if (transient(ar) || ar.status === 429) {
