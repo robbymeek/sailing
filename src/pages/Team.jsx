@@ -149,7 +149,16 @@ const SPONSORS = [
   {
     name: 'Sailing Foundation of NY',
     photo: 'sponsor-sfny.jpg',
-    logo: 'sfny-logo.png',
+    // The official SFNY × Schoonmaker Foundation partnership lockup, SQUARE version (the
+    // home sponsor strip uses the horizontal one). It's a full-colour card on its own white
+    // ground, so `logoTile` shows it as-is instead of through the white-silhouette filter
+    // the other marks get — that filter would flatten it into a blank white square.
+    logo: 'sfny-schoonmaker-lockup-square.png',
+    logoTile: true,
+    logoAlt: 'Sailing Foundation of New York & Schoonmaker Foundation',
+    // The revealed heading credits both funders, matching the joint lockup above it; the
+    // resting photo title stays the short name.
+    revealName: 'SFNY & Schoonmaker Foundation',
     url: 'https://sfny.org/',
     desc: 'Supporting competitive sailors and maritime education across the country.',
   },
@@ -247,7 +256,10 @@ function SponsorCard({ sponsor, hovered, locked, onHover, onLeave, onClick }) {
         position: 'absolute', inset: 0,
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
-        padding: '40px 32px',
+        // The content is centred, so this padding only matters once it's tall — the
+        // square lockup tile gets a tighter inset (and tighter gaps below) so short phone
+        // cards have room for it instead of squeezing it down to an unreadable thumbnail.
+        padding: sponsor.logoTile ? '16px 18px' : '40px 32px',
         opacity: revealed ? 1 : 0,
         transform: revealed ? 'translateY(0)' : 'translateY(12px)',
         transition: 'opacity 0.5s ease, transform 0.5s ease',
@@ -256,10 +268,21 @@ function SponsorCard({ sponsor, hovered, locked, onHover, onLeave, onClick }) {
         {sponsor.logo && (
           <img
             src={`${BASE}${sponsor.logo}`}
-            alt=""
+            alt={sponsor.logoAlt || ''}
             loading="lazy"
             decoding="async"
-            style={{
+            style={sponsor.logoTile ? {
+              // Square tile sized off the card's own height (the card is a vh clamp, so
+              // this tracks every layout), capped for the wide desktop card. minHeight 0
+              // lets it give way on short phone cards before the copy below would clip.
+              height: 'min(50%, 210px)', width: 'auto', aspectRatio: '1 / 1',
+              maxWidth: '100%', minHeight: 0, objectFit: 'contain',
+              marginBottom: 14,
+              // White mat: the lockup's own blue wave band would otherwise butt straight
+              // onto the card's (slightly different) blue overlay and read as a mismatched
+              // patch; the mat mounts it as a deliberate badge. Paint-only, no layout.
+              boxShadow: '0 0 0 6px #fff',
+            } : {
               maxWidth: 180, maxHeight: 72, objectFit: 'contain',
               marginBottom: 22,
               filter: 'brightness(0) invert(1)',
@@ -270,10 +293,10 @@ function SponsorCard({ sponsor, hovered, locked, onHover, onLeave, onClick }) {
           color: '#fff', fontSize: 17, fontWeight: 500,
           letterSpacing: '-0.3px',
           margin: sponsor.logo ? 0 : '0 0 10px', textAlign: 'center',
-        }}>{sponsor.name}</p>
+        }}>{sponsor.revealName || sponsor.name}</p>
         <p style={{
           color: 'rgba(255,255,255,0.95)', fontSize: 13,
-          textAlign: 'center', lineHeight: 1.65, margin: '12px 0 0',
+          textAlign: 'center', lineHeight: 1.65, margin: sponsor.logoTile ? '8px 0 0' : '12px 0 0',
           maxWidth: 340,
         }}>{sponsor.desc}</p>
       </div>

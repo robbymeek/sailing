@@ -11,11 +11,19 @@ const BASE = import.meta.env.BASE_URL
 // with a per-logo optical `weight` correction (a dense/bold mark scaled down, an airy/thin
 // one scaled up) so all read at the same perceived size. Non-interactive (pointerEvents:
 // 'none') so they never compete with the orb's click zone. Edit SPONSORS to change the set.
+//
+// SFNY is the official SFNY × Schoonmaker Foundation partnership lockup (HORIZONTAL version;
+// The Team's partner card uses the square one). It's a self-contained card — two marks, a
+// wave band and a funding line — not a bare wordmark, so it's given its whole cell: `weight`
+// is set high enough that the cell bounds (maxWidth / maxHeight), not the equal-area target,
+// decide its size, and on the mobile strip its column is widened (`stripFlex`) because a
+// quarter-width column leaves the card too small to read. The other three marks are
+// height-bound there, so the narrower columns don't shrink them.
 const SPONSORS = [
   { name: 'AA Entertainment', logo: 'AAENT-Logo.png', logoDark: 'AAENT-Logo-white.png', aspect: 354 / 329, weight: 0.93, wide: false },
   { name: 'Charter Financial Group', logo: 'charter-logo.jpg', logoDark: 'charter-logo-white.png', aspect: 652 / 143, weight: 1.0, wide: true },
   { name: 'AYC Foundation', logo: 'ayc-logo.png', aspect: 440 / 87, weight: 0.92, wide: true },
-  { name: 'Sailing Foundation of New York', logo: 'sfny-logo.png', aspect: 543 / 177, weight: 1.08, wide: true },
+  { name: 'Sailing Foundation of New York & Schoonmaker Foundation', logo: 'sfny-schoonmaker-lockup-horizontal.png', aspect: 480 / 241, weight: 2.2, stripFlex: 1.4, wide: true },
 ]
 
 // Equal-AREA multiplier. shortMul scales a logo's upright HEIGHT; because
@@ -141,8 +149,9 @@ export default function HomeSponsorStrip({ embedded = false, uiVisible = true, t
   const opacity = (uiVisible ? 1 : 0) * (1 - textOut)
 
   if (embedded) {
-    // MOBILE: full-width horizontal white bar at the VERY TOP — FOUR EQUAL COLUMNS, one logo
-    // centered in each. The hamburger + "Menu" bar rests just BELOW it (App's sticky bar) and
+    // MOBILE: full-width horizontal white bar at the VERY TOP — FOUR COLUMNS (equal, except
+    // a sponsor's optional `stripFlex` widens its own), one logo centered in each. The
+    // hamburger + "Menu" bar rests just BELOW it (App's sticky bar) and
     // pins to the top on scroll; position:absolute so the banner scrolls off with the hero.
     return (
       <div
@@ -166,7 +175,7 @@ export default function HomeSponsorStrip({ embedded = false, uiVisible = true, t
         {SPONSORS.map((s) => (
           <div
             key={s.logo}
-            style={{ flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 clamp(4px, 1.4vw, 10px)' }}
+            style={{ flex: `${s.stripFlex ?? 1} 1 0`, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 clamp(4px, 1.4vw, 10px)' }}
           >
             <img
               src={`${BASE}${s.logo}`}
