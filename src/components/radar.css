@@ -1,0 +1,98 @@
+/* ==========================================================================
+   radar.css — the campaign radar scope (src/components/Radar.jsx).
+   Extracted verbatim from the retired helm panel stylesheet. The host
+   provides the size container + the --hp-* vars (see Radar.jsx header).
+   ========================================================================== */
+
+/* The scope must be a TRUE square (border-radius:50% + %-positioned blips
+   go elliptical otherwise). The host is a size container so the wrap can
+   inscribe against BOTH axes. */
+.hp-scope-wrap {
+  position: relative;
+  width: min(100cqw, 100cqh);
+  aspect-ratio: 1;
+  margin: auto;
+}
+.hp-scope {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(var(--hp-scope-rgb), 0.5) 0%, rgba(var(--hp-scope-deep-rgb), 0.85) 55%, var(--hp-scope-edge) 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--hp-phos-rgb), 0.12),
+    inset 0 0 30px rgba(0, 0, 0, 0.85);
+  overflow: hidden;
+}
+/* the rotating beam — bright leading edge at 12 o'clock, afterglow
+   trailing counter-clockwise BEHIND the clockwise rotation */
+.hp-sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 258deg,
+    rgba(var(--hp-phos-rgb), 0.04) 284deg,
+    rgba(var(--hp-phos-rgb), 0.16) 330deg,
+    rgba(var(--hp-phos-rgb), 0.5) 357deg,
+    rgba(var(--hp-phos-hi-rgb), 0.85) 360deg
+  );
+  animation: hp-sweep var(--hp-sweep-s) linear infinite;
+  transform-origin: 50% 50%;
+}
+.hp-sweep::before {
+  content: '';
+  position: absolute;
+  left: calc(50% - 0.75px);
+  top: 0;
+  width: 1.5px;
+  height: 50%;
+  background: linear-gradient(
+    to top,
+    rgba(var(--hp-phos-rgb), 0.25),
+    rgba(var(--hp-phos-hi-rgb), 0.95)
+  );
+}
+@keyframes hp-sweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* venue blips — flash as the beam passes (delay = bearing/360 × period) */
+.hp-blip {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  background: var(--hp-phos);
+  box-shadow: 0 0 6px 1px rgba(var(--hp-phos-rgb), 0.7);
+  opacity: 0.25;
+  animation: hp-blip var(--hp-sweep-s) linear infinite;
+  animation-delay: var(--blip-delay, 0s);
+}
+@keyframes hp-blip {
+  0% { opacity: 1; }
+  14% { opacity: 0.8; }
+  55% { opacity: 0.32; }
+  92% { opacity: 0.16; }
+  100% { opacity: 1; }
+}
+.hp-blip-tag {
+  position: absolute;
+  left: 7px;
+  top: -4px;
+  font-family: var(--hp-mono);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: rgba(var(--hp-phos-rgb), 0.6);
+  white-space: nowrap;
+}
+
+/* Reduced motion: park the beam, hold the blips. Must stay LAST. */
+@media (prefers-reduced-motion: reduce) {
+  .hp-sweep { animation: none; transform: rotate(215deg); }
+  .hp-blip { animation: none; opacity: 0.75; }
+}

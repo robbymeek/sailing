@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import Footer from './Footer'
-import { Radar } from './HelmPanel'
+import Radar from './Radar'
 import ContactPhoto from './ContactPhoto'
 import teamPhoto from '../assets/exit-cards/exit-path.jpg'
 
@@ -60,7 +60,7 @@ const signatureLead = { fontWeight: 600 }
 const cursiveAccent = { fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic', fontWeight: 400 }
 const blurbCopy = { ...bodyCopy, margin: '0 0 22px', maxWidth: 480 }
 
-// The Road row hosts the helm station's Radar OUTSIDE the panel, so the CSS
+// The Road row hosts the campaign Radar (./Radar), so the CSS
 // vars its classed elements consume (.hp-scope/.hp-sweep/.hp-blip[-tag])
 // are re-provided here — blue on black, The Road's own palette. The wrapper
 // is a size container because the scope inscribes via min(100cqw, 100cqh).
