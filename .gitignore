@@ -28,3 +28,7 @@ trailer-src/
 
 # Local design/prompt working notes — keep out of the public repo
 /prompts/
+
+# Nautical chart bake — its own deps + the OpenFreeMap tile cache
+scripts/charts/node_modules/
+.cache/
