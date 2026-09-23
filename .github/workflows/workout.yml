@@ -1,0 +1,68 @@
+# Last workout (Strava): every 30 minutes, ask Strava for Robby's latest
+# PUBLIC activity and, only when it differs from what robbysailing.com serves,
+# redeploy the site with the new data/last-workout.json. Runbook: STRAVA.md.
+#
+# Secrets live in the `strava` GitHub Environment (restricted to main):
+# STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, STRAVA_REFRESH_TOKEN (rotated and
+# written back by the script) and STRAVA_SECRETS_PAT (fine-grained PAT with
+# Environments: write on this repo, used ONLY for that write-back).
+name: Last workout (Strava)
+
+on:
+  schedule:
+    - cron: '17,47 * * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Redeploy even if the latest workout is unchanged
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: strava
+  cancel-in-progress: false
+
+jobs:
+  check:
+    if: github.repository == 'robbymeek/sailing'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: strava
+      # Secrets only: don't log a "deployment" every 30 minutes.
+      deployment: false
+    steps:
+      # Only what the script imports. Cone mode also keeps the root files, so
+      # package.json ("type": "module") is there for the .js imports.
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scripts
+            src/data
+          sparse-checkout-cone-mode: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - id: fetch
+        name: Fetch the latest public activity
+        run: node scripts/fetch-last-workout.mjs
+        env:
+          STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
+          STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
+          STRAVA_REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
+          STRAVA_SECRETS_PAT: ${{ secrets.STRAVA_SECRETS_PAT }}
+          STRAVA_ENV: strava
+          LIVE_URL: https://robbysailing.com/data/last-workout.json
+          FORCE: ${{ inputs.force && 'true' || 'false' }}
+          # GITHUB_REPOSITORY is set by the runner.
+      - name: Redeploy the site with the new workout
+        if: steps.fetch.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORKOUT_B64: ${{ steps.fetch.outputs.workout_b64 }}
+        run: gh workflow run deploy.yml --repo "$GITHUB_REPOSITORY" --ref main -f workout_b64="$WORKOUT_B64"
