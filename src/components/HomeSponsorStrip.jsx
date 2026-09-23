@@ -23,7 +23,7 @@ const SPONSORS = [
   { name: 'AA Entertainment', logo: 'AAENT-Logo.png', logoDark: 'AAENT-Logo-white.png', aspect: 354 / 329, weight: 0.93, wide: false },
   { name: 'Charter Financial Group', logo: 'charter-logo.jpg', logoDark: 'charter-logo-white.png', aspect: 652 / 143, weight: 1.0, wide: true },
   { name: 'AYC Foundation', logo: 'ayc-logo.png', aspect: 440 / 87, weight: 0.92, wide: true },
-  { name: 'Sailing Foundation of New York & Schoonmaker Foundation', logo: 'sfny-schoonmaker-lockup-horizontal.png', aspect: 960 / 482, weight: 2.2, stripFlex: 1.4, wide: true },
+  { name: 'Sailing Foundation of New York & Schoonmaker Foundation', logo: 'sfny-schoonmaker-lockup-horizontal.png', aspect: 480 / 241, weight: 2.2, stripFlex: 1.4, wide: true },
 ]
 
 // Equal-AREA multiplier. shortMul scales a logo's upright HEIGHT; because
