@@ -3,10 +3,10 @@
 // ============================================================================
 //  Derives live scheduling state (upcoming / in progress / completed, the
 //  featured next regatta, and a human countdown) from the campaign STOPS in
-//  ../data/campaignStops.js. Biography's "Next Event" line and the HelmPanel's
-//  NEXT EVENT LCD both read from here, so their readouts can never drift and the
-//  schedule ROLLS OVER on its own — no hard-coded date or event name in either
-//  component, and it can never get stuck on "in 0 Days".
+//  ../data/campaignStops.js. Biography's "Next Event" line reads from here (and
+//  the home card's where-now resolver reuses its date helpers), so the schedule
+//  ROLLS OVER on its own — no hard-coded date or event name in any component,
+//  and it can never get stuck on "in 0 Days".
 //
 //  Dates are LOCAL CALENDAR dates ('YYYY-MM-DD'), parsed at local midnight, so a
 //  UTC conversion can never shove an event onto the wrong day. Most stops carry
@@ -109,7 +109,7 @@ export function getScheduleState(now = new Date(), { kind } = {}) {
   return { current, next, completed, featured: current || next || null }
 }
 
-// The next-event readout shared by Biography + HelmPanel. Everything a consumer
+// The next-event readout (Biography's chrome line). Everything a consumer
 // needs to render its own layout, so the SELECTION + WORDING live in one place.
 export function nextEventDisplay(now = new Date()) {
   const { featured } = getScheduleState(now, { kind: 'regatta' })

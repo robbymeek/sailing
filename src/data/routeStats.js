@@ -1,5 +1,6 @@
-// Real great-circle length of the 2026 → 2028 campaign route, in nautical
-// miles — the "CAMPAIGN ROUTE · NM" readout on the home helm panel. Computed
+// Great-circle helpers for the home page (the campaign Radar's bearings and
+// ranges, the home card's world locator), plus the real length of the
+// 2026 → 2028 campaign route in nautical miles. Computed
 // from the same source of truth The Road uses (campaignStops), mirroring
 // TheRoad.jsx's math (centralAngle + the 3440.065 NM/rad radius and the same
 // stop→waypoint flattening) so the home figure matches The Road's world.

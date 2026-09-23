@@ -7,15 +7,15 @@ import teamPhoto from '../assets/exit-cards/exit-path.jpg'
 const BASE = import.meta.env.BASE_URL
 
 // ============================================================================
-//  HomeOverview — four uniform editorial rows below the helm station.
+//  HomeOverview — four uniform editorial rows below the home card.
 // ============================================================================
-//  The pinned hero brightens to the raw photo and the white helm card rides
+//  The pinned hero brightens to the raw photo and the white home card rides
 //  up over it; scrolling on from the card lands here — an index of the
 //  campaign as FOUR equally-sized rows, uniformly built: media on the left,
 //  text on the right, and the route action always in the same spot at the
 //  bottom of the text column (mobile: media, then text, then the action).
 //  Biography (the film) · The Team (the crew photo) · The Road (the page's
-//  one black row — the helm station's radar, blue on black, sweeping the
+//  one black row — the campaign radar (./Radar), blue on black, sweeping the
 //  2026 venues) · Contact (Robby's headshot with a scroll-aware treatment).
 //
 //  The interaction signature is the route action: an outlined ink button that
