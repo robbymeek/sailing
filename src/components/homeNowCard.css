@@ -551,13 +551,17 @@
 .nc-fix--next .nc-fix-ping { display: none; }
 
 /* ---- title block: cartouche (roomy) / strip (narrow) --------------------- */
+/* "Currently: Annapolis, MD" (one line, one face), the working-on line, and
+   the position. The cartouche hugs its content. */
 .nc-cart {
   position: absolute;
   z-index: 3;
   top: 20px;
   left: 20px;
   box-sizing: border-box;
-  width: clamp(236px, 34%, 340px);
+  width: max-content;
+  min-width: 220px;
+  max-width: min(46%, 460px);
   max-height: calc(100% - 40px);
   overflow: hidden;
   display: flex;
@@ -570,67 +574,23 @@
 .nc-strip {
   flex: none;
   box-sizing: border-box;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    'kick road'
-    'title road'
-    'event event'
-    'focus focus';
-  column-gap: 12px;
-  row-gap: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
   padding: 10px 12px 11px;
   border: 1px solid var(--nc-rule);
   border-top: 0;
   background: #fff;
 }
-.nc-strip .nc-kicker { grid-area: kick; }
-.nc-strip .nc-title { grid-area: title; }
-.nc-strip .nc-event { grid-area: event; margin-top: 2px; }
-.nc-strip .nc-focus { grid-area: focus; }
-.nc-strip .nc-cart-foot { grid-area: road; align-self: center; margin: 0; padding: 0; border: 0; }
-.nc-strip--narrow {
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: 'kick' 'title' 'event' 'focus' 'road';
-}
-.nc-strip--narrow .nc-cart-foot { justify-self: start; margin-top: 8px; }
-
-.nc-kicker {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.3;
-  color: var(--nc-muted);
-}
-.nc-live-dot {
-  flex: none;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--nc-accent);
-}
-.nc-live-dot--off { background: transparent; box-shadow: inset 0 0 0 1.5px var(--nc-accent); }
 .nc-title {
   margin: 0;
-  font-size: clamp(24px, 2.4vw, 36px);
+  font-size: clamp(20px, 1.9vw, 30px);
   font-weight: 700;
-  letter-spacing: -0.6px;
-  line-height: 1.1;
+  letter-spacing: -0.5px;
+  line-height: 1.15;
   color: var(--nc-ink);
 }
-.nc-strip .nc-title { font-size: 21px; letter-spacing: -0.4px; }
-.nc-event {
-  margin: 0;
-  font-family: var(--nc-serif);
-  font-style: italic;
-  font-size: 16px;
-  line-height: 1.35;
-  color: var(--nc-body);
-}
-.nc-strip .nc-event { font-size: 14px; }
+.nc-strip .nc-title { font-size: 20px; letter-spacing: -0.4px; }
 .nc-focus {
   margin: 2px 0 0;
   font-size: 15px;
@@ -639,32 +599,17 @@
 }
 .nc-strip .nc-focus { font-size: 13.5px; line-height: 1.4; }
 .nc-focus-lead { font-weight: 600; color: var(--nc-ink); }
-.nc-cart-foot {
+.nc-pos {
   flex: none;
-  margin-top: 8px;
-  padding-top: 12px;
+  margin: 8px 0 0;
+  padding-top: 10px;
   border-top: 1px solid var(--nc-rule);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-}
-.nc-pos { font-size: 12px; letter-spacing: 0.02em; color: var(--nc-muted); white-space: nowrap; }
-.nc-road {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 13px;
-  border-radius: 2px;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--nc-muted);
   white-space: nowrap;
-  cursor: pointer;
 }
-.nc-strip .nc-road { padding: 7px 11px; font-size: 13px; }
+.nc-strip .nc-pos { margin-top: 2px; padding-top: 0; border-top: 0; }
 
 /* focus rings (site standard) */
 .nc-root a:focus-visible,

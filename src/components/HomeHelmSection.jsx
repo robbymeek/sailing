@@ -52,7 +52,7 @@ function useTiny() {
   return tiny
 }
 
-export default function HomeHelmSection({ isMobile = false, onNavigate }) {
+export default function HomeHelmSection({ isMobile = false }) {
   const tiny = useTiny()
   return (
     <section
@@ -83,7 +83,7 @@ export default function HomeHelmSection({ isMobile = false, onNavigate }) {
         }}
       >
         <Suspense fallback={placeholder(tiny)}>
-          <HomeNowCard onNavigate={onNavigate} flow={tiny} />
+          <HomeNowCard flow={tiny} />
         </Suspense>
       </div>
     </section>

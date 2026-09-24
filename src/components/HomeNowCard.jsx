@@ -70,7 +70,7 @@ class TileBoundary extends Component {
   }
 }
 
-export default function HomeNowCard({ onNavigate, flow = false }) {
+export default function HomeNowCard({ flow = false }) {
   const rootRef = useRef(null)
   const view = useInView(rootRef)
   const here = useWhereNow()
@@ -92,7 +92,7 @@ export default function HomeNowCard({ onNavigate, flow = false }) {
       <div className="nc-grid">
         <TileBoundary className="nc-tile nc-tile--chart">
           <section className="nc-tile nc-tile--chart" aria-label="Currently here">
-            <NowChart here={here} onNavigate={onNavigate} visible={view.visible} />
+            <NowChart here={here} visible={view.visible} />
           </section>
         </TileBoundary>
         <TileBoundary className="nc-tile nc-tile--cond">

@@ -13,8 +13,9 @@
 //    · water names in italic, land names in spaced caps (chart convention)
 //    · a hairline compass rose, a small world locator, the map credit
 //    · the navigator's FIX (dot in a ring, blue = live) at Robby's position
-//    · the title block: a cartouche over the chart on roomy tiles, a strip
-//      under it on narrow ones
+//    · the title block ("Currently: Annapolis, MD", what he's working on, the
+//      position): a cartouche over the chart on roomy tiles, a strip under it
+//      on narrow ones
 //
 //  Framing is pure math shared with the bake (../utils/chartMath.js): the
 //  frame + fix paint on the first frame from the manifest; the land fades in
@@ -82,13 +83,10 @@ function useSize(ref) {
 
 const hit = (a, b) => a && b && a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
 
-// 'SEP 2026' → 'Sep 2026', 'OCT–NOV 2026' → 'Oct–Nov 2026'
-const niceDates = (s) => (s || '').replace(/[A-Z]{3}/g, (m) => m[0] + m.slice(1).toLowerCase())
-// 'Training Camp' → 'Training camp' (sentence case for the italic event line);
-// proper regatta names keep their capitals.
-const niceEvent = (e) => (e === 'Training Camp' || e === 'Training Block' ? e.replace(/ ([A-Z])/, (m, c) => ' ' + c.toLowerCase()) : e || '')
+// The title's lead-in per resolver mode ("Currently: Annapolis, MD").
+const LEAD = { override: 'Currently', stop: 'Currently', next: 'Next stop', last: 'Last stop' }
 
-export default function NowChart({ here, onNavigate, visible = true }) {
+export default function NowChart({ here, visible = true }) {
   const tileRef = useRef(null)
   const stageRef = useRef(null)
   const cartRef = useRef(null)
@@ -157,33 +155,19 @@ export default function NowChart({ here, onNavigate, visible = true }) {
   }, [here, entry, worldMode, W, H, overlay])
 
   if (!here) return null
-  const { place, stop, focus, mode, kicker, daysUntil } = here
+  const { place, focus, mode } = here
   const live = mode === 'stop' || mode === 'override'
-  const kickerText = mode === 'next' && Number.isFinite(daysUntil)
-    ? `${kicker}, in ${daysUntil} ${daysUntil === 1 ? 'day' : 'days'}`
-    : kicker
-  const eventLine = stop ? `${niceEvent(stop.event)}, ${niceDates(stop.dates)}` : null
   const aria = `Nautical chart of ${place.title}. ${live ? "Robby's position" : 'Position'} ${place.position}.`
 
   const titleBlock = (
-    <div ref={cartRef} className={overlay ? 'nc-cart' : `nc-strip${tile.w < 360 ? ' nc-strip--narrow' : ''}`}>
-      <p className="nc-kicker">
-        <span className={live ? 'nc-live-dot' : 'nc-live-dot nc-live-dot--off'} aria-hidden="true" />
-        {kickerText}
-      </p>
-      <h3 className="nc-title">{place.title}</h3>
-      {eventLine && <p className="nc-event">{eventLine}</p>}
+    <div ref={cartRef} className={overlay ? 'nc-cart' : 'nc-strip'}>
+      <h3 className="nc-title">{LEAD[mode] || 'Currently'}: {place.title}</h3>
       {focus && (
         <p className="nc-focus">
           <span className="nc-focus-lead">Working on</span> {focus}
         </p>
       )}
-      <div className="nc-cart-foot">
-        {overlay && <span className="nc-pos">{place.position}</span>}
-        <button type="button" className="ho-action nc-road" onClick={() => onNavigate?.('The Road')}>
-          See the road<span aria-hidden="true"> →</span>
-        </button>
-      </div>
+      <p className="nc-pos">{place.position}</p>
     </div>
   )
 
