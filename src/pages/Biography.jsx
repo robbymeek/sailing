@@ -148,7 +148,7 @@ export default function Biography({ onNavigate, scrollOffsetRef, preload = false
     return () => window.removeEventListener('resize', h)
   }, [])
 
-  // Auto-rolling next event (shared with the HelmPanel — one source of truth,
+  // Auto-rolling next event (the shared campaignSchedule helper — one source of truth,
   // no hard-coded date/name here). Frozen for the off-screen preload copy.
   const nextEvent = useNextEvent(!preload)
 

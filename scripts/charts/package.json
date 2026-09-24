@@ -1,0 +1,15 @@
+{
+  "name": "robbysailing-charts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bake": "node bake.mjs"
+  },
+  "dependencies": {
+    "@mapbox/vector-tile": "^2.0.3",
+    "clipper-lib": "^6.4.2",
+    "pbf": "^4.0.1",
+    "topojson-client": "^3.1.0",
+    "world-atlas": "^2.0.2"
+  }
+}

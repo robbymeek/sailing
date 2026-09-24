@@ -82,7 +82,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
   // Exit reveal — the hero is PINNED (sticky, above) and never scrolls away;
-  // as the white helm card rises over it, the frame BRIGHTENS to the raw
+  // as the white home card rises over it, the frame BRIGHTENS to the raw
   // photograph (owner direction, Jul 2026 — no fade-to-black): the 0.42 rest
   // scrim lifts to 0 in lockstep with the scroll while the orb fades in
   // place and the hero chrome (blurb, sponsor lockups, cue) fades out via
@@ -94,7 +94,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
   const restScrimRef = useRef(null)
   const bakedScrimRef = useRef(null)
   useEffect(() => {
-    // Runs on both mobile and desktop — the helm card covers both the same
+    // Runs on both mobile and desktop — the home card covers both the same
     // way, and the live orb (a body-level fixed canvas) fades IN PLACE in
     // lockstep with the scrim lift — it stays centered under the rising card.
     //
@@ -573,7 +573,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
       width: '100%',
       // Pinned cover (owner direction, Jul 2026): the hero stays FIXED in the
       // viewport — it never scrolls away. On scroll it BRIGHTENS to the raw
-      // photo (rest scrim lifts, chrome fades) while the helm card + the rest
+      // photo (rest scrim lifts, chrome fades) while the home card + the rest
       // of the site ride up OVER it (HomeShell's z45 scroll layer). Sticky
       // keeps its 100dvh flow footprint so the scroll layer starts one
       // viewport down; zIndex 0 pins the hero's whole stacking context
@@ -634,7 +634,7 @@ function HomeIntro({ onNavigate, skipIntro: forceSkip, embedded, boatSrc }) {
 
       {/* Darkening overlay (solid black, alpha animates via CSS transition).
           Its OPACITY is a second, scroll-driven channel: the exit-reveal rAF
-          lifts it 1→0 as the helm card rises, brightening the photo to full. */}
+          lifts it 1→0 as the home card rises, brightening the photo to full. */}
       <div
         ref={restScrimRef}
         aria-hidden="true"

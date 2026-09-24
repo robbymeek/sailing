@@ -3,6 +3,13 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      workout_b64:
+        description: last-workout.json as base64 (sent by the Strava workflow)
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -11,7 +18,7 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
@@ -27,6 +34,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - name: Stage last workout (never fails the deploy)
+        continue-on-error: true
+        env:
+          WORKOUT_B64: ${{ inputs.workout_b64 }}
+          LIVE_URL: https://robbysailing.com/data/last-workout.json
+        run: node scripts/stage-last-workout.mjs
       - uses: actions/configure-pages@v4
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -1,0 +1,629 @@
+/* ==========================================================================
+   homeNowCard.css — the home page's "where Robby is now" card
+   (HomeNowCard.jsx + NowChart.jsx). Prefix: nc-.
+
+   The site's white editorial sheet: #fff, sharp corners, hairline tiles, ink
+   structure, ONE electric blue reserved for live things (the fix, the wind).
+   The chart is the one bold element; the two small tiles stay quiet.
+
+   Layout = container queries on the card's own box (.nc-root):
+     WIDE (default)          chart | conditions / workout
+     STACKED (aspect < 1.35) chart on top, the two tiles side by side, credits
+     SHORT ROW (≤ 380 tall)  chart | conditions | workout in one row
+   The reduced-motion block must stay LAST (it wins on source order).
+   ========================================================================== */
+
+.nc-root {
+  --nc-ink: rgb(20, 28, 54);
+  --nc-body: rgba(20, 28, 54, 0.8);
+  --nc-muted: rgba(20, 28, 54, 0.62);
+  --nc-rule: rgba(20, 28, 54, 0.14);
+  --nc-accent: rgb(10, 85, 235);
+  --nc-water: #fff;
+  --nc-shoal2: rgb(238, 243, 253);
+  --nc-shoal1: rgb(226, 234, 251);
+  --nc-land: rgb(214, 219, 228);
+  --nc-coast: rgba(20, 28, 54, 0.62);
+  --nc-serif: Georgia, 'Times New Roman', serif;
+
+  container: nc / size;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  color: var(--nc-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.nc-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- the grid ----------------------------------------------------------- */
+.nc-grid {
+  box-sizing: border-box;
+  height: 100%;
+  display: grid;
+  padding: clamp(10px, 1.2vw, 18px);
+  gap: clamp(8px, 0.9vw, 14px);
+  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1.12fr) minmax(0, 1fr);
+  grid-template-areas:
+    'chart cond'
+    'chart work';
+}
+.nc-root--solo .nc-grid {
+  grid-template-areas:
+    'chart cond'
+    'chart cond';
+}
+
+.nc-tile {
+  position: relative;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid var(--nc-rule);
+  margin: 0;
+}
+.nc-tile--chart { grid-area: chart; border: 0; }
+.nc-tile--cond { grid-area: cond; }
+.nc-tile--work { grid-area: work; }
+.nc-tile--cond,
+.nc-tile--work {
+  container: tile / size;
+  display: flex;
+  flex-direction: column;
+  /* fixed px: a container's OWN cq units resolve against the card, not itself */
+  padding: 18px 20px;
+}
+
+.nc-credits {
+  grid-area: credits;
+  display: none;
+  margin: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 10.5px;
+  line-height: 1.3;
+  color: var(--nc-muted);
+}
+.nc-credits a { color: inherit; text-decoration: none; }
+.nc-credits .nc-strava { height: 10px; }
+.nc-credits a:hover { color: var(--nc-accent); text-decoration: underline; }
+
+/* STACKED — tablets portrait + phones: chart on top, tiles side by side. */
+@container nc (max-aspect-ratio: 135 / 100) {
+  .nc-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) clamp(88px, 25%, 240px) auto;
+    grid-template-areas:
+      'chart chart'
+      'cond work'
+      'credits credits';
+  }
+  .nc-root--solo .nc-grid {
+    grid-template-areas:
+      'chart chart'
+      'cond cond'
+      'credits credits';
+  }
+  .nc-credits { display: flex; }
+  .nc-root .nc-attr,
+  .nc-root .nc-strava--tile,
+  .nc-root .nc-credit { display: none; }
+}
+@container nc (max-aspect-ratio: 135 / 100) and (max-width: 460px) {
+  .nc-tile--cond,
+  .nc-tile--work { padding: 12px 12px; }
+}
+
+/* SHORT ROW — squat cards (short landscape windows). */
+@container nc (min-aspect-ratio: 135 / 100) and (max-height: 380px) and (min-width: 600px) {
+  .nc-grid {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: 'chart cond work';
+  }
+  .nc-root--solo .nc-grid {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    grid-template-areas: 'chart cond';
+  }
+}
+
+/* FLOW — tiny viewports (e.g. 400% zoom, 320×256): the card stops being a
+   fixed box and simply stacks, one tile per row, growing with its content. */
+.nc-root--flow { container-type: inline-size; height: auto; }
+.nc-root--flow .nc-grid {
+  height: auto;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: none;
+  grid-auto-rows: auto;
+  grid-template-areas: 'chart' 'cond' 'work' 'credits';
+}
+.nc-root--flow.nc-root--solo .nc-grid { grid-template-areas: 'chart' 'cond' 'credits'; }
+.nc-root--flow .nc-tile--chart { height: 300px; }
+.nc-root--flow .nc-tile--cond { height: 150px; }
+.nc-root--flow .nc-tile--work { height: 110px; }
+.nc-root--flow .nc-tile--cond,
+.nc-root--flow .nc-tile--work { padding: 12px; }
+
+/* Browsers without size containers (Safari < 16): stack on phones. */
+@supports not (container-type: size) {
+  @media (max-width: 699px) {
+    .nc-grid {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr) 104px auto;
+      grid-template-areas: 'chart chart' 'cond work' 'credits credits';
+    }
+    .nc-root--solo .nc-grid { grid-template-areas: 'chart chart' 'cond cond' 'credits credits'; }
+    .nc-credits { display: flex; }
+    .nc-root .nc-attr, .nc-root .nc-strava--tile, .nc-root .nc-credit { display: none; }
+  }
+}
+
+/* ---- tile type ---------------------------------------------------------- */
+.nc-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.nc-label {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--nc-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nc-meta {
+  flex: none;
+  font-size: 12px;
+  color: var(--nc-muted);
+  white-space: nowrap;
+}
+
+/* ---- conditions ---------------------------------------------------------- */
+.nc-cond-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+.nc-now {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'dial wind'
+    'dial sub';
+  column-gap: 12px;
+  align-items: center;
+  margin: 0;
+}
+.nc-now--loading { margin: auto 0; }
+.nc-dial {
+  grid-area: dial;
+  width: 44px;
+  width: clamp(30px, min(26cqh, 24cqw), 60px);
+  height: auto;
+  aspect-ratio: 1;
+  overflow: visible;
+}
+.nc-dial-ring { fill: none; stroke: rgba(20, 28, 54, 0.28); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.nc-dial-n { stroke: rgba(20, 28, 54, 0.55); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.nc-dial-needle {
+  transform: rotate(var(--wind-to, 0deg));
+  transition: transform 1.1s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.nc-dial-needle path {
+  fill: none;
+  stroke: var(--nc-accent);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.nc-root:not(.is-on) .nc-dial-needle { transform: rotate(calc(var(--wind-to, 0deg) - 360deg)); }
+
+.nc-wind {
+  grid-area: wind;
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  line-height: 1;
+}
+.nc-big {
+  font-size: 40px;
+  font-size: clamp(26px, min(24cqh, 26cqw), 58px);
+  font-weight: 700;
+  letter-spacing: -1px;
+  color: var(--nc-accent);
+}
+.nc-unit {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--nc-muted);
+  text-decoration: none;
+  border: 0;
+}
+.nc-sub {
+  grid-area: sub;
+  margin: 6px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--nc-body);
+}
+.nc-deg,
+.nc-temp { color: var(--nc-muted); }
+.nc-temp { color: var(--nc-body); }
+
+.nc-fc {
+  list-style: none;
+  margin: 0;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--nc-rule);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  text-align: center;
+}
+.nc-fc li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+.nc-fc-t { font-size: 11.5px; color: var(--nc-muted); white-space: nowrap; }
+.nc-fc-arrow {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--nc-ink);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.nc-fc-s { font-size: 13px; font-weight: 600; color: var(--nc-ink); }
+
+.nc-attr {
+  margin-top: 8px;
+  align-self: flex-start;
+  font-size: 11px;
+  color: var(--nc-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--nc-rule);
+}
+.nc-attr:hover { color: var(--nc-accent); text-decoration-color: currentColor; }
+.nc-empty { margin: auto 0; font-size: 14px; line-height: 1.45; color: var(--nc-body); }
+.nc-stale { margin: 6px 0 0; font-size: 11px; color: var(--nc-muted); }
+.is-stale .nc-big { color: var(--nc-ink); }
+.nc-now--loading .nc-big { color: rgba(20, 28, 54, 0.3); }
+
+/* wide tiles put the forecast BESIDE the wind; tall ones below it; short
+   narrow ones shed it, then the clock, then go one-line */
+@container tile (min-aspect-ratio: 19 / 10) and (min-width: 420px) and (min-height: 96px) {
+  .nc-cond-body { flex-direction: row; align-items: center; gap: 18px; }
+  .nc-now { flex: none; }
+  .nc-fc { flex: 1 1 auto; border-top: 0; border-left: 1px solid var(--nc-rule); padding: 2px 0 2px 12px; }
+}
+@container tile (max-height: 190px) and ((max-aspect-ratio: 19 / 10) or (max-width: 419px) or (max-height: 95px)) {
+  .nc-fc { display: none; }
+}
+/* stacked cards credit the weather in the card footer, so their tiles can
+   keep the forecast down to a shorter height */
+@container nc (max-aspect-ratio: 135 / 100) {
+  @container tile (min-height: 148px) and (max-width: 419px) {
+    .nc-fc { display: grid; }
+  }
+}
+@container tile (max-height: 130px) {
+  .nc-meta,
+  .nc-attr,
+  .nc-stale { display: none; }
+  .nc-now { column-gap: 10px; }
+  .nc-sub { margin-top: 3px; font-size: 12px; flex-wrap: nowrap; gap: 8px; white-space: nowrap; }
+  .nc-deg,
+  .nc-from { display: none; }
+}
+@container tile (max-width: 200px) {
+  .nc-meta { display: none; }
+}
+@container tile (max-width: 190px) {
+  .nc-deg,
+  .nc-from { display: none; }
+  .nc-now { column-gap: 8px; }
+  .nc-unit { font-size: 13px; }
+}
+
+/* ---- last workout -------------------------------------------------------- */
+.nc-work {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: auto 0;
+  min-width: 0;
+}
+.nc-medal {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  width: clamp(34px, min(30cqh, 26cqw), 66px);
+  aspect-ratio: 1;
+  border: 1px solid var(--nc-rule);
+  border-radius: 50%;
+  color: var(--nc-ink);
+}
+.nc-medal svg { width: 58%; height: 58%; }
+.nc-work-text {
+  margin: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.nc-work-sport {
+  font-size: 20px;
+  font-size: clamp(16px, min(13cqh, 13cqw), 26px);
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  line-height: 1.15;
+  color: var(--nc-ink);
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+.nc-work-dur {
+  font-size: 17px;
+  font-size: clamp(14px, min(11cqh, 11cqw), 22px);
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--nc-body);
+}
+.nc-strava { display: block; height: 12px; width: auto; }
+.nc-strava--tile { margin-top: 10px; align-self: flex-start; }
+@container tile (max-height: 130px) {
+  .nc-work { gap: 10px; }
+}
+@container tile (max-width: 190px) {
+  .nc-work { gap: 8px; }
+  .nc-medal { width: 28px; }
+  .nc-work-sport { font-size: 15px; letter-spacing: -0.4px; }
+}
+
+/* ==========================================================================
+   The chart tile (NowChart)
+   ========================================================================== */
+.nc-chart {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+.nc-stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--nc-water);
+}
+.nc-map-wrap { position: absolute; inset: 0; }
+.nc-map,
+.nc-furn {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.nc-map { opacity: 0; transition: opacity 0.45s ease; }
+.nc-map.is-loaded { opacity: 1; }
+.nc-shoal2 { fill: var(--nc-shoal2); fill-rule: evenodd; }
+.nc-shoal1 { fill: var(--nc-shoal1); fill-rule: evenodd; }
+.nc-land {
+  fill: var(--nc-land);
+  fill-rule: evenodd;
+  stroke: var(--nc-coast);
+  stroke-width: 1;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.nc-land--world { stroke: none; }
+
+.nc-furn text {
+  font-family: inherit;
+  font-size: 10px;
+  fill: var(--nc-muted);
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.nc-grat line { stroke: rgba(20, 28, 54, 0.07); stroke-width: 1; }
+.nc-neat { fill: none; stroke: rgba(20, 28, 54, 0.6); stroke-width: 1; }
+.nc-bars rect { fill: rgba(20, 28, 54, 0.78); }
+.nc-furn .nc-name-water {
+  font-family: var(--nc-serif);
+  font-style: italic;
+  font-size: 13px;
+  fill: rgba(20, 28, 54, 0.52);
+}
+.nc-furn .nc-name-place {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  fill: rgba(20, 28, 54, 0.56);
+}
+
+.nc-rose-ring { fill: none; stroke: rgba(20, 28, 54, 0.3); stroke-width: 1; }
+.nc-rose-ring--in { stroke: rgba(20, 28, 54, 0.16); }
+.nc-rose-tick { stroke: rgba(20, 28, 54, 0.3); stroke-width: 1; }
+.nc-rose-tick--30 { stroke: rgba(20, 28, 54, 0.46); }
+.nc-rose-fill { fill: rgba(20, 28, 54, 0.58); }
+.nc-rose-open { fill: #fff; stroke: rgba(20, 28, 54, 0.58); stroke-width: 0.8; stroke-linejoin: round; }
+.nc-furn .nc-rose-n { font-size: 10px; font-weight: 700; fill: rgba(20, 28, 54, 0.72); }
+
+.nc-loc-box { fill: #fff; stroke: rgba(20, 28, 54, 0.3); stroke-width: 1; }
+.nc-loc-land { fill: var(--nc-land); }
+.nc-loc-stop { fill: rgba(20, 28, 54, 0.4); }
+.nc-loc-in { stroke: rgba(20, 28, 54, 0.5); stroke-width: 1; }
+.nc-loc-out { stroke: var(--nc-accent); stroke-width: 1; stroke-dasharray: 2 2; }
+.nc-loc-here { fill: var(--nc-accent); stroke: #fff; stroke-width: 1; }
+
+.nc-credit {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  z-index: 2;
+  padding: 1px 4px;
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--nc-muted);
+  background: rgba(255, 255, 255, 0.86);
+  text-decoration: none;
+}
+.nc-credit:hover { color: var(--nc-accent); text-decoration: underline; }
+
+/* ---- the fix: dot in a ring (the navigator's symbol) ---------------------- */
+.nc-fix {
+  position: absolute;
+  z-index: 2;
+  width: 0;
+  height: 0;
+  transition: opacity 0.5s ease 0.15s, transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) 0.15s;
+}
+.nc-root:not(.is-on) .nc-fix { opacity: 0; transform: scale(0.4); }
+.nc-fix-dot,
+.nc-fix-ring,
+.nc-fix-ping {
+  position: absolute;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+.nc-fix-dot {
+  left: -4.5px;
+  top: -4.5px;
+  width: 9px;
+  height: 9px;
+  background: var(--nc-accent);
+  box-shadow: 0 0 0 2px #fff;
+}
+.nc-fix-ring,
+.nc-fix-ping {
+  left: -12px;
+  top: -12px;
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid var(--nc-accent);
+}
+.nc-fix-ring { box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.9), inset 0 0 0 1.5px rgba(255, 255, 255, 0.9); }
+.nc-fix-ping { opacity: 0; }
+.nc-root.is-on .nc-fix.is-animating .nc-fix-ping {
+  animation: nc-ping 3.2s cubic-bezier(0, 0, 0.2, 1) 0.8s infinite;
+}
+@keyframes nc-ping {
+  0% { transform: scale(0.6); opacity: 0.65; }
+  70%, 100% { transform: scale(2.6); opacity: 0; }
+}
+/* not there yet (the card is showing the NEXT stop): hollow fix, no ping */
+.nc-fix--next .nc-fix-dot { background: #fff; box-shadow: inset 0 0 0 2px var(--nc-accent); }
+.nc-fix--next .nc-fix-ping { display: none; }
+
+/* ---- title block: cartouche (roomy) / strip (narrow) --------------------- */
+/* "Currently: Annapolis, MD" (one line, one face), the working-on line, and
+   the position. The cartouche hugs its content. */
+.nc-cart {
+  position: absolute;
+  z-index: 3;
+  top: 20px;
+  left: 20px;
+  box-sizing: border-box;
+  width: max-content;
+  min-width: 220px;
+  max-width: min(46%, 460px);
+  max-height: calc(100% - 40px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  background: #fff;
+  border: 1px solid var(--nc-rule);
+}
+.nc-strip {
+  flex: none;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px 11px;
+  border: 1px solid var(--nc-rule);
+  border-top: 0;
+  background: #fff;
+}
+.nc-title {
+  margin: 0;
+  font-size: clamp(20px, 1.9vw, 30px);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+  color: var(--nc-ink);
+}
+.nc-strip .nc-title { font-size: 20px; letter-spacing: -0.4px; }
+.nc-focus {
+  margin: 2px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--nc-body);
+}
+.nc-strip .nc-focus { font-size: 13.5px; line-height: 1.4; }
+.nc-focus-lead { font-weight: 600; color: var(--nc-ink); }
+.nc-pos {
+  flex: none;
+  margin: 8px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--nc-rule);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--nc-muted);
+  white-space: nowrap;
+}
+.nc-strip .nc-pos { margin-top: 2px; padding-top: 0; border-top: 0; }
+
+/* focus rings (site standard) */
+.nc-root a:focus-visible,
+.nc-root button:focus-visible {
+  outline: 2px solid #1e40ff;
+  outline-offset: 3px;
+}
+
+/* ---- reduced motion: the final state, no spins, no ping. LAST. ----------- */
+@media (prefers-reduced-motion: reduce) {
+  .nc-map,
+  .nc-fix,
+  .nc-dial-needle { transition: none; }
+  .nc-root:not(.is-on) .nc-fix { opacity: 1; transform: none; }
+  .nc-root:not(.is-on) .nc-dial-needle { transform: rotate(var(--wind-to, 0deg)); }
+  .nc-root.is-on .nc-fix.is-animating .nc-fix-ping { animation: none; }
+}

@@ -18,8 +18,8 @@
 //             Derived from `dates`: a month-level stop spans the whole month
 //             (start = 1st, end = last day); San Pedro OCR carries its
 //             owner-confirmed EXACT day. Consumed by ../utils/campaignSchedule.js
-//             for the self-rolling next-event readouts on Biography + the
-//             HelmPanel. NEVER invent a day the source data doesn't state — where
+//             for Biography's self-rolling next-event line and the home
+//             card's where-now resolver. NEVER invent a day the source data doesn't state — where
 //             only the month is known, the month window is the honest encoding.
 //   venues  — [{ city, noc }] with 3-letter NOC country codes, rendered via
 //             formatVenues() in ./tourChapters.js ("Adelaide · Fremantle ·
