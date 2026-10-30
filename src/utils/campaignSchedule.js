@@ -11,7 +11,8 @@
 //  Dates are LOCAL CALENDAR dates ('YYYY-MM-DD'), parsed at local midnight, so a
 //  UTC conversion can never shove an event onto the wrong day. Most stops carry
 //  only month-level precision (the source data does); those read "In progress"
-//  for the whole event month. San Pedro OCR carries its owner-confirmed exact day.
+//  for the whole event month. San Pedro OCR carries its owner-confirmed exact day,
+//  Sail Melbourne its published racing days.
 
 import { useEffect, useState } from 'react'
 import STOPS from '../data/campaignStops'
@@ -24,7 +25,8 @@ const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', '
 const TRAINING_EVENTS = new Set(['Training Camp', 'Training Block'])
 
 // Short tags so a long event name renders like the old hand-tuned label
-// ("San Pedro OCR", "Dún Laoghaire Worlds"). Unmapped names keep the full name.
+// ("San Pedro OCR", "Dún Laoghaire Worlds"). Unmapped names keep the full name;
+// a name that already says where ("Sail Melbourne") isn't prefixed with the city.
 const EVENT_ABBREV = {
   'Olympic Classes Regatta': 'OCR',
   'World Championship': 'Worlds',
@@ -63,6 +65,7 @@ export const CAMPAIGN_EVENTS = STOPS
   .filter((s) => s.start && s.end)
   .map((s) => {
     const city = s.venues?.[0]?.city || s.region
+    const tag = EVENT_ABBREV[s.event] || s.event
     return {
       id: s.id,
       name: s.event,
@@ -73,7 +76,7 @@ export const CAMPAIGN_EVENTS = STOPS
       end: s.end,
       precision: s.start === s.end ? 'day' : 'range',
       kind: TRAINING_EVENTS.has(s.event) ? 'training' : 'regatta',
-      title: `${city} ${EVENT_ABBREV[s.event] || s.event}`,
+      title: tag.includes(city) || tag.includes(s.region) ? tag : `${city} ${tag}`,
       resultUrl: s.record?.url || null, // optional post-event link (none in data yet)
     }
   })
