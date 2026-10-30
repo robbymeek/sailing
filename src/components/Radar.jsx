@@ -23,12 +23,12 @@ const RADAR_BASE = { lat: 33.7088, lng: -118.2836 }
 const RADAR_RANGE_NM = 8000 // outer ring; rings every 2000 NM
 const SWEEP_S = 4.4 // beam period; must match --hp-sweep-s on the host
 const RADAR_BLIPS = [
-  // Annapolis is skipped — at this range it sits on top of NYC (one target).
+  // Annapolis is skipped — at this range it sits on top of NYC (one target);
+  // Sail Melbourne likewise sits on top of Adelaide.
   ['nyc-training', 'NYC'],
   ['dun-laoghaire-worlds', 'DUB'],
   ['miami-jan-27', 'MIA'],
   ['australia-breeze-26', 'ADL'],
-  ['vilamoura-26', 'VIL'],
 ].map(([id, label]) => {
   const s = STOPS.find((t) => t.id === id)
   return { label, brg: bearingDeg(RADAR_BASE, s), nm: distanceNm(RADAR_BASE, s) }

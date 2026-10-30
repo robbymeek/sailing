@@ -27,9 +27,10 @@
 export const LOCATION_OVERRIDES = [
   // Owner, Oct 1 2026: still in Annapolis until the Fremantle leg starts Oct 10.
   { active: true, from: '2026-10-01', until: '2026-10-09', stopId: 'annapolis-fall-26' },
-  // Fremantle from Oct 10 through the end of November (wins over the
-  // Vilamoura month by the override rule).
-  { active: true, from: '2026-10-10', until: '2026-11-30', stopId: 'australia-breeze-26', point: 'Fremantle' },
+  // Fremantle from Oct 10 until Sail Melbourne (Nov 26 to 29), then Melbourne
+  // through the end of November.
+  { active: true, from: '2026-10-10', until: '2026-11-25', stopId: 'australia-breeze-26', point: 'Fremantle' },
+  { active: true, from: '2026-11-26', until: '2026-11-30', stopId: 'sail-melbourne-26' },
 ]
 
 // ---------------------------------------------------------------------------

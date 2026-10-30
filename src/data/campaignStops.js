@@ -17,7 +17,7 @@
 //   end     — machine-readable window END,   LOCAL ISO date 'YYYY-MM-DD'
 //             Derived from `dates`: a month-level stop spans the whole month
 //             (start = 1st, end = last day); San Pedro OCR carries its
-//             owner-confirmed EXACT day. Consumed by ../utils/campaignSchedule.js
+//             owner-confirmed EXACT day, Sail Melbourne its published racing days. Consumed by ../utils/campaignSchedule.js
 //             for Biography's self-rolling next-event line and the home
 //             card's where-now resolver. NEVER invent a day the source data doesn't state — where
 //             only the month is known, the month window is the honest encoding.
@@ -49,7 +49,7 @@
 const STOPS = [
   {
     id: 'san-pedro-ocr',
-    start: '2026-07-20', end: '2026-07-20', // owner-confirmed EXACT day; every other stop is a month-level window
+    start: '2026-07-20', end: '2026-07-20', // owner-confirmed EXACT day; Sail Melbourne carries its published racing days; every other stop is a month-level window
     region: 'Los Angeles',
     event: 'Olympic Classes Regatta',
     dates: 'JUL 2026',
@@ -132,26 +132,18 @@ const STOPS = [
     ],
   },
   {
-    id: 'vilamoura-26',
-    start: '2026-11-01', end: '2026-12-31',
-    region: 'Algarve',
-    event: 'Vilamoura Grand-Prix',
-    dates: 'NOV–DEC 2026',
-    venues: [{ city: 'Vilamoura', noc: 'POR' }],
-    status: 'projected',
-    lat: 37.0741,
-    lng: -8.1247,
+    id: 'sail-melbourne-26',
+    start: '2026-11-26', end: '2026-11-29', // organiser's published racing days (Notice of Race V2, 17 Jun 2026)
+    region: 'Port Phillip',
+    event: 'Sail Melbourne',
+    dates: 'NOV 2026',
+    venues: [{ city: 'Melbourne', noc: 'AUS' }],
+    status: 'confirmed',
+    lat: -37.94559,
+    lng: 144.99698,
     chapter: 0,
     tier: 'support',
-    short: 'Grand-Prix',
-    record: { result: 'RACED', detail: 'Vilamoura Grand-Prix', date: 'NOV 2025' },
-    photo: {
-      src: 'tour/vilamoura.jpg',
-      srcMobile: 'tour/vilamoura-m.jpg',
-      position: 'center 42%',
-      alt: 'Robby Meek reaching past the red cliffs of the Algarve at Vilamoura',
-      credit: null,
-    },
+    short: 'Sail Melbourne',
   },
   {
     id: 'miami-jan-27',
@@ -387,7 +379,7 @@ if (import.meta.env.DEV) {
   const EVENT_CLASSES = new Set([
     'Olympic Classes Regatta', 'World Championship', 'Trofeo Princesa Sofía',
     'French Olympic Week', 'European Championship', 'Vilamoura Grand-Prix',
-    'Olympic Games', 'Training Camp', 'Training Block',
+    'Sail Melbourne', 'Olympic Games', 'Training Camp', 'Training Block',
   ])
   const DATES_RE = /^[A-Z]{3}(–[A-Z]{3})? \d{4}$/
   const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/

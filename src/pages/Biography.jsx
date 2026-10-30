@@ -11,11 +11,11 @@ const BASE = import.meta.env.BASE_URL
 
 const REGATTAS = [
   {
-    date: '16 MAY', month: 'MAY',
+    date: '23 AUG', month: 'AUG',
     status: 'FINISHED',
-    name: 'European Championships',
-    league: 'Senior Europeans',
-    location: 'Split, Croatia',
+    name: 'World Championship',
+    league: 'Senior Worlds',
+    location: 'Dún Laoghaire, Ireland',
     past: true,
   },
   {
@@ -24,11 +24,11 @@ const REGATTAS = [
     current: true,
   },
   {
-    date: '17 AUG', month: 'AUG',
+    date: '26 NOV', month: 'NOV',
     status: 'UPCOMING',
-    name: 'World Championship',
-    league: 'Senior Worlds',
-    location: 'Dún Laoghaire, Ireland',
+    name: 'Sail Melbourne',
+    league: 'Australian Training Camp',
+    location: 'Melbourne, Australia',
     blue: true, // owner: the right card gets the blue treatment (greys read boring)
   },
 ]
@@ -95,11 +95,11 @@ function RoadCard({ isMid, isMobile, onNavigate, img }) {
         display: 'flex', flexDirection: 'column',
       }}>
         <div style={{
-          color: 'rgba(255,255,255,0.8)', fontWeight: 700,
-          fontSize: isMobile ? 8 : 11, letterSpacing: '2px', textTransform: 'uppercase',
+          color: 'rgba(255,255,255,0.8)', fontWeight: 500,
+          fontSize: isMobile ? 8 : 11, letterSpacing: '0.3px',
           marginBottom: isMobile ? 6 : 12,
         }}>
-          Up Next
+          Click to see more
         </div>
         <h3 className="chrome-text" style={{
           fontSize: isMobile ? 15 : 26, fontWeight: 800, letterSpacing: '-0.6px',
