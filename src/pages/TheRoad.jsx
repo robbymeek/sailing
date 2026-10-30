@@ -8,6 +8,8 @@ import { DESKTOP_BANNER_H } from '../components/HomeSponsorStrip'
 import useCountdown from '../hooks/useCountdown'
 import usePageEntrance from '../hooks/usePageEntrance'
 import useTextSpray from '../hooks/useTextSpray'
+import { resolveWhereNow, localISODate } from '../utils/whereNow'
+import { parseLocalDate } from '../utils/campaignSchedule'
 
 const BASE = import.meta.env.BASE_URL
 
@@ -90,6 +92,26 @@ const GLIDE_TAU = 550 // ms — velocity decay constant; coast distance ≈ v0·
 const GLIDE_V_SMOOTH = 40 // ms — velocity estimator smoothing
 const SETTLE_WINDOW = 0.3 // vh-units: land on a stop if the coast dies this close
 const SETTLE_MS = 350
+// "Where we are": the page opens on the hero, holds the title a beat, then
+// glides itself down to today's stop (resolveHereTarget) through the same
+// tween a stop-row click uses (banner leads, globe chases), just calmer, since
+// it crosses the whole road so far. Any wheel / touch / click / key takes over.
+const HERE_TITLE_BEAT_MS = 1000 // the title holds this long, fully in, before the glide
+const HERE_AFTER_READY_MS = 1300 // the canvas's 1.2s fade-in is done before the globe moves
+const HERE_AFTER_READY_SEAMLESS_MS = 1600 // orb arrival: the globe's shrink-to-left entry ease is done
+const HERE_MS_PER_SCREEN = 320 // calmer than a row jump (JUMP_MS_PER_SCREEN)
+const HERE_MS_MIN = 1400
+const HERE_MS_MAX = 2600 // Australia (Fremantle) ≈ 7.5 screens ≈ 2.4s; later stops clamp here
+const HERE_TOP_SLOP = 0.05 // vh-units: a page already off the top (a restored reload) stays put
+const HERE_RETRY_MS = 250 // re-check cadence while a scroll lock (seamless entry) holds the page
+const HERE_STATIC_JUMP_MS = 300 // reduced-motion list: just past App's post-swap scrollTo(0,0)s
+// Hero title entrance (usePageEntrance): its delay, then a fixed 0.5s fade. A
+// seamless orb→globe arrival holds it back until the overlay has dissolved.
+const HERO_IN_MS = 200
+const HERO_IN_SEAMLESS_MS = 1450
+const HERO_FADE_MS = 500 // usePageEntrance's opacity transition
+const HERO_OUT_S = 0.6 // hero fade-out on a manual scroll
+const HERO_OUT_FAST_S = 0.2 // ...and during the glide, so it's gone before the Leg 1 frame fades in over the same spot
 
 // Flatten stops → frames (one per waypoint), tagging position within the stop.
 function buildFrames(stops) {
@@ -294,6 +316,54 @@ const STOP_FRAME = (() => {
   return m
 })()
 const STOP_Y = STOP_FRAME.map((fi) => LAND_Y[fi])
+
+// ---------- "where we are" ----------
+// The page-open target: today's stop, resolved by the SAME rules as the home
+// "Currently here" card (../utils/whereNow: owner override → the stop in
+// progress → the next one), so the card and the tour can never disagree. An
+// override that pins a place OFF The Road has no stop, so the tour falls back
+// to the date rules alone. Once the whole campaign is behind us ('last') there
+// is nothing to glide to and the page just opens on its title.
+// → { si, y } (y in vh units = screens of scroll), or null:
+//   • a multi-city block lands on the resolved CITY's own waypoint frame. The
+//     card stays up across a block's hops, so its row still lights, but the
+//     globe faces the city the card names (Australia → Fremantle). Searched
+//     within this stop only: cities repeat across the campaign.
+//   • any other stop → its dwell point (STOP_Y, what a stop-row click flies to)
+//   • the finale → the LA 2028 climax (what toEnd() / the finale row fly to)
+// Resolved when the glide fires, never at load: a long-lived tab must not
+// carry a stale date. DEV-only ?now=YYYY-MM-DD / ?override=0 preview a date
+// exactly like the home card (a mirror of whereNow's readDevParams with its
+// round-trip check: a malformed date would read every stop as in progress).
+function hereMoment() {
+  if (import.meta.env.DEV) {
+    const q = new URLSearchParams(window.location.search)
+    const d = q.get('now')
+    const ok = !!d && /^\d{4}-\d{2}-\d{2}$/.test(d) && localISODate(parseLocalDate(d)) === d
+    return { now: ok ? parseLocalDate(d) : new Date(), useOverrides: q.get('override') !== '0' }
+  }
+  return { now: new Date(), useOverrides: true }
+}
+function resolveHereTarget() {
+  let here
+  try {
+    const { now, useOverrides } = hereMoment()
+    here = resolveWhereNow(now, { useOverrides })
+    if (here && !here.stop && useOverrides) here = resolveWhereNow(now, { useOverrides: false })
+  } catch (err) {
+    // whereNow throws in DEV on a malformed station.js override; never let
+    // that take the page down, it just doesn't glide
+    console.warn('The Road: could not resolve where we are', err)
+    return null
+  }
+  if (!here || !here.stop || here.mode === 'last') return null
+  const si = STOPS.findIndex((s) => s.id === here.stop.id)
+  if (si < 0) return null
+  if (si >= STOPS.length - 1) return { si, y: TOTAL_VH / 100 }
+  const city = here.place && here.place.city
+  const fi = FRAMES.findIndex((f) => f.stopIndex === si && f.label === city)
+  return { si, y: fi >= 0 ? LAND_Y[fi] : STOP_Y[si] }
+}
 
 // ---------- distance made good ----------
 // Real great-circle miles along the route (the readout's "NM TO LA").
@@ -547,6 +617,79 @@ export default function TheRoad({ onNavigate, seamless = false, onGlobeReady, fr
   )
 }
 
+// ---------- "where we are" on open (globe tour + static list) ----------
+// One-shot per mount. Once `armed`, waits `afterReadyMs` (and at least `holdMs`
+// after mount, so the title gets its moment), then calls go(), which starts the
+// move and returns how long it runs (0 = nothing to do). It never moves a page
+// the reader already owns: any wheel / touch / pointer / key input (or a Back
+// press) since mount, or a page already off the top (a reload's restored
+// scroll), cancels it for good. 'scroll' is NOT an input: App's own
+// scrollTo(0,0)s fire it. A hidden tab waits to be shown, then replays
+// afterReadyMs so the hero still reads first; a scroll lock (the seamless
+// entry) just retries. In flight, the reader's first input of ANY kind hands
+// control straight back via stop(): animate() alone only cancels on scroll-type
+// input, so a globe grab would fight the tween, and a Back press could let its
+// rAF scroll the NEXT page after App's swap. Window capture phase, so the cut
+// lands before a stop-row / Play / tracker handler starts its own move.
+// StrictMode's double mount only re-arms the timer (the ref survives, and
+// `done` is set at fire time, never at arm time).
+const HERE_INPUTS = ['wheel', 'touchstart', 'pointerdown', 'keydown', 'popstate']
+const HERE_INPUT_OPTS = { capture: true, passive: true }
+// a lone modifier or an OS/browser chord (⌘-Tab away, a screenshot) isn't the reader taking over
+const isChordKey = (e) => e.metaKey || e.ctrlKey || e.altKey || ['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)
+
+function useHereGlide({ armed, holdMs, afterReadyMs, go, stop }) {
+  const stateRef = useRef(null)
+  if (stateRef.current === null) stateRef.current = { at: performance.now(), touched: false, done: false, flyUntil: 0 }
+  const cbRef = useRef(null)
+  cbRef.current = { go, stop } // latest closures, without re-running the effects
+
+  useEffect(() => {
+    const E = stateRef.current
+    const onInput = (e) => {
+      if (e.type === 'keydown' && isChordKey(e)) return
+      E.touched = true
+      if (performance.now() < E.flyUntil) { E.flyUntil = 0; cbRef.current.stop() }
+    }
+    HERE_INPUTS.forEach((t) => window.addEventListener(t, onInput, HERE_INPUT_OPTS))
+    return () => HERE_INPUTS.forEach((t) => window.removeEventListener(t, onInput, HERE_INPUT_OPTS))
+  }, [])
+
+  useEffect(() => {
+    const E = stateRef.current
+    if (!armed || E.done) return undefined
+    let timer = 0
+    let onShow = null
+    const fire = () => {
+      timer = 0
+      if (E.done) return
+      if (E.touched || window.scrollY > HERE_TOP_SLOP * (window.innerHeight || 1)) { E.done = true; return }
+      if (document.hidden) {
+        onShow = () => {
+          if (document.hidden) return
+          document.removeEventListener('visibilitychange', onShow)
+          onShow = null
+          timer = setTimeout(fire, afterReadyMs)
+        }
+        document.addEventListener('visibilitychange', onShow)
+        return
+      }
+      if (document.documentElement.style.overflow === 'hidden' || document.body.style.overflow === 'hidden') {
+        timer = setTimeout(fire, HERE_RETRY_MS)
+        return
+      }
+      E.done = true
+      const ms = cbRef.current.go()
+      if (ms > 0) E.flyUntil = performance.now() + ms
+    }
+    timer = setTimeout(fire, Math.max(afterReadyMs, E.at + holdMs - performance.now()))
+    return () => {
+      clearTimeout(timer)
+      if (onShow) document.removeEventListener('visibilitychange', onShow)
+    }
+  }, [armed]) // eslint-disable-line react-hooks/exhaustive-deps
+}
+
 // ---------- scroll-driven globe tour ----------
 
 function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiography }) {
@@ -558,6 +701,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
   })
   const [finaleT, setFinaleT] = useState(0)
   const [heroDone, setHeroDone] = useState(false)
+  const [heroFast, setHeroFast] = useState(false) // the "where we are" glide is clearing the hero
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 700)
   const [playing, setPlaying] = useState(false)
   const [docked, setDocked] = useState(false) // "Back to Biography" docks to the top once scrolled past the nav
@@ -776,6 +920,41 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
     const t = setTimeout(() => { html.style.overflow = prev }, 1900)
     return () => { clearTimeout(t); html.style.overflow = prev }
   }, [seamless])
+
+  // "Where we are": once the globe is up and the title has had its beat, glide
+  // down to today's stop through the shared tour tween: the banner leads, the
+  // globe chases (LAG_TAU), lastProgAt keeps the momentum glide out of it, and
+  // wheel / touch / scroll keys halt it like any row jump (useHereGlide adds the
+  // click / tap / Back cut). A seamless arrival waits out its held-back title.
+  // Lands 1px SHORT of the target: LAND_Y is exactly the next segment's start,
+  // so landing on it would let device-pixel rounding pick the pose (the pin
+  // pulse, or a stop's photo backdrop at a chapter edge). 1px short sits inside
+  // the arriving segment at arcT ≈ 1, the same rest a scroll onto it reads.
+  useHereGlide({
+    armed: ready,
+    holdMs: (seamless ? HERO_IN_SEAMLESS_MS : HERO_IN_MS) + HERO_FADE_MS + HERE_TITLE_BEAT_MS,
+    afterReadyMs: seamless ? HERE_AFTER_READY_SEAMLESS_MS : HERE_AFTER_READY_MS,
+    stop: () => { tourRef.current?.stop(); setHeroFast(false) }, // cut early: the reader's own scroll fades the hero at the normal pace
+    go: () => {
+      const tour = tourRef.current
+      const target = resolveHereTarget()
+      if (!tour || !target || tour.isAnimating()) return 0 // Play / a jump already owns the scroll
+      if (!lite) warmStop(target.si)
+      const ih = window.innerHeight || 1
+      const y = Math.max(0, Math.floor(target.y * ih) - 1)
+      const ms = clamp((Math.abs(y - window.scrollY) / ih) * HERE_MS_PER_SCREEN, HERE_MS_MIN, HERE_MS_MAX)
+      setHeroFast(true)
+      tour.toY(y, ms)
+      return ms
+    },
+  })
+  // the quick hero fade is for the glide only; once the hero is gone, a later
+  // scroll back up to the top fades it in at the normal pace again
+  useEffect(() => {
+    if (!heroFast || !heroDone) return undefined
+    const t = setTimeout(() => setHeroFast(false), HERO_OUT_FAST_S * 1000 + 100)
+    return () => clearTimeout(t)
+  }, [heroFast, heroDone])
 
   // Coarse React state; the heavy per-frame work runs in the scene's rAF loop.
   useEffect(() => {
@@ -1052,7 +1231,7 @@ function GlobeTour({ onNavigate, seamless, onGlobeReady, onSceneFail, fromBiogra
       {/* scroll runway — all visible content is fixed-position above it */}
       <div style={{ height: `${TOTAL_VH}vh` }} />
 
-      <Hero visible={!heroDone} seamless={seamless} isMobile={isMobile} />
+      <Hero visible={!heroDone} seamless={seamless} isMobile={isMobile} fast={heroFast} />
 
       {/* "Back to Biography" — only when arriving from the Biography page. Sits below
           the nav at the top, docks up with a little padding once scrolled, and fades
@@ -1547,10 +1726,11 @@ function BackButton({ onNavigate, docked, finaleT, isMobile }) {
   )
 }
 
-function Hero({ visible, seamless, isMobile }) {
+function Hero({ visible, seamless, isMobile, fast }) {
   // After a seamless morph, hold the hero text back so it fades in LAST — after
   // the overlay has dissolved to the globe and it has settled small + left.
-  const entrance = usePageEntrance(2, { staggerMs: 150, initialDelayMs: seamless ? 1450 : 200 })
+  // (The "where we are" glide times its title beat off these same constants.)
+  const entrance = usePageEntrance(2, { staggerMs: 150, initialDelayMs: seamless ? HERO_IN_SEAMLESS_MS : HERO_IN_MS })
   // Same lane as the rest of the content — right column (desktop) / bottom band
   // (mobile), left-aligned — so the title never overlaps the globe.
   // Mobile: TOP-align the title to the band top (MOBILE_LANE_TOP) so it lands in
@@ -1570,7 +1750,7 @@ function Hero({ visible, seamless, isMobile }) {
         alignItems: 'flex-start',
         textAlign: 'left',
         opacity: visible ? 1 : 0,
-        transition: 'opacity 0.6s ease',
+        transition: `opacity ${fast ? HERO_OUT_FAST_S : HERO_OUT_S}s ease`,
         pointerEvents: 'none',
       }}
     >
@@ -1791,6 +1971,27 @@ function BackToTop({ onBackToTop }) {
 function StaticTimeline({ onNavigate }) {
   const entrance = usePageEntrance(4, { staggerMs: 120, initialDelayMs: 50 })
   const { days, hrs, mins, secs } = useCountdown(new Date('2028-07-14T00:00:00'))
+  // "Where we are", list edition: bring today's stop row to the middle of the
+  // screen (centred, so the fixed banner never covers it). Under reduced motion
+  // it's instant and early (just past App's post-swap scrollTo(0,0)s), so the
+  // page simply opens there; otherwise a native smooth scroll after the title's
+  // beat (entrance item 1 = 50 + 120ms in, then its fade). Same one-shot guards
+  // as the globe glide; a fresh instant scrollTo is what cancels a smooth one.
+  const listRef = useRef(null)
+  const [reduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  useHereGlide({
+    armed: true,
+    holdMs: reduced ? HERE_STATIC_JUMP_MS : 50 + 120 + HERO_FADE_MS + HERE_TITLE_BEAT_MS,
+    afterReadyMs: reduced ? 0 : HERE_TITLE_BEAT_MS, // = the beat a once-hidden tab gets when shown
+    stop: () => window.scrollTo(0, window.scrollY),
+    go: () => {
+      const target = resolveHereTarget()
+      const row = target && listRef.current?.querySelector(`[data-stop-id="${STOPS[target.si].id}"]`)
+      if (!row) return 0
+      row.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' })
+      return reduced ? 0 : HERE_MS_MAX
+    },
+  })
   return (
     <div style={{ background: 'rgb(0,0,0)', minHeight: '100vh' }}>
       <div style={{ textAlign: 'center', padding: '110px 20px 30px' }}>
@@ -1799,7 +2000,7 @@ function StaticTimeline({ onNavigate }) {
         </h1>
       </div>
 
-      <div style={{ ...entrance.style(2), maxWidth: 720, margin: '0 auto', padding: '0 24px 50px' }}>
+      <div ref={listRef} style={{ ...entrance.style(2), maxWidth: 720, margin: '0 auto', padding: '0 24px 50px' }}>
         {CHAPTERS.map((ch, ci) => (
           <div key={ch.id}>
             {/* leg header — the counter + the months it covers */}
@@ -1814,7 +2015,7 @@ function StaticTimeline({ onNavigate }) {
             {ch.stopIndices.map((i) => {
               const s = STOPS[i]
               return (
-                <div key={s.id} style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+                <div key={s.id} data-stop-id={s.id} style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
                   {s.photo && (
                     <div style={{ padding: '18px 0 0' }}>
                       <img
